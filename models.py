@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import csv
+from pandas import DataFrame
 import logging
 import os.path
 import random
@@ -28,7 +28,7 @@ from config import IGNORED_CHAR
 
 
 # wrapper for selenium instance
-from upgrade.config import WEBDRIVER_PATH
+from upgrade.config import WEBDRIVER_PATH, state, defaultstate
 
 
 class AmazonRequest:
@@ -50,7 +50,7 @@ class AmazonRequest:
         self.options.add_argument('--start-maximized')
         self.options.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.options.add_experimental_option('useAutomationExtension', False)
-        #self.options.add_argument('--headless')
+        # self.options.add_argument('--headless')
         self.options.add_argument('--no-sandbox')
         self.options.add_argument('--disable-gpu')
         self.options.add_argument('--disable-dev-shm-usage')
@@ -159,11 +159,16 @@ class ProductFull(AmazonRequest):
         logging.info('Loading product URL: {}'.format(self.url))
         self.hover(By.XPATH, f'//*[@id="a-autoid-1"]')
         self.browser.quit()
+        state(product_url=self.url)
         # reviews
         self.reviews = ReviewsFull(
-            url="https://www.amazon.com/" + self.alias + "/product-reviews/" + self.asin + "?pageNumber=1",
+            url="https://www.amazon.com/"
+                + self.alias + "/product-reviews/"
+                + self.asin + "?pageNumber="
+                + defaultstate['reviews_page'],
             product_url=self.url,
             product_asin=self.asin,
+            reviews_page=int(defaultstate['reviews_page']),
         )
 
     def get_data(self):
@@ -182,11 +187,12 @@ class ProductFull(AmazonRequest):
         }
 
     def to_csv(self, direct, mode='a'):
-        f = open(os.path.join(direct, 'products.csv'), mode=mode)
-        data = self.get_data()
-        # del data['reviews']
-        csv.writer(f).writerows(data)
-        f.close()
+        # f = open(os.path.join(direct, 'products.csv'), mode=mode)
+        # data = self.get_data()
+        # # del data['reviews']
+        # csv.writer(f).writerows(data)
+        # f.close()
+        pass
 
 
 class ReviewsFull(AmazonRequest):
@@ -195,6 +201,7 @@ class ReviewsFull(AmazonRequest):
 
         self.product_url = kwargs.get('product_url') or 'Unknown'
         self.product_asin = kwargs.get('product_asin') or 'Unknown'
+        self.page = kwargs.get('reviews_page') or 1
 
         logging.info('Loading product reviews URL: {}'.format(self.product_url))
         # HTML parsing
@@ -213,7 +220,6 @@ class ReviewsFull(AmazonRequest):
 
         self.browser.quit()
 
-
     def click_next(self):
         el = self.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
         if not el:
@@ -225,43 +231,53 @@ class ReviewsFull(AmazonRequest):
         body.send_keys(Keys.PAGE_UP)
         sleep(2)
         self.browser.execute_script('arguments[0].scrollIntoView(true);', el)
-        self.browser.execute_script('console.log(arguments[0]);', el)
-        sleep(20)
+        sleep(2)
         self.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
         sleep(1)
-        self.browser.execute_script('arguments[0].click();', el)
+        self.url = self.url.replace('pageNumber=' + str(self.page), 'pageNumber=' + str(self.page + 1))
+        self.browser.get(self.url)
+        self.page += 1
+        state(reviews_page=self.page)
+        # self.browser.execute_script('arguments[0].click();', el)
         sleep(random.randint(3, 5))
         return True
 
     def get_data(self):
-        return map(lambda x: x.get_data(), self.reviews)
+        return DataFrame(
+            map(lambda x: x.get_data().values(), self.reviews),
+            columns=list(self.reviews[0].get_data().keys()),
+        )
 
-    def to_csv(self, direct, mode='a'):
-        f = open(os.path.join(direct, 'reviews.csv'), mode=mode)
-        csv.writer(f).writerows(self.get_data())
-        f.close()
+    def to_csv(self, direct, mode):
+        self.get_data().to_csv(
+            os.path.join(direct, 'reviews.csv'),
+            index=False,
+            mode=mode(),
+            header=mode() == 'w',
+        )
 
 
 class ReviewBlock:
     def __init__(self, html, url, asin):
-        if not isinstance(html, Tag) and not isinstance(html, BeautifulSoup):
-            html = BeautifulSoup(html, features='html.parser')
+        html = str(html)
+        html = re.sub(IGNORED_CHAR, '', html)
+        html = BeautifulSoup(html, features='html.parser')
         self.html = html
         self.product_url = url
         self.product_asin = asin
 
         # 1. title
-        self.title = html.find("a", class_="review-title")
+        self.title = html.find("a", class_="review-title").text.strip()
         # 2. name
-        self.name = html.find('span', class_='a-profile-name')
+        self.name = html.find('span', class_='a-profile-name').text.strip()
         # 3. rating
-        self.rating = html.find("i", {"data-hook": "review-star-rating"}).find('span').text.split(' ')[0]
+        self.rating = html.find("i", {"data-hook": "review-star-rating"}).find('span').text.split(' ')[0].strip()
         # 4. date
-        self.date = html.find("span", {"data-hook": "review-date"})
+        self.date = html.find("span", {"data-hook": "review-date"}).text.strip()
         # 5. content
         self.content = re.sub(' +', '', ". ".join(
             html.find("span", {"data-hook": "review-body"}).find('span').get_text("\n").strip().splitlines()
-        ))
+        )).strip()
         # 6. quantity of people who find this review helpful
         self.votes = html.find("span", {"data-hook": "helpful-votes-statement"})
         if self.votes:
@@ -280,7 +296,7 @@ class ReviewBlock:
         else:
             self.options = ''
 
-    def get_data(self):
+    def get_data(self) -> dict:
         return {
             'product_url': self.product_url,
             'asin': self.product_asin,
