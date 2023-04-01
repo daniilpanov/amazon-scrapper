@@ -48,7 +48,7 @@ def state(products_page=None, product_url=None, reviews_page=None):
             data['reviews_page'] = reviews_page
     else:
         open(path, 'w').close()
-        return state(1, '', 1)
+        return state(0, '', 0)
 
     if products_page is not None or product_url is not None or reviews_page is not None:
         f = open(path, 'w')

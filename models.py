@@ -45,7 +45,7 @@ class AmazonRequest:
         self.retries = 0
         self.driver_path = WEBDRIVER_PATH
         self.max_retries = kwargs.get('max_retries') or 5
-        self.url = kwargs.get('url')
+        url = kwargs.get('url')
         self.options.add_argument(kwargs.get('window_size') or '--window-size=1920,1080')
         self.options.add_argument('--start-maximized')
         self.options.add_experimental_option('excludeSwitches', ['enable-automation'])
@@ -55,11 +55,12 @@ class AmazonRequest:
         self.options.add_argument('--disable-gpu')
         self.options.add_argument('--disable-dev-shm-usage')
         self.options.add_argument(f'user-agent={self.user_agents.get_random_user_agent()}')
-        self.init()
+        self.init(url)
 
-    def init(self):
+    def init(self, url):
         self.browser = webdriver.Chrome(self.driver_path, chrome_options=self.options)
-        self.browser.get(self.url)
+        self.browser.get(url)
+        sleep(2)
 
     def hover(self, criteria, element):
         try:
@@ -81,7 +82,7 @@ class AmazonRequest:
             self.retries += 1
             self.browser.quit()
             sleep(random.randint(1, 6))
-            self.init()
+            self.init(self.browser.current_url)
 
             if not self.retries > self.max_retries:
                 self.wait(criteria, element)
@@ -110,14 +111,17 @@ class AmazonRequest:
         page_html = self.browser.page_source
         return page_html
 
+    def get(self, url):
+        self.browser.get(url)
 
-class ProductFull(AmazonRequest):
+
+class ProductFull:
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
         # HTML parsing
-        html = self.html = BeautifulSoup(self.get_html(By.ID, 'title'), features='html.parser')
+        self.browser: AmazonRequest = kwargs.get('browser')
+        html = self.html = BeautifulSoup(self.browser.get_html(By.ID, 'title'), features='html.parser')
         self.title = html.find('h1', id='title')
-        self.url = '/'.join(self.url.split('/')[:-1])
+        self.url = '/'.join(kwargs.get('url').split('/')[:-1])
         self.asin = self.url.split('/')[5]
         self.alias = self.url.split('/')[3]
         self.category = kwargs.get('category') or None
@@ -157,18 +161,24 @@ class ProductFull(AmazonRequest):
         self.image_urls = {f'image_url_{i + 1}': e for i, e in enumerate(self.image_urls[:6])}
         # log
         logging.info('Loading product URL: {}'.format(self.url))
-        self.hover(By.XPATH, f'//*[@id="a-autoid-1"]')
-        self.browser.quit()
+        self.browser.hover(By.XPATH, f'//*[@id="a-autoid-1"]')
         state(product_url=self.url)
+        button_reviews = self.browser.get_element(By.CSS_SELECTOR, '[data-hook="see-all-reviews-link-foot"]')
+        self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', button_reviews)
+        sleep(2)
+        self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+        sleep(2)
+        button_reviews.click()
         # reviews
         self.reviews = ReviewsFull(
             url="https://www.amazon.com/"
                 + self.alias + "/product-reviews/"
                 + self.asin + "?pageNumber="
-                + defaultstate['reviews_page'],
+                + str(int(defaultstate['reviews_page']) + 1),
             product_url=self.url,
             product_asin=self.asin,
-            reviews_page=int(defaultstate['reviews_page']),
+            reviews_page=int(defaultstate['reviews_page']) + 1,
+            browser=self.browser,
         )
 
     def get_data(self):
@@ -195,18 +205,26 @@ class ProductFull(AmazonRequest):
         pass
 
 
-class ReviewsFull(AmazonRequest):
+class ReviewsFull:
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
+        self.browser: AmazonRequest = kwargs.get('browser')
         self.product_url = kwargs.get('product_url') or 'Unknown'
         self.product_asin = kwargs.get('product_asin') or 'Unknown'
-        self.page = kwargs.get('reviews_page') or 1
+        page = self.page = kwargs.get('reviews_page') or 1
+
+        if page > 1:
+            url = self.browser.browser.current_url
+            if 'pageNumber=1' not in url:
+                url += ('&' if '?' in url else '?') + 'pageNumber=' + str(self.page)
+            else:
+                url = url.replace('pageNumber=1', 'pageNumber=' + str(self.page + 1))
+            self.browser.get(url)
+            self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
 
         logging.info('Loading product reviews URL: {}'.format(self.product_url))
         # HTML parsing
         while True:
-            html = self.html = BeautifulSoup(self.get_html(By.CLASS_NAME, 'view-point'), features='html.parser')
+            html = self.html = BeautifulSoup(self.browser.get_html(By.CLASS_NAME, 'view-point'), features='html.parser')
             self.reviews_block = html.find('div', id='cm_cr-review_list')
             self.reviews = []
             reviews_blocks = self.reviews_block.find_all('div', {'data-hook': 'review'})
@@ -218,27 +236,26 @@ class ReviewsFull(AmazonRequest):
             if not self.click_next():
                 break
 
-        self.browser.quit()
-
     def click_next(self):
-        el = self.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+        el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
         if not el:
             return False
 
-        body = self.get_element(By.TAG_NAME, 'body')
+        body = self.browser.get_element(By.TAG_NAME, 'body')
         body.send_keys(Keys.PAGE_DOWN)
         sleep(1)
         body.send_keys(Keys.PAGE_UP)
         sleep(2)
-        self.browser.execute_script('arguments[0].scrollIntoView(true);', el)
+        self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', el)
         sleep(2)
-        self.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-        sleep(1)
-        self.url = self.url.replace('pageNumber=' + str(self.page), 'pageNumber=' + str(self.page + 1))
-        self.browser.get(self.url)
+        self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+        sleep(2)
+        # self.url = self.url.replace('pageNumber=' + str(self.page), 'pageNumber=' + str(self.page + 1))
+        # self.browser.get(self.url)
         self.page += 1
         state(reviews_page=self.page)
-        # self.browser.execute_script('arguments[0].click();', el)
+        el.click()
+        sleep(2)
         sleep(random.randint(3, 5))
         return True
 
@@ -287,12 +304,9 @@ class ReviewBlock:
         else:
             self.votes = 0
         # 7. options
-        self.options = html.find("span", {"data-hook": "format-strip-linkless", "class": "a-color-secondary"})
+        self.options = html.find_all("a", {"data-hook": "format-strip"})
         if self.options:
-            self.options = self.options.text.replace(
-                '<i class="a-icon a-icon-text-separator" role="img" aria-label="|"></i>',
-                '|',
-            )
+            self.options = '|'.join(map(lambda x: x.text, self.options))
         else:
             self.options = ''
 
