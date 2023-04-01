@@ -28,7 +28,7 @@ from config import IGNORED_CHAR
 
 
 # wrapper for selenium instance
-from upgrade.config import WEBDRIVER_PATH, state, defaultstate
+from config import WEBDRIVER_PATH, state, defaultstate
 
 
 class AmazonRequest:

@@ -2,7 +2,7 @@ import os.path
 
 
 #
-from upgrade.config import FOLDER_NAME
+from config import FOLDER_NAME
 
 
 def search_url(query):
