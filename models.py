@@ -50,7 +50,7 @@ class AmazonRequest:
         self.options.add_argument('--start-maximized')
         self.options.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.options.add_experimental_option('useAutomationExtension', False)
-        # self.options.add_argument('--headless')
+        self.options.add_argument('--headless')
         self.options.add_argument('--no-sandbox')
         self.options.add_argument('--disable-gpu')
         self.options.add_argument('--disable-dev-shm-usage')
