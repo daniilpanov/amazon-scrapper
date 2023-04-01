@@ -292,9 +292,10 @@ class ReviewBlock:
         # 4. date
         self.date = html.find("span", {"data-hook": "review-date"}).text.strip()
         # 5. content
-        self.content = re.sub(' +', '', ". ".join(
-            html.find("span", {"data-hook": "review-body"}).find('span').get_text("\n").strip().splitlines()
-        )).strip()
+        review_body = html.find("span", {"data-hook": "review-body"}).find('span')
+        self.content = \
+            re.sub(' +', '', ". ".join(review_body.get_text("\n").strip().splitlines())).strip() if review_body\
+            else "<images>"
         # 6. quantity of people who find this review helpful
         self.votes = html.find("span", {"data-hook": "helpful-votes-statement"})
         if self.votes:
