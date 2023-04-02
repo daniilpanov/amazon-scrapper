@@ -2,9 +2,13 @@ import datetime
 import logging
 import os
 
-WEBDRIVER_PATH = '../chromedriver/chromedriver.exe'
-MAX_RETRIES = 10
-IGNORED_CHAR = '[✎【】★❤️🎧💕♥🌈🎸🍀【✅✔\U0001f43b]'
+import dotenv
+
+dotenv.load_dotenv()
+
+WEBDRIVER_PATH = os.environ.get('WEBDRIVER_PATH')
+MAX_RETRIES = os.environ.get('MAX_RETRIES')
+IGNORED_CHAR = os.environ.get('IGNORED_CHAR')
 FOLDER_NAME = datetime.datetime.now().strftime('%Y-%m-%d')
 
 if not os.path.exists('./' + FOLDER_NAME):
