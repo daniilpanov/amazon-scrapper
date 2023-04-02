@@ -1,5 +1,6 @@
-from selenium.common.exceptions import WebDriverException
 from models import ProductFull, AmazonRequest
+import schedule
+import time
 
 browser_inst = None
 
@@ -11,13 +12,17 @@ def run():
         browser_inst = AmazonRequest(url=product)
         ProductFull(url=product, browser=browser_inst)
         browser_inst.browser.quit()
-    except WebDriverException:
+    except:
         try:
             if browser_inst:
                 browser_inst.browser.quit()
         finally:
-            run()
+            pass
 
 
 if __name__ == '__main__':
     run()
+    schedule.every().hour.do(run)
+    while True:
+        schedule.run_pending()
+        time.sleep(5)

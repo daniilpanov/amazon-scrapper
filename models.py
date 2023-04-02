@@ -174,10 +174,10 @@ class ProductFull:
             url="https://www.amazon.com/"
                 + self.alias + "/product-reviews/"
                 + self.asin + "?pageNumber="
-                + str(int(defaultstate['reviews_page']) + 1),
+                + defaultstate['reviews_page'],
             product_url=self.url,
             product_asin=self.asin,
-            reviews_page=int(defaultstate['reviews_page']) + 1,
+            reviews_page=int(defaultstate['reviews_page']),
             browser=self.browser,
         )
 
