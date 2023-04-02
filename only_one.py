@@ -12,7 +12,8 @@ def run():
         browser_inst = AmazonRequest(url=product)
         ProductFull(url=product, browser=browser_inst)
         browser_inst.browser.quit()
-    except:
+    except Exception as e:
+        raise e
         try:
             if browser_inst:
                 browser_inst.browser.quit()

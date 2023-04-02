@@ -50,7 +50,7 @@ class AmazonRequest:
         self.options.add_argument('--start-maximized')
         self.options.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.options.add_experimental_option('useAutomationExtension', False)
-        self.options.add_argument('--headless')
+        # self.options.add_argument('--headless')
         self.options.add_argument('--no-sandbox')
         self.options.add_argument('--disable-gpu')
         self.options.add_argument('--disable-dev-shm-usage')
@@ -174,7 +174,7 @@ class ProductFull:
             url="https://www.amazon.com/"
                 + self.alias + "/product-reviews/"
                 + self.asin + "?pageNumber="
-                + defaultstate['reviews_page'] if int(defaultstate['reviews_page']) > 0 else '1',
+                + str(defaultstate['reviews_page'] if int(defaultstate['reviews_page']) > 0 else '1'),
             product_url=self.url,
             product_asin=self.asin,
             reviews_page=int(defaultstate['reviews_page']) if int(defaultstate['reviews_page']) > 0 else 1,
@@ -215,9 +215,9 @@ class ReviewsFull:
         if page > 1:
             url = self.browser.browser.current_url
             if 'pageNumber=1' not in url:
-                url += ('&' if '?' in url else '?') + 'pageNumber=' + str(self.page)
+                url += ('&' if '?' in url else '?') + 'pageNumber=' + str(page)
             else:
-                url = url.replace('pageNumber=1', 'pageNumber=' + str(self.page))
+                url = url.replace('pageNumber=1', 'pageNumber=' + str(page))
             self.browser.get(url)
             self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
 
