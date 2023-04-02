@@ -1,3 +1,6 @@
+from selenium.common import WebDriverException
+from urllib3.exceptions import MaxRetryError
+
 from models import ProductFull, AmazonRequest
 import schedule
 import time
@@ -12,8 +15,13 @@ def run():
         browser_inst = AmazonRequest(url=product)
         ProductFull(url=product, browser=browser_inst)
         browser_inst.browser.quit()
-    except Exception as e:
-        raise e
+    except WebDriverException:
+        try:
+            if browser_inst:
+                browser_inst.browser.quit()
+        finally:
+            run()
+    except MaxRetryError:
         try:
             if browser_inst:
                 browser_inst.browser.quit()
