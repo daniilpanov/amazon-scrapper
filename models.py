@@ -78,7 +78,7 @@ class AmazonRequest:
         try:
             WebDriverWait(self.browser, 50) \
                 .until(EC.presence_of_element_located((criteria, element)))
-        except (WebDriverException, TimeoutException) as e:
+        except (WebDriverException, TimeoutException):
             self.retries += 1
             self.browser.quit()
             sleep(random.randint(1, 6))
@@ -217,7 +217,7 @@ class ReviewsFull:
             if 'pageNumber=1' not in url:
                 url += ('&' if '?' in url else '?') + 'pageNumber=' + str(self.page)
             else:
-                url = url.replace('pageNumber=1', 'pageNumber=' + str(self.page + 1))
+                url = url.replace('pageNumber=1', 'pageNumber=' + str(self.page))
             self.browser.get(url)
             self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
 
