@@ -1,9 +1,13 @@
+import time
+
+
+time.sleep(60)
+
+
 from selenium.common import WebDriverException
 from urllib3.exceptions import MaxRetryError
 
 from models import ProductFull, AmazonRequest
-import schedule
-import time
 
 browser_inst = None
 
@@ -22,16 +26,11 @@ def run():
         finally:
             run()
     except MaxRetryError:
-        try:
-            if browser_inst:
-                browser_inst.browser.quit()
-        finally:
-            pass
+        import os
+        import sys
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+        sys.exit(0)
 
 
 if __name__ == '__main__':
     run()
-    schedule.every().hour.do(run)
-    while True:
-        schedule.run_pending()
-        time.sleep(5)
