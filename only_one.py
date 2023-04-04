@@ -7,7 +7,7 @@ if len(sys.argv) > 1:
     time.sleep(10)
     current_reviews_page = int(sys.argv[1])
 else:
-    from config import state
+    from config import state, FOLDER_NAME
 
     current_reviews_page = state()['reviews_page']
     if int(current_reviews_page) == 1:
@@ -25,7 +25,7 @@ def run(page):
                       '?crid=1A032JAVNFCZ4&keywords=hair+gummies&qid=1680186819&sprefix=hair+gummies%2Caps%2C146&sr=8' \
                       '-8'
         browser_inst = AmazonRequest(url=product_url)
-        product = ProductFull(url=product_url, browser=browser_inst, page=page)
+        product = ProductFull(url=product_url, browser=browser_inst, page=page, dirname=FOLDER_NAME)
     except:
         print("Error when creating AmazonRequest")
         logging.warning("Error when creating AmazonRequest")

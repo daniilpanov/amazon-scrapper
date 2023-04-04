@@ -129,6 +129,7 @@ class ProductFull:
         self.alias = self.url.split('/')[3]
         self.category = kwargs.get('category') or None
         self.page = kwargs.get('page') or None
+        self.dirname = kwargs.get('dirname') or None
 
         # bullets
         self.bullet = ''
@@ -184,7 +185,8 @@ class ProductFull:
             product_asin=self.asin,
             reviews_page=int(defaultstate['reviews_page']) if int(defaultstate['reviews_page']) > 0 else 1,
             browser=self.browser,
-            page=self.page
+            page=self.page,
+            dirname=self.dirname,
         )
 
     def get_data(self):
