@@ -4,10 +4,7 @@ import sys
 if len(sys.argv) > 1:
     import time
 
-    print('start...')
     time.sleep(10)
-
-    print('...done!')
     current_reviews_page = int(sys.argv[1])
 else:
     from config import state

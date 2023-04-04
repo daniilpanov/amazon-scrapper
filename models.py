@@ -248,9 +248,7 @@ class ReviewsFull:
         try:
             el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
         except NoSuchElementException:
-            print('STOP')
             return False
-        print(el)
         body = self.browser.get_element(By.TAG_NAME, 'body')
         body.send_keys(Keys.PAGE_DOWN)
         sleep(1)
@@ -264,9 +262,6 @@ class ReviewsFull:
         # self.browser.get(self.url)
         self.page += 1
         state(reviews_page=self.page)
-        if self.page % 5 == 0:
-            print('stop...')
-            #raise Exception
         el.click()
         sleep(2)
         sleep(random.randint(3, 5))
