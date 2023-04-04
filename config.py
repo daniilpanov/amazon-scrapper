@@ -10,7 +10,7 @@ dotenv.load_dotenv()
 WEBDRIVER_PATH = os.environ.get('WEBDRIVER_PATH')
 MAX_RETRIES = os.environ.get('MAX_RETRIES')
 IGNORED_CHAR = os.environ.get('IGNORED_CHAR') or '[✎【】★❤️🎧💕♥🌈🎸🍀【✅✔\U0001f43b]'
-FOLDER_NAME = input('Введите имя папки: ') or datetime.datetime.now().strftime('%Y-%m-%d')
+FOLDER_NAME = input('Please, input the folder name: ') or datetime.datetime.now().strftime('%Y-%m-%d')
 
 if not os.path.exists('./' + FOLDER_NAME):
     os.makedirs(FOLDER_NAME)
