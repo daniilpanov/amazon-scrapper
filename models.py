@@ -14,8 +14,9 @@ from selenium.webdriver import Keys
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException, TimeoutException, ElementNotInteractableException, \
-    JavascriptException
+    JavascriptException, NoSuchElementException
 from selenium.webdriver.common.by import By
+from urllib3.exceptions import MaxRetryError
 
 from config import r
 
@@ -55,6 +56,8 @@ class AmazonRequest:
         self.options.add_argument('--disable-gpu')
         self.options.add_argument('--disable-dev-shm-usage')
         self.options.add_argument(f'user-agent={self.user_agents.get_random_user_agent()}')
+        self.options.add_argument('--ignore-certificate-errors-spki-list')
+        self.options.add_argument('--ignore-ssl-errors')
         self.init(url)
 
     def init(self, url):
@@ -241,10 +244,13 @@ class ReviewsFull:
                 break
 
     def click_next(self):
-        el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-        if not el:
+        self.browser.wait(By.CSS_SELECTOR, '.a-last > a')
+        try:
+            el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+        except NoSuchElementException:
+            print('STOP')
             return False
-
+        print(el)
         body = self.browser.get_element(By.TAG_NAME, 'body')
         body.send_keys(Keys.PAGE_DOWN)
         sleep(1)
@@ -258,6 +264,9 @@ class ReviewsFull:
         # self.browser.get(self.url)
         self.page += 1
         state(reviews_page=self.page)
+        if self.page % 5 == 0:
+            print('stop...')
+            #raise Exception
         el.click()
         sleep(2)
         sleep(random.randint(3, 5))

@@ -4,7 +4,10 @@ import sys
 if len(sys.argv) > 1:
     import time
 
-    time.sleep(60)
+    print('start...')
+    time.sleep(10)
+
+    print('...done!')
     current_reviews_page = int(sys.argv[1])
 else:
     from config import state
@@ -40,7 +43,7 @@ def run(page):
                 browser_inst.browser.quit()
         finally:
             run(product.reviews.page)
-    except MaxRetryError:
+    except (MaxRetryError, Exception):
         import os
         os.execv(sys.executable, [sys.executable] + sys.argv)
         sys.exit(0)
