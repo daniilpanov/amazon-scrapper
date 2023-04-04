@@ -16,7 +16,7 @@ if not os.path.exists('./' + FOLDER_NAME):
 
 logging.basicConfig(filename=os.path.join(FOLDER_NAME, 'collect.log'),
                     format='%(levelname)s: %(asctime)s: %(message)s',
-                    level=logging.DEBUG)
+                    level=logging.WARNING)
 
 
 def get_file(filename):

@@ -117,6 +117,7 @@ class AmazonRequest:
 
 class ProductFull:
     def __init__(self, **kwargs):
+        self.reviews: typing.Union[ReviewsFull, None] = None
         # HTML parsing
         self.browser: AmazonRequest = kwargs.get('browser')
         html = self.html = BeautifulSoup(self.browser.get_html(By.ID, 'title'), features='html.parser')
@@ -125,6 +126,7 @@ class ProductFull:
         self.asin = self.url.split('/')[5]
         self.alias = self.url.split('/')[3]
         self.category = kwargs.get('category') or None
+        self.page = kwargs.get('page') or None
 
         # bullets
         self.bullet = ''
@@ -169,7 +171,8 @@ class ProductFull:
         self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
         sleep(2)
         button_reviews.click()
-        # reviews
+
+    def reviews_collect(self):
         self.reviews = ReviewsFull(
             url="https://www.amazon.com/"
                 + self.alias + "/product-reviews/"
@@ -179,6 +182,7 @@ class ProductFull:
             product_asin=self.asin,
             reviews_page=int(defaultstate['reviews_page']) if int(defaultstate['reviews_page']) > 0 else 1,
             browser=self.browser,
+            page=self.page
         )
 
     def get_data(self):
@@ -294,7 +298,7 @@ class ReviewBlock:
         # 5. content
         review_body = html.find("span", {"data-hook": "review-body"}).find('span')
         self.content = \
-            re.sub(' +', '', ". ".join(review_body.get_text("\n").strip().splitlines())).strip() if review_body\
+            re.sub(' +', ' ', ". ".join(review_body.get_text("\n").strip().splitlines())).strip() if review_body\
             else "<images>"
         # 6. quantity of people who find this review helpful
         self.votes = html.find("span", {"data-hook": "helpful-votes-statement"})
