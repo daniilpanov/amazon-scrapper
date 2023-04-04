@@ -8,7 +8,7 @@ import typing
 from datetime import datetime
 from time import sleep
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver import Keys
 from selenium.webdriver.chrome.webdriver import WebDriver
@@ -16,7 +16,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException, TimeoutException, ElementNotInteractableException, \
     JavascriptException, NoSuchElementException
 from selenium.webdriver.common.by import By
-from urllib3.exceptions import MaxRetryError
 
 from config import r
 

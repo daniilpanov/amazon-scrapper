@@ -40,7 +40,7 @@ def run(page):
                 browser_inst.browser.quit()
         finally:
             run(product.reviews.page)
-    except (MaxRetryError, Exception):
+    except MaxRetryError:
         import os
         os.execv(sys.executable, [sys.executable] + sys.argv)
         sys.exit(0)
