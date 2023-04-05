@@ -11,6 +11,7 @@ WEBDRIVER_PATH = os.environ.get('WEBDRIVER_PATH')
 MAX_RETRIES = os.environ.get('MAX_RETRIES')
 IGNORED_CHAR = os.environ.get('IGNORED_CHAR') or '[✎【】★❤️🎧💕♥🌈🎸🍀【✅✔\U0001f43b]'
 FOLDER_NAME = os.environ.get('DIRECTORY_OUTPUT') or datetime.datetime.now().strftime('%Y-%m-%d')
+HEADLESS = os.environ.get('HEADLESS') == 'true'
 
 if not os.path.exists('./' + FOLDER_NAME):
     os.makedirs(FOLDER_NAME)
@@ -34,23 +35,24 @@ def j(): return get_file('data.json')
 defaultstate = None
 
 
-# current_state is in [No start, In progress, Finished]
 def state(products_page=None, product_url=None, reviews_page=None, current_state=None):
     """
-    :param products_page: str
-    :param product_url: str
-    :param reviews_page: str
-    :param current_state: str [No start, In progress, Finished]
-    :return:
+    :param str products_page: The link to products page of current search request
+    :param str product_url: The link to current product
+    :param str reviews_page: The link to reviews page of current product
+    :param bool current_state: When it's True, after restart script press 'next' button without collecting reviews
+                               It helps exclude duplicates
+    :return dict: All config
     """
     global defaultstate
     path = os.path.join(FOLDER_NAME, 'state.dat')
     data = dict()
+
     if os.path.exists(path):
         f = open(path)
         for row in f.readlines():
             row = row.strip().split('=')
-            data[row[0]] = row[1]
+            data[row[0]] = '='.join(row[1:])
         f.close()
 
         if products_page is not None:
@@ -60,10 +62,10 @@ def state(products_page=None, product_url=None, reviews_page=None, current_state
         if reviews_page is not None:
             data['reviews_page'] = reviews_page
         if current_state is not None:
-            data['current_state'] = current_state
+            data['current_state'] = int(current_state)
     else:
         open(path, 'w').close()
-        return state(1, '', '', 'No start')
+        return state('', '', '', False)
 
     if products_page is not None or product_url is not None or reviews_page is not None or current_state is not None:
         f = open(path, 'w')

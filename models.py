@@ -18,7 +18,7 @@ from selenium.common.exceptions import WebDriverException, TimeoutException, Ele
 from selenium.webdriver.common.by import By
 
 from MustBeReloadedException import MustBeReloadedException
-from config import r
+from config import r, HEADLESS
 
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import OperatingSystem, SoftwareName
@@ -29,7 +29,7 @@ from config import IGNORED_CHAR
 
 
 # wrapper for selenium instance
-from config import WEBDRIVER_PATH, state, defaultstate
+from config import WEBDRIVER_PATH, state
 
 
 class AmazonRequest:
@@ -51,7 +51,8 @@ class AmazonRequest:
         self.options.add_argument('--start-maximized')
         self.options.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.options.add_experimental_option('useAutomationExtension', False)
-        self.options.add_argument('--headless')
+        if HEADLESS:
+            self.options.add_argument('--headless')
         self.options.add_argument('--no-sandbox')
         self.options.add_argument('--disable-gpu')
         self.options.add_argument('--disable-dev-shm-usage')
@@ -132,7 +133,7 @@ class ProductFull:
         self.alias = self.url.split('/')[3]
         self.category = kwargs.get('category') or None
         self.page = kwargs.get('page') or None
-        self.state = kwargs.get('state') or 'No start'
+        self.state = kwargs.get('state') or False
         self.dirname = kwargs.get('dirname') or None
 
         # bullets
@@ -183,7 +184,7 @@ class ProductFull:
         self.reviews = ReviewsFull(
             product_url=self.url,
             product_asin=self.asin,
-            reviews_page=defaultstate['reviews_page'],
+            reviews_page=state()['reviews_page'],
             state=self.state,
             browser=self.browser,
             dirname=self.dirname,
@@ -219,25 +220,24 @@ class ReviewsFull:
         self.product_url = kwargs.get('product_url') or 'Unknown'
         self.product_asin = kwargs.get('product_asin') or 'Unknown'
         page = self.page = kwargs.get('reviews_page') or None
-        self.state = kwargs.get('state') or 'No start'
+        self.state = kwargs.get('state') or False
 
-        if self.state == 'In progress':
-            url = self.browser.browser.current_url
-            if page and url != page:
-                self.browser.get(page)
-            self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
+        url = self.browser.browser.current_url
+        if page and url != page:
+            self.browser.get(page)
+        self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
+
+        if self.state and not self.click_next():
+            return
 
         logging.info('Loading product reviews URL: {}'.format(self.product_url))
         # HTML parsing
-        while self.state != 'Finished':
+        while True:
+            sleep(1)
             self.page = self.browser.browser.current_url
-            if self.state == 'No start':
-                self.state = 'In progress'
-                state(reviews_page=self.page, current_state='In progress')
-            else:
-                state(reviews_page=self.page)
-
-            print('You have 3 seconds for close this program correctly by Ctrl+C...')
+            print(self.page)
+            self.state = False
+            state(reviews_page=self.page, current_state=False)
 
             html = self.html = BeautifulSoup(self.browser.get_html(By.CLASS_NAME, 'view-point'), features='html.parser')
             self.reviews_block = html.find('div', id='cm_cr-review_list')
@@ -246,33 +246,34 @@ class ReviewsFull:
             for review_block in reviews_blocks:
                 self.reviews.append(ReviewBlock(review_block, self.product_url, self.product_asin))
 
-            sleep(3)
-            print('OK. Continued')
-
             self.to_csv(kwargs.get('dirname') or datetime.now().strftime('%Y-%m-%d'), r)
-
-            self.browser.wait(By.CSS_SELECTOR, '.a-last > a')
-            el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-            if not el:
-                self.state = 'Finished'
-                state(current_state='Finished')
+            state(reviews_page=self.page, current_state=True)
+            self.state = True
+            if not self.click_next():
                 break
-
-            body = self.browser.get_element(By.TAG_NAME, 'body')
-            body.send_keys(Keys.PAGE_DOWN)
-            sleep(1)
-            body.send_keys(Keys.PAGE_UP)
-            sleep(1)
-            self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', el)
-            sleep(1)
-            self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-            sleep(1)
-            el.click()
-            sleep(random.randint(3, 5))
 
     def check(self):
         return self.state != 'Finished' and\
                self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+
+    def click_next(self):
+        self.browser.wait(By.CSS_SELECTOR, '.a-last > a')
+        el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+        if not el:
+            return False
+
+        body = self.browser.get_element(By.TAG_NAME, 'body')
+        body.send_keys(Keys.PAGE_DOWN)
+        sleep(1)
+        body.send_keys(Keys.PAGE_UP)
+        sleep(1)
+        self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', el)
+        sleep(1)
+        self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+        sleep(1)
+        el.click()
+        sleep(random.randint(2, 4))
+        return True
 
     def get_data(self):
         return DataFrame(

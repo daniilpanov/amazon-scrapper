@@ -29,7 +29,13 @@ def run(page):
                       '?crid=1A032JAVNFCZ4&keywords=hair+gummies&qid=1680186819&sprefix=hair+gummies%2Caps%2C146&sr=8' \
                       '-8'
         browser_inst = AmazonRequest(url=product_url)
-        product = ProductFull(url=product_url, browser=browser_inst, page=page, dirname=FOLDER_NAME)
+        product = ProductFull(
+            url=product_url,
+            browser=browser_inst,
+            page=page,
+            dirname=FOLDER_NAME,
+            state=bool(int(state()['current_state'])),
+        )
     except MustBeReloadedException:
         import os
         print("Critical error. Reloading script...")
