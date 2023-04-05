@@ -16,6 +16,7 @@ else:
 
 def run(page):
     from selenium.common import WebDriverException
+    from selenium.common.exceptions import InvalidSessionIdException
     from urllib3.exceptions import MaxRetryError
 
     from models import ProductFull, AmazonRequest
@@ -40,7 +41,7 @@ def run(page):
                 browser_inst.browser.quit()
         finally:
             run(product.reviews.page)
-    except MaxRetryError:
+    except (MaxRetryError, InvalidSessionIdException):
         import os
         os.execv(sys.executable, [sys.executable] + sys.argv)
         sys.exit(0)
