@@ -1,0 +1,2 @@
+class MustBeReloadedException(Exception):
+    pass

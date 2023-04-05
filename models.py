@@ -17,6 +17,7 @@ from selenium.common.exceptions import WebDriverException, TimeoutException, Ele
     JavascriptException, NoSuchElementException
 from selenium.webdriver.common.by import By
 
+from MustBeReloadedException import MustBeReloadedException
 from config import r
 
 from random_user_agent.user_agent import UserAgent
@@ -69,9 +70,7 @@ class AmazonRequest:
             element_to_hover_over = self.browser.find_element(criteria, element)
             hover = ActionChains(self.browser).move_to_element(element_to_hover_over)
             hover.perform()
-        except ElementNotInteractableException:
-            return
-        except JavascriptException:
+        except (ElementNotInteractableException, JavascriptException, NoSuchElementException):
             return
         except Exception as ex:
             print(type(ex).__name__, element)
@@ -90,6 +89,7 @@ class AmazonRequest:
                 self.wait(criteria, element)
             else:
                 sleep(5)
+                raise MustBeReloadedException
 
         self.browser.maximize_window()
         body = self.get_element(By.TAG_NAME, 'body', False)
@@ -103,9 +103,12 @@ class AmazonRequest:
         sleep(2)
 
     def get_element(self, criteria, element, wait=True):
-        if wait:
-            self.wait(criteria, element)
-        return self.browser.find_element(criteria, element)
+        try:
+            if wait:
+                self.wait(criteria, element)
+            return self.browser.find_element(criteria, element)
+        except NoSuchElementException:
+            return None
 
     def get_html(self, criteria=None, element=None):
         if criteria and element:
@@ -129,6 +132,7 @@ class ProductFull:
         self.alias = self.url.split('/')[3]
         self.category = kwargs.get('category') or None
         self.page = kwargs.get('page') or None
+        self.state = kwargs.get('state') or 'No start'
         self.dirname = kwargs.get('dirname') or None
 
         # bullets
@@ -177,15 +181,11 @@ class ProductFull:
 
     def reviews_collect(self):
         self.reviews = ReviewsFull(
-            url="https://www.amazon.com/"
-                + self.alias + "/product-reviews/"
-                + self.asin + "?pageNumber="
-                + str(defaultstate['reviews_page'] if int(defaultstate['reviews_page']) > 0 else '1'),
             product_url=self.url,
             product_asin=self.asin,
-            reviews_page=int(defaultstate['reviews_page']) if int(defaultstate['reviews_page']) > 0 else 1,
+            reviews_page=defaultstate['reviews_page'],
+            state=self.state,
             browser=self.browser,
-            page=self.page,
             dirname=self.dirname,
         )
 
@@ -218,20 +218,27 @@ class ReviewsFull:
         self.browser: AmazonRequest = kwargs.get('browser')
         self.product_url = kwargs.get('product_url') or 'Unknown'
         self.product_asin = kwargs.get('product_asin') or 'Unknown'
-        page = self.page = kwargs.get('reviews_page') or 1
+        page = self.page = kwargs.get('reviews_page') or None
+        self.state = kwargs.get('state') or 'No start'
 
-        if page > 1:
+        if self.state == 'In progress':
             url = self.browser.browser.current_url
-            if 'pageNumber=1' not in url:
-                url += ('&' if '?' in url else '?') + 'pageNumber=' + str(page)
-            else:
-                url = url.replace('pageNumber=1', 'pageNumber=' + str(page))
-            self.browser.get(url)
+            if page and url != page:
+                self.browser.get(page)
             self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
 
         logging.info('Loading product reviews URL: {}'.format(self.product_url))
         # HTML parsing
-        while True:
+        while self.state != 'Finished':
+            self.page = self.browser.browser.current_url
+            if self.state == 'No start':
+                self.state = 'In progress'
+                state(reviews_page=self.page, current_state='In progress')
+            else:
+                state(reviews_page=self.page)
+
+            print('You have 3 seconds for close this program correctly by Ctrl+C...')
+
             html = self.html = BeautifulSoup(self.browser.get_html(By.CLASS_NAME, 'view-point'), features='html.parser')
             self.reviews_block = html.find('div', id='cm_cr-review_list')
             self.reviews = []
@@ -239,34 +246,33 @@ class ReviewsFull:
             for review_block in reviews_blocks:
                 self.reviews.append(ReviewBlock(review_block, self.product_url, self.product_asin))
 
+            sleep(3)
+            print('OK. Continued')
+
             self.to_csv(kwargs.get('dirname') or datetime.now().strftime('%Y-%m-%d'), r)
 
-            if not self.click_next():
+            self.browser.wait(By.CSS_SELECTOR, '.a-last > a')
+            el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+            if not el:
+                self.state = 'Finished'
+                state(current_state='Finished')
                 break
 
-    def click_next(self):
-        self.browser.wait(By.CSS_SELECTOR, '.a-last > a')
-        try:
-            el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-        except NoSuchElementException:
-            return False
-        body = self.browser.get_element(By.TAG_NAME, 'body')
-        body.send_keys(Keys.PAGE_DOWN)
-        sleep(1)
-        body.send_keys(Keys.PAGE_UP)
-        sleep(2)
-        self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', el)
-        sleep(2)
-        self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-        sleep(2)
-        # self.url = self.url.replace('pageNumber=' + str(self.page), 'pageNumber=' + str(self.page + 1))
-        # self.browser.get(self.url)
-        self.page += 1
-        state(reviews_page=self.page)
-        el.click()
-        sleep(2)
-        sleep(random.randint(3, 5))
-        return True
+            body = self.browser.get_element(By.TAG_NAME, 'body')
+            body.send_keys(Keys.PAGE_DOWN)
+            sleep(1)
+            body.send_keys(Keys.PAGE_UP)
+            sleep(1)
+            self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', el)
+            sleep(1)
+            self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+            sleep(1)
+            el.click()
+            sleep(random.randint(3, 5))
+
+    def check(self):
+        return self.state != 'Finished' and\
+               self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
 
     def get_data(self):
         return DataFrame(

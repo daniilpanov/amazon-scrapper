@@ -34,7 +34,15 @@ def j(): return get_file('data.json')
 defaultstate = None
 
 
-def state(products_page=None, product_url=None, reviews_page=None):
+# current_state is in [No start, In progress, Finished]
+def state(products_page=None, product_url=None, reviews_page=None, current_state=None):
+    """
+    :param products_page: str
+    :param product_url: str
+    :param reviews_page: str
+    :param current_state: str [No start, In progress, Finished]
+    :return:
+    """
     global defaultstate
     path = os.path.join(FOLDER_NAME, 'state.dat')
     data = dict()
@@ -51,11 +59,13 @@ def state(products_page=None, product_url=None, reviews_page=None):
             data['product_url'] = product_url
         if reviews_page is not None:
             data['reviews_page'] = reviews_page
+        if current_state is not None:
+            data['current_state'] = current_state
     else:
         open(path, 'w').close()
-        return state(1, '', 1)
+        return state(1, '', '', 'No start')
 
-    if products_page is not None or product_url is not None or reviews_page is not None:
+    if products_page is not None or product_url is not None or reviews_page is not None or current_state is not None:
         f = open(path, 'w')
         f.writelines(map(lambda x: x + '=' + str(data[x]) + '\n', data))
         f.close()
