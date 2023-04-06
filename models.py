@@ -16,6 +16,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException, TimeoutException, ElementNotInteractableException, \
     JavascriptException, NoSuchElementException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
 
 from MustBeReloadedException import MustBeReloadedException
 from config import r, HEADLESS
@@ -103,7 +104,7 @@ class AmazonRequest:
         body.send_keys(Keys.PAGE_UP)
         sleep(2)
 
-    def get_element(self, criteria, element, wait=True):
+    def get_element(self, criteria, element, wait=True) -> typing.Union[WebElement, None]:
         try:
             if wait:
                 self.wait(criteria, element)
@@ -111,7 +112,7 @@ class AmazonRequest:
         except NoSuchElementException:
             return None
 
-    def get_html(self, criteria=None, element=None):
+    def get_html(self, criteria=None, element=None) -> str:
         if criteria and element:
             self.wait(criteria, element)
         page_html = self.browser.page_source
@@ -190,7 +191,7 @@ class ProductFull:
             dirname=self.dirname,
         )
 
-    def get_data(self):
+    def get_data(self) -> dict:
         return {
             'url': self.url,
             'asin': self.asin,
@@ -216,17 +217,22 @@ class ProductFull:
 
 class ReviewsFull:
     def __init__(self, **kwargs):
+        # get all data
         self.browser: AmazonRequest = kwargs.get('browser')
         self.product_url = kwargs.get('product_url') or 'Unknown'
         self.product_asin = kwargs.get('product_asin') or 'Unknown'
+        # link to the current page
         page = self.page = kwargs.get('reviews_page') or None
+        # state: has data written or not?
         self.state = kwargs.get('state') or False
 
+        # gets url and update it when it is not current page's url
         url = self.browser.browser.current_url
         if page and url != page:
             self.browser.get(page)
+        # then wait for loading
         self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
-
+        # if data is written, and we can not click next, we close the reviews collecting
         if self.state and not self.click_next():
             return
 
@@ -236,27 +242,34 @@ class ReviewsFull:
             sleep(1)
             self.page = self.browser.browser.current_url
             print(self.page)
+            # The data is not written now
             self.state = False
+            # updates the state file
             state(reviews_page=self.page, current_state=False)
-
+            # gets HTML code
             html = self.html = BeautifulSoup(self.browser.get_html(By.CLASS_NAME, 'view-point'), features='html.parser')
+            # gets block with all reviews inside
             self.reviews_block = html.find('div', id='cm_cr-review_list')
             self.reviews = []
+            # gets all reviews blocks
             reviews_blocks = self.reviews_block.find_all('div', {'data-hook': 'review'})
             for review_block in reviews_blocks:
+                # adds data
                 self.reviews.append(ReviewBlock(review_block, self.product_url, self.product_asin))
-
+            # writes data
             self.to_csv(kwargs.get('dirname') or datetime.now().strftime('%Y-%m-%d'), r)
+            # updates state
             state(reviews_page=self.page, current_state=True)
             self.state = True
+            # if it is end, exit the loop
             if not self.click_next():
                 break
 
-    def check(self):
-        return self.state != 'Finished' and\
-               self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-
-    def click_next(self):
+    def click_next(self) -> bool:
+        """
+        This function uses for click next button
+        :rtype: bool (able to click next)
+        """
         self.browser.wait(By.CSS_SELECTOR, '.a-last > a')
         el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
         if not el:
@@ -275,7 +288,7 @@ class ReviewsFull:
         sleep(random.randint(2, 4))
         return True
 
-    def get_data(self):
+    def get_data(self) -> DataFrame:
         return DataFrame(
             map(lambda x: x.get_data().values(), self.reviews),
             columns=list(self.reviews[0].get_data().keys()),
@@ -292,6 +305,7 @@ class ReviewsFull:
 
 class ReviewBlock:
     def __init__(self, html, url, asin):
+        # HTML parsing
         html = str(html)
         html = re.sub(IGNORED_CHAR, '', html)
         html = BeautifulSoup(html, features='html.parser')

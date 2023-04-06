@@ -35,41 +35,40 @@ def j(): return get_file('data.json')
 defaultstate = None
 
 
-def state(products_page=None, product_url=None, reviews_page=None, current_state=None):
+def state(**kwargs):
     """
-    :param str products_page: The link to products page of current search request
-    :param str product_url: The link to current product
-    :param str reviews_page: The link to reviews page of current product
-    :param bool current_state: When it's True, after restart script press 'next' button without collecting reviews
-                               It helps exclude duplicates
+    param str products_page: Link to the products' page of the current search.
+    param str product_url: The link to current product
+    param str reviews_page: The link to reviews page of current product
+    param bool current_state: When it's True, after restart script click 'next' without collecting reviews
+                              It helps eliminate duplicates.
+    param int rate: This is the filter parameter. We have to use a filter because there is a visibility limit
+                    500 review pages. When we use this filter, this limit only applies to the selected reviews rating.
+                    So, for example, any product has 6_443 reviews. We can't get all reviews because of limit,
+                    but we can get all 5-star reviews, then 4-star, then 3-, 2- and 1-star reviews. So in every case
+                    we'll get less than 5k reviews, but the total number of reviews exceeds 5k.
     :return dict: All config
     """
     global defaultstate
     path = os.path.join(FOLDER_NAME, 'state.dat')
-    data = dict()
+    new_data = data = dict()
 
     if os.path.exists(path):
         f = open(path)
         for row in f.readlines():
             row = row.strip().split('=')
-            data[row[0]] = '='.join(row[1:])
+            new_data[row[0]] = data[row[0]] = '='.join(row[1:])
         f.close()
 
-        if products_page is not None:
-            data['products_page'] = products_page
-        if product_url is not None:
-            data['product_url'] = product_url
-        if reviews_page is not None:
-            data['reviews_page'] = reviews_page
-        if current_state is not None:
-            data['current_state'] = int(current_state)
+        for key, value in kwargs:
+            new_data[key] = value
     else:
         open(path, 'w').close()
-        return state('', '', '', False)
+        return state(products_page='', product_url='', reviews_page='', current_state=False, rating=5)
 
-    if products_page is not None or product_url is not None or reviews_page is not None or current_state is not None:
+    if new_data != data:
         f = open(path, 'w')
-        f.writelines(map(lambda x: x + '=' + str(data[x]) + '\n', data))
+        f.writelines(map(lambda x: x + '=' + str(new_data[x]) + '\n', new_data))
         f.close()
 
     defaultstate = data
