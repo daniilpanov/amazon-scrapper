@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from argparse import ArgumentError
+
 from pandas import DataFrame
 import logging
 import os.path
@@ -123,20 +125,28 @@ class AmazonRequest:
 
 
 class ProductFull:
+
+    reviews_count = 0
+
     def __init__(self, **kwargs):
-        self.reviews: typing.Union[ReviewsFull, None] = None
-        # HTML parsing
         self.browser: AmazonRequest = kwargs.get('browser')
-        html = self.html = BeautifulSoup(self.browser.get_html(By.ID, 'title'), features='html.parser')
-        self.title = html.find('h1', id='title')
+        self.category = kwargs.get('category') or None
+        self.page = kwargs.get('page') or None
+        self.dirname = kwargs.get('dirname') or None
         self.url = '/'.join(kwargs.get('url').split('/')[:-1])
         self.asin = self.url.split('/')[5]
         self.alias = self.url.split('/')[3]
-        self.category = kwargs.get('category') or None
-        self.page = kwargs.get('page') or None
-        self.state = kwargs.get('state') or False
-        self.dirname = kwargs.get('dirname') or None
-
+        self.reviews: typing.Union[ReviewsFull, None] = None
+        # HTML parsing
+        html = self.html = BeautifulSoup(self.browser.get_html(By.ID, 'title'), features='html.parser')
+        # title
+        self.title = html.find('h1', id='title')
+        # reviews count
+        reviews_count_raw = html.find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
+        if reviews_count_raw:
+            reviews_count_raw = reviews_count_raw.split('total ratings, ')
+            if len(reviews_count_raw) > 1:
+                self.reviews_count = int(reviews_count_raw[1].replace(' with reviews', '').replace(',', '.'))
         # bullets
         self.bullet = ''
         feature_bullets = html.find('div', id='feature-bullets')
@@ -176,19 +186,16 @@ class ProductFull:
         state(product_url=self.url)
         button_reviews = self.browser.get_element(By.CSS_SELECTOR, '[data-hook="see-all-reviews-link-foot"]')
         self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', button_reviews)
-        sleep(2)
+        sleep(1)
         self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-        sleep(2)
+        sleep(1)
         button_reviews.click()
 
     def reviews_collect(self):
         self.reviews = ReviewsFull(
-            product_url=self.url,
-            product_asin=self.asin,
+            product=self,
             reviews_page=state()['reviews_page'],
-            state=self.state,
-            browser=self.browser,
-            dirname=self.dirname,
+            state=bool(int(state()['current_state'])),
         )
 
     def get_data(self) -> dict:
@@ -218,9 +225,10 @@ class ProductFull:
 class ReviewsFull:
     def __init__(self, **kwargs):
         # get all data
-        self.browser: AmazonRequest = kwargs.get('browser')
-        self.product_url = kwargs.get('product_url') or 'Unknown'
-        self.product_asin = kwargs.get('product_asin') or 'Unknown'
+        self.product: ProductFull = kwargs.get('product')
+        if not self.product:
+            raise ArgumentError
+        self.browser: AmazonRequest = self.product.browser
         # link to the current page
         page = self.page = kwargs.get('reviews_page') or None
         # state: has data written or not?
@@ -236,7 +244,7 @@ class ReviewsFull:
         if self.state and not self.click_next():
             return
 
-        logging.info('Loading product reviews URL: {}'.format(self.product_url))
+        logging.info('Loading product reviews URL: {}'.format(self.product.url))
         # HTML parsing
         while True:
             sleep(1)
@@ -255,9 +263,9 @@ class ReviewsFull:
             reviews_blocks = self.reviews_block.find_all('div', {'data-hook': 'review'})
             for review_block in reviews_blocks:
                 # adds data
-                self.reviews.append(ReviewBlock(review_block, self.product_url, self.product_asin))
+                self.reviews.append(ReviewBlock(review_block, self.product.url, self.product.asin))
             # writes data
-            self.to_csv(kwargs.get('dirname') or datetime.now().strftime('%Y-%m-%d'), r)
+            self.to_csv(self.product.dirname or datetime.now().strftime('%Y-%m-%d'), r)
             # updates state
             state(reviews_page=self.page, current_state=True)
             self.state = True
