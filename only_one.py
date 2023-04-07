@@ -34,7 +34,6 @@ def run(page):
             browser=browser_inst,
             page=page,
             dirname=FOLDER_NAME,
-            state=bool(int(state()['current_state'])),
         )
     except MustBeReloadedException:
         import os

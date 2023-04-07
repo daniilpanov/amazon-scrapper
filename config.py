@@ -51,20 +51,21 @@ def state(**kwargs):
     """
     global defaultstate
     path = os.path.join(FOLDER_NAME, 'state.dat')
-    new_data = data = dict()
+    new_data = dict()
+    data = dict()
 
     if os.path.exists(path):
         f = open(path)
         for row in f.readlines():
             row = row.strip().split('=')
-            new_data[row[0]] = data[row[0]] = '='.join(row[1:])
+            data[row[0]] = new_data[row[0]] = '='.join(row[1:])
         f.close()
-
-        for key, value in kwargs:
-            new_data[key] = value
     else:
         open(path, 'w').close()
-        return state(products_page='', product_url='', reviews_page='', current_state=False, rating=5)
+        return state(products_page='', product_url='', reviews_page='', current_state=0, rating=6)
+
+    for key in kwargs:
+        new_data[key] = kwargs.get(key)
 
     if new_data != data:
         f = open(path, 'w')

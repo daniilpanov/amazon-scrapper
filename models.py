@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from argparse import ArgumentError
+
 from pandas import DataFrame
 import logging
 import os.path
@@ -123,20 +125,22 @@ class AmazonRequest:
 
 
 class ProductFull:
+
+    reviews_count = 0
+
     def __init__(self, **kwargs):
-        self.reviews: typing.Union[ReviewsFull, None] = None
-        # HTML parsing
         self.browser: AmazonRequest = kwargs.get('browser')
-        html = self.html = BeautifulSoup(self.browser.get_html(By.ID, 'title'), features='html.parser')
-        self.title = html.find('h1', id='title')
+        self.category = kwargs.get('category') or None
+        self.page = kwargs.get('page') or None
+        self.dirname = kwargs.get('dirname') or None
         self.url = '/'.join(kwargs.get('url').split('/')[:-1])
         self.asin = self.url.split('/')[5]
         self.alias = self.url.split('/')[3]
-        self.category = kwargs.get('category') or None
-        self.page = kwargs.get('page') or None
-        self.state = kwargs.get('state') or False
-        self.dirname = kwargs.get('dirname') or None
-
+        self.reviews: typing.Union[ReviewsFull, None] = None
+        # HTML parsing
+        html = self.html = BeautifulSoup(self.browser.get_html(By.ID, 'title'), features='html.parser')
+        # title
+        self.title = html.find('h1', id='title')
         # bullets
         self.bullet = ''
         feature_bullets = html.find('div', id='feature-bullets')
@@ -174,22 +178,40 @@ class ProductFull:
         logging.info('Loading product URL: {}'.format(self.url))
         self.browser.hover(By.XPATH, f'//*[@id="a-autoid-1"]')
         state(product_url=self.url)
-        button_reviews = self.browser.get_element(By.CSS_SELECTOR, '[data-hook="see-all-reviews-link-foot"]')
-        self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', button_reviews)
-        sleep(2)
-        self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
-        sleep(2)
-        button_reviews.click()
 
     def reviews_collect(self):
-        self.reviews = ReviewsFull(
-            product_url=self.url,
-            product_asin=self.asin,
-            reviews_page=state()['reviews_page'],
-            state=self.state,
-            browser=self.browser,
-            dirname=self.dirname,
-        )
+        # goto reviews page
+        button_reviews = self.browser.get_element(By.CSS_SELECTOR, '[data-hook="see-all-reviews-link-foot"]')
+        self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', button_reviews)
+        sleep(1)
+        self.browser.hover(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+        sleep(1)
+        button_reviews.click()
+        # wait for load...
+        self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
+        # reviews count
+        reviews_count_raw = BeautifulSoup(self.browser.browser.page_source, features='html.parser')\
+            .find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
+        if reviews_count_raw:
+            reviews_count_raw = reviews_count_raw.text.split('total ratings, ')
+            if len(reviews_count_raw) > 1:
+                self.reviews_count = int(reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip())
+        # collect all
+        # if more than 5k uses the filter trick
+        if self.reviews_count > 5000:
+            self.reviews = FilteredReviews(
+                product=self,
+                reviews_page=state()['reviews_page'],
+                state=bool(int(state()['current_state'])),
+            )
+        # else this trick is redundant
+        else:
+            self.reviews = ReviewsFull(
+                product=self,
+                reviews_page=state()['reviews_page'],
+                state=bool(int(state()['current_state'])),
+            )
+        print('Reviews collected!')
 
     def get_data(self) -> dict:
         return {
@@ -215,12 +237,49 @@ class ProductFull:
         pass
 
 
+class FilteredReviews:
+    def __init__(self, **kwargs):
+        # get all data
+        self.product: ProductFull = kwargs.get('product')
+        if not self.product:
+            raise ArgumentError
+        self.browser: AmazonRequest = self.product.browser
+        self.page = kwargs.get('reviews_page') or None
+        self.state = kwargs.get('state') or False
+        self.page = self.browser.browser.current_url
+        self.current_star = int(state()['rating']) or 6
+        self.reviews_list: list[ReviewsFull] = []
+
+        self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="reviews-header"]')
+
+        filter_params_id_pattern = 'star-count-dropdown_{}'
+        filter_button = self.browser.get_element(By.ID, 'a-autoid-5-announce')
+        for i in range(6 - self.current_star, 6):
+            state(rating=6 - i)
+            self.browser.browser.execute_script('arguments[0].scrollIntoView(true);', filter_button)
+            sleep(1)
+            filter_button.click()
+            sleep(1)
+            el = self.browser.get_element(By.ID, filter_params_id_pattern.format(i), False)
+            hover = ActionChains(self.browser.browser).move_to_element(el)
+            hover.perform()
+            sleep(1)
+            el.click()
+            self.reviews_list.append(ReviewsFull(
+                product=self.product,
+                reviews_page=state()['reviews_page'],
+                state=bool(int(state()['current_state'])),
+            ))
+            state(reviews_page='', current_state=0)
+
+
 class ReviewsFull:
     def __init__(self, **kwargs):
         # get all data
-        self.browser: AmazonRequest = kwargs.get('browser')
-        self.product_url = kwargs.get('product_url') or 'Unknown'
-        self.product_asin = kwargs.get('product_asin') or 'Unknown'
+        self.product: ProductFull = kwargs.get('product')
+        if not self.product:
+            raise ArgumentError
+        self.browser: AmazonRequest = self.product.browser
         # link to the current page
         page = self.page = kwargs.get('reviews_page') or None
         # state: has data written or not?
@@ -231,12 +290,12 @@ class ReviewsFull:
         if page and url != page:
             self.browser.get(page)
         # then wait for loading
-        self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
+        self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="reviews-header"]')
         # if data is written, and we can not click next, we close the reviews collecting
         if self.state and not self.click_next():
             return
 
-        logging.info('Loading product reviews URL: {}'.format(self.product_url))
+        logging.info('Loading product reviews URL: {}'.format(self.product.url))
         # HTML parsing
         while True:
             sleep(1)
@@ -245,7 +304,7 @@ class ReviewsFull:
             # The data is not written now
             self.state = False
             # updates the state file
-            state(reviews_page=self.page, current_state=False)
+            state(reviews_page=self.page, current_state=0)
             # gets HTML code
             html = self.html = BeautifulSoup(self.browser.get_html(By.CLASS_NAME, 'view-point'), features='html.parser')
             # gets block with all reviews inside
@@ -255,11 +314,11 @@ class ReviewsFull:
             reviews_blocks = self.reviews_block.find_all('div', {'data-hook': 'review'})
             for review_block in reviews_blocks:
                 # adds data
-                self.reviews.append(ReviewBlock(review_block, self.product_url, self.product_asin))
+                self.reviews.append(ReviewBlock(review_block, self.product.url, self.product.asin))
             # writes data
-            self.to_csv(kwargs.get('dirname') or datetime.now().strftime('%Y-%m-%d'), r)
+            self.to_csv(self.product.dirname or datetime.now().strftime('%Y-%m-%d'), r)
             # updates state
-            state(reviews_page=self.page, current_state=True)
+            state(reviews_page=self.page, current_state=1)
             self.state = True
             # if it is end, exit the loop
             if not self.click_next():
@@ -270,8 +329,7 @@ class ReviewsFull:
         This function uses for click next button
         :rtype: bool (able to click next)
         """
-        self.browser.wait(By.CSS_SELECTOR, '.a-last > a')
-        el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a')
+        el = self.browser.get_element(By.CSS_SELECTOR, '.a-last:not(.a-disabled) > a', False)
         if not el:
             return False
 
@@ -314,20 +372,23 @@ class ReviewBlock:
         self.product_asin = asin
 
         # 1. title
-        self.title = html.find("a", class_="review-title").text.strip()
+        self.title = html.find(class_="review-title").text.strip()
         # 2. name
-        self.name = html.find('span', class_='a-profile-name').text.strip()
+        self.name = html.find(class_='a-profile-name').text.strip()
         # 3. rating
-        self.rating = html.find("i", {"data-hook": "review-star-rating"}).find('span').text.split(' ')[0].strip()
+        review_star_rating = html.find('i', {'data-hook': 'review-star-rating'})
+        if not review_star_rating:
+            review_star_rating = html.find('i', {'data-hook': 'cmps-review-star-rating'})
+        self.rating = review_star_rating.find('span').text.split(' ')[0].strip()
         # 4. date
-        self.date = html.find("span", {"data-hook": "review-date"}).text.strip()
+        self.date = html.find('span', {'data-hook': 'review-date'}).text.strip()
         # 5. content
-        review_body = html.find("span", {"data-hook": "review-body"}).find('span')
+        review_body = html.find('span', {'data-hook': 'review-body'}).find('span')
         self.content = \
-            re.sub(' +', ' ', ". ".join(review_body.get_text("\n").strip().splitlines())).strip() if review_body\
-            else "<images>"
+            re.sub(' +', ' ', '. '.join(review_body.get_text("\n").strip().splitlines())).strip() if review_body\
+            else '<images>'
         # 6. quantity of people who find this review helpful
-        self.votes = html.find("span", {"data-hook": "helpful-votes-statement"})
+        self.votes = html.find('span', {'data-hook': 'helpful-votes-statement'})
         if self.votes:
             self.votes = self.votes.text.split(' ')[0]
             if self.votes == 'One':
@@ -335,7 +396,7 @@ class ReviewBlock:
         else:
             self.votes = 0
         # 7. options
-        self.options = html.find_all("a", {"data-hook": "format-strip"})
+        self.options = html.find_all('a', {'data-hook': 'format-strip'})
         if self.options:
             self.options = '|'.join(map(lambda x: x.text, self.options))
         else:
