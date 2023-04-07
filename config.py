@@ -62,7 +62,7 @@ def state(**kwargs):
         f.close()
     else:
         open(path, 'w').close()
-        return state(products_page='', product_url='', reviews_page='', current_state=0, rating=6)
+        return state(products_page='', product_url='', reviews_page='', current_state=0, rating=6, filtered=0)
 
     for key in kwargs:
         new_data[key] = kwargs.get(key)

@@ -198,7 +198,8 @@ class ProductFull:
                 self.reviews_count = int(reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip())
         # collect all
         # if more than 5k uses the filter trick
-        if self.reviews_count > 5000:
+        if self.reviews_count > 5000 or bool(state()['filtered']):
+            state(filtered=1)
             self.reviews = FilteredReviews(
                 product=self,
                 reviews_page=state()['reviews_page'],
@@ -206,6 +207,7 @@ class ProductFull:
             )
         # else this trick is redundant
         else:
+            state(filtered=0)
             self.reviews = ReviewsFull(
                 product=self,
                 reviews_page=state()['reviews_page'],
