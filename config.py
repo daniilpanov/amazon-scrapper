@@ -18,7 +18,7 @@ if not os.path.exists('./' + FOLDER_NAME):
 
 logging.basicConfig(filename=os.path.join(FOLDER_NAME, 'collect.log'),
                     format='%(levelname)s: %(asctime)s: %(message)s',
-                    level=logging.WARNING)
+                    level=logging.INFO)
 
 
 def get_file(filename):
@@ -35,7 +35,7 @@ def j(): return get_file('data.json')
 defaultstate = None
 
 
-def state(**kwargs):
+def state(**kwargs) -> dict:
     """
     param str products_page: Link to the products' page of the current search.
     param str product_url: The link to current product
@@ -47,7 +47,7 @@ def state(**kwargs):
                     So, for example, any product has 6_443 reviews. We can't get all reviews because of limit,
                     but we can get all 5-star reviews, then 4-star, then 3-, 2- and 1-star reviews. So in every case
                     we'll get less than 5k reviews, but the total number of reviews exceeds 5k.
-    :return dict: All config
+    :rtype: dict All config
     """
     global defaultstate
     path = os.path.join(FOLDER_NAME, 'state.dat')

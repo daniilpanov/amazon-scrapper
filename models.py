@@ -188,7 +188,7 @@ class ProductFull:
         sleep(1)
         button_reviews.click()
         # wait for load...
-        self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="local-reviews-header"]')
+        self.browser.wait(By.CSS_SELECTOR, 'h3[data-hook*="reviews-header"]')
         # reviews count
         reviews_count_raw = BeautifulSoup(self.browser.browser.page_source, features='html.parser')\
             .find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
@@ -198,7 +198,15 @@ class ProductFull:
                 self.reviews_count = int(reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip())
         # collect all
         # if more than 5k uses the filter trick
+<<<<<<< Updated upstream
         if self.reviews_count > 5000:
+=======
+        if self.reviews_count > 5000 or bool(state()['filtered']):
+            if int(state()['rating']) > 5:
+                state(filtered=1, rating=5)
+            else:
+                state(filtered=1)
+>>>>>>> Stashed changes
             self.reviews = FilteredReviews(
                 product=self,
                 reviews_page=state()['reviews_page'],
@@ -260,11 +268,13 @@ class FilteredReviews:
             sleep(1)
             filter_button.click()
             sleep(1)
-            el = self.browser.get_element(By.ID, filter_params_id_pattern.format(i), False)
+            el = self.browser.get_element(By.ID, filter_params_id_pattern.format(i), True)
+            sleep(1)
             hover = ActionChains(self.browser.browser).move_to_element(el)
             hover.perform()
             sleep(1)
             el.click()
+            sleep(1)
             self.reviews_list.append(ReviewsFull(
                 product=self.product,
                 reviews_page=state()['reviews_page'],
