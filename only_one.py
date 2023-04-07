@@ -34,8 +34,8 @@ def run(product_url, page):
         )
     except MustBeReloadedException:
         import os
-        print("Critical error. Reloading script...")
-        logging.warning("Critical error. Reloading script...")
+        print("Script must be reloaded. All data is saved. Reloading...")
+        logging.warning("Script must be reloaded. All data is saved. Reloading...")
         if browser_inst and browser_inst.browser:
             browser_inst.browser.quit()
         if product and product.reviews:
@@ -45,8 +45,9 @@ def run(product_url, page):
                 sys.argv.append(product.reviews.page)
         os.execv(sys.executable, [sys.executable] + sys.argv)
         sys.exit(0)
-    except Exception:
-        print("Error when creating AmazonRequest")
+    except Exception as e:
+        print("An error occurred. Warning code:", e)
+        print("An error occurred. Warning code:" + str(e))
         logging.warning("Error when creating AmazonRequest")
         if browser_inst and browser_inst.browser:
             browser_inst.browser.quit()
@@ -55,10 +56,10 @@ def run(product_url, page):
     try:
         product.reviews_collect()
         browser_inst.browser.quit()
-    except (WebDriverException, MaxRetryError, InvalidSessionIdException, MustBeReloadedException):
+    except (WebDriverException, MaxRetryError, InvalidSessionIdException, MustBeReloadedException) as e:
         import os
-        print("Critical error. Reloading script...")
-        logging.warning("Critical error. Reloading script...")
+        print("Script must be reloaded. All data is saved. Warning code:", e)
+        logging.warning("Script must be reloaded. All data is saved. Warning code:" + str(e))
         if browser_inst and browser_inst.browser:
             browser_inst.browser.quit()
         os.execv(sys.executable, [sys.executable] + sys.argv)
