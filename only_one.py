@@ -16,7 +16,7 @@ else:
     current_reviews_page = state()['reviews_page']
 
 
-def run(page):
+def run(product_url, page):
     from selenium.common import WebDriverException
     from selenium.common.exceptions import InvalidSessionIdException
     from urllib3.exceptions import MaxRetryError
@@ -25,9 +25,6 @@ def run(page):
 
     browser_inst = product = None
     try:
-        product_url = 'https://www.amazon.com/Sugarbear-Vitamin-Gummies-Chewable-Supplement/dp/B019ZZB3O2/ref=sr_1_8' \
-                      '?crid=1A032JAVNFCZ4&keywords=hair+gummies&qid=1680186819&sprefix=hair+gummies%2Caps%2C146&sr=8' \
-                      '-8'
         browser_inst = AmazonRequest(url=product_url)
         product = ProductFull(
             url=product_url,
@@ -69,4 +66,4 @@ def run(page):
 
 
 if __name__ == '__main__':
-    run(current_reviews_page)
+    run(input("Please, input product's url: "), current_reviews_page)
