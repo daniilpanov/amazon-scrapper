@@ -395,7 +395,7 @@ class ReviewBlock:
             re.sub(' +', ' ', '. '.join(review_body.get_text("\n").strip().splitlines())).strip() if review_body\
             else '<images>'
         # 6. quantity of people who find this review helpful
-        self.votes = html.find('span', {'data-hook': 'helpful-votes-statement'})
+        self.votes = html.find('span', {'data-hook': 'helpful-vote-statement'})
         if self.votes:
             self.votes = self.votes.text.split(' ')[0]
             if self.votes == 'One':
