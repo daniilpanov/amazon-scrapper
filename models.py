@@ -197,16 +197,12 @@ class ProductFull:
             if len(reviews_count_raw) > 1:
                 self.reviews_count = int(reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip())
         # collect all
-        # if more than 5k uses the filter trick
-<<<<<<< Updated upstream
-        if self.reviews_count > 5000:
-=======
+        # if more than 5k, or we have to continue filtered collection we use the filter trick
         if self.reviews_count > 5000 or bool(state()['filtered']):
             if int(state()['rating']) > 5:
                 state(filtered=1, rating=5)
             else:
                 state(filtered=1)
->>>>>>> Stashed changes
             self.reviews = FilteredReviews(
                 product=self,
                 reviews_page=state()['reviews_page'],
