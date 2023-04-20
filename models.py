@@ -133,7 +133,7 @@ class ProductFull:
         self.category = kwargs.get('category') or None
         self.page = kwargs.get('page') or None
         self.dirname = kwargs.get('dirname') or None
-        self.url = '/'.join(kwargs.get('url').split('/')[:-1])
+        self.url = '/'.join(kwargs.get('url').split('/'))
         self.asin = self.url.split('/')[5]
         self.alias = self.url.split('/')[3]
         self.reviews: typing.Union[ReviewsFull, None] = None

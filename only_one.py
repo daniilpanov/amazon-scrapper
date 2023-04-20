@@ -47,11 +47,10 @@ def run(product_url, page):
         sys.exit(0)
     except Exception as e:
         print("An error occurred. Warning code:", e)
-        print("An error occurred. Warning code:" + str(e))
         logging.warning("Error when creating AmazonRequest")
         if browser_inst and browser_inst.browser:
             browser_inst.browser.quit()
-        sys.exit(1)
+        raise e
 
     try:
         product.reviews_collect()
@@ -67,4 +66,4 @@ def run(product_url, page):
 
 
 if __name__ == '__main__':
-    run(input("Please, input product's url: "), current_reviews_page)
+    run(state()['product_url'] or input("Please, input product's url: "), current_reviews_page)
