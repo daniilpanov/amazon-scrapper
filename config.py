@@ -32,9 +32,6 @@ def r(): return get_file('reviews.csv')
 def j(): return get_file('data.json')
 
 
-defaultstate = None
-
-
 def state(**kwargs) -> dict:
     """
     param str products_page: Link to the products' page of the current search.
@@ -49,8 +46,8 @@ def state(**kwargs) -> dict:
                     we'll get less than 5k reviews, but the total number of reviews exceeds 5k.
     :rtype: dict All config
     """
-    global defaultstate
-    path = os.path.join(FOLDER_NAME, 'state.dat')
+    statefile = kwargs.get('filename', False)
+    path = os.path.join(FOLDER_NAME, statefile or 'state.dat')
     new_data = dict()
     data = dict()
 
@@ -62,17 +59,20 @@ def state(**kwargs) -> dict:
         f.close()
     else:
         open(path, 'w').close()
-        return state(products_page='', product_url='', reviews_page='', current_state=0, rating=6, filtered=0)
+        if not statefile:
+            return state(products_page='', product_url='', reviews_page='', current_state=0, rating=6, filtered=0)
+        else:
+            return dict()
 
     for key in kwargs:
-        new_data[key] = kwargs.get(key)
+        if key != 'filename':
+            new_data[key] = kwargs.get(key)
 
     if new_data != data:
         f = open(path, 'w')
         f.writelines(map(lambda x: x + '=' + str(new_data[x]) + '\n', new_data))
         f.close()
 
-    defaultstate = data
     return data
 
 
