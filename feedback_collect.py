@@ -2,17 +2,13 @@ import os
 from time import sleep
 
 from pandas import DataFrame
-from selenium import webdriver
-from selenium.webdriver.chrome.webdriver import WebDriver
 
-from random_user_agent.user_agent import UserAgent
-from random_user_agent.params import OperatingSystem, SoftwareName
+from initialization import initialize
+from configuration import FOLDER_NAME, State, get_file_write_mode
 
-from config import WEBDRIVER_PATH, HEADLESS, state, get_file, FOLDER_NAME
-
-st = state(filename='feedback__state.dat')
+st = State('feedback__state.dat')
 marketplaceID = None
-if st:
+if st.has_data():
     seller = st['seller']
     marketplaceID = st['marketplaceID']
     start_rating = int(st['rating'])
@@ -24,23 +20,7 @@ else:
     start_rating = 1
     start_page = 0
 
-options = webdriver.ChromeOptions()
-options.add_argument('--window-size=1920,1080')
-options.add_argument('--start-maximized')
-options.add_experimental_option('excludeSwitches', ['enable-automation'])
-options.add_experimental_option('useAutomationExtension', False)
-if HEADLESS:
-    options.add_argument('--headless')
-options.add_argument('--no-sandbox')
-options.add_argument('--disable-gpu')
-options.add_argument('--disable-dev-shm-usage')
-options.add_argument(
-    f'user-agent={UserAgent(software_names=(SoftwareName.CHROME.value,), operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value), limit=120).get_random_user_agent()}'
-)
-options.add_argument('--ignore-certificate-errors-spki-list')
-options.add_argument('--ignore-ssl-errors')
-
-selenium = WebDriver(WEBDRIVER_PATH, options=options)
+selenium = initialize()
 
 # https://www.amazon.com/sp?ie=UTF8&seller=ANLM9VGDHWW4V
 selenium.get("https://www.amazon.com/sp?ie=UTF8&seller=" + seller)
@@ -51,15 +31,20 @@ document.getElementsByTagName('head')[0].appendChild(jq);
 """)
 sleep(1)
 
-if not st:
+if not st.has_data():
     marketplaceID = selenium.execute_script("return ue_mid")
-    state(filename='feedback__state.dat', seller=seller, marketplaceID=marketplaceID)
+    st['seller'] = seller
+    st['marketplaceID'] = marketplaceID
+    st.write()
 
 for rating in range(start_rating, 6):
-    state(filename='feedback__state.dat', rating=rating)
+    st['rating'] = rating
+    st.write()
     data = DataFrame()
     for page in range(start_page, 101):
-        state(filename='feedback__state.dat', page=page, got=0)
+        st['page'] = page
+        st['got'] = 0
+        st.write()
         res = selenium.execute_script("""
         var a = $.post(
             "https://www.amazon.com/sp/ajax/feedback",
@@ -96,10 +81,11 @@ for rating in range(start_rating, 6):
         new_data.to_csv(
             os.path.join(FOLDER_NAME, 'feedback.csv'),
             index=False,
-            mode=get_file('feedback.csv'),
-            header=get_file('feedback.csv') == 'w',
+            mode=get_file_write_mode('feedback.csv'),
+            header=get_file_write_mode('feedback.csv') == 'w',
         )
-        state(filename='feedback__state.dat', got=1)
+        st['got'] = 1
+        st.write()
     start_page = 0
 
 
