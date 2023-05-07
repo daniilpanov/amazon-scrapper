@@ -1,6 +1,15 @@
+from time import sleep
+
+from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import WebDriverException, TimeoutException, NoSuchElementException
+import logging
+
+
 def initialize():
     from selenium import webdriver
-    from selenium.webdriver.chrome.webdriver import WebDriver
 
     from random_user_agent.user_agent import UserAgent
     from random_user_agent.params import OperatingSystem, SoftwareName
@@ -8,7 +17,7 @@ def initialize():
     from configuration import WEBDRIVER_PATH, HEADLESS
 
     options = webdriver.ChromeOptions()
-    options.add_argument('--window-size=1920,1080')
+    # options.add_argument('--window-size=1920,1080')
     options.add_argument('--start-maximized')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
@@ -22,5 +31,44 @@ def initialize():
     )
     options.add_argument('--ignore-certificate-errors-spki-list')
     options.add_argument('--ignore-ssl-errors')
+    options.add_argument('--log-level=3')
+    logger = logging.getLogger('selenium.webdriver.remote.remote_connection')
+    logger.setLevel(logging.CRITICAL)  # or any variant from WARNING, ERROR, CRITICAL or NOTSET
 
-    return WebDriver(WEBDRIVER_PATH, options=options)
+    return CustomSelenium(WEBDRIVER_PATH, options=options)
+
+
+class CustomSelenium(WebDriver):
+    jquery_inserted = False
+
+    def insert_jquery(self):
+        if not self.jquery_inserted:
+            self.execute_script("""
+            var jq = document.createElement('script');
+            jq.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js";
+            document.getElementsByTagName('head')[0].appendChild(jq);
+            """)
+            sleep(1)
+            self.jquery_inserted = True
+
+    def insert_script(self, js_script: str):
+        self.insert_jquery()
+        self.execute_script("""
+        $("<script>").html(" """ + js_script.replace('"', '\\"') + """ ").appendTo($("body"));
+        """)
+
+    def write_answer(self, js_code):
+        self.execute_script("""
+        $("#answer").text({});
+        """.format(js_code))
+
+    def get_answer(self):
+        return self.get_items("answer", By.ID, single=True)
+
+    def get_items(self, path, by=By.CSS_SELECTOR, wait=True, single=False):
+        try:
+            if wait:
+                WebDriverWait(self, 10000).until(EC.presence_of_element_located((by, path)))
+            return self.find_element(by, path) if single else self.find_elements(by, path)
+        except NoSuchElementException | TimeoutException | WebDriverException:
+            return None

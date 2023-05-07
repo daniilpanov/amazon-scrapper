@@ -7,8 +7,9 @@ from initialization import initialize
 from configuration import FOLDER_NAME, State, get_file_write_mode
 
 st = State('feedback__state.dat')
+print(st.data)
 marketplaceID = None
-if st.has_data():
+if st.has_data() and st['rating'] and st['page'] and st['got']:
     seller = st['seller']
     marketplaceID = st['marketplaceID']
     start_rating = int(st['rating'])
@@ -24,12 +25,7 @@ selenium = initialize()
 
 # https://www.amazon.com/sp?ie=UTF8&seller=ANLM9VGDHWW4V
 selenium.get("https://www.amazon.com/sp?ie=UTF8&seller=" + seller)
-selenium.execute_script("""
-var jq = document.createElement('script');
-jq.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js";
-document.getElementsByTagName('head')[0].appendChild(jq);
-""")
-sleep(1)
+selenium.insert_jquery()
 
 if not st.has_data():
     marketplaceID = selenium.execute_script("return ue_mid")
@@ -79,10 +75,10 @@ for rating in range(start_rating, 6):
             break
         data = new_data
         new_data.to_csv(
-            os.path.join(FOLDER_NAME, 'feedback.csv'),
+            os.path.join(FOLDER_NAME, 'feedback__OLD.csv'),
             index=False,
-            mode=get_file_write_mode('feedback.csv'),
-            header=get_file_write_mode('feedback.csv') == 'w',
+            mode=get_file_write_mode('feedback__OLD.csv'),
+            header=get_file_write_mode('feedback__OLD.csv') == 'w',
         )
         st['got'] = 1
         st.write()
