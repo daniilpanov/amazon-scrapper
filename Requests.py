@@ -214,7 +214,7 @@ class ReviewsRequest(Request):
                 if helpful_votes == 'One':
                     helpful_votes = 1
                 else:
-                    helpful_votes = int(helpful_votes)
+                    helpful_votes = int(helpful_votes.replace(',', ''))
             else:
                 helpful_votes = 0
             # Options
