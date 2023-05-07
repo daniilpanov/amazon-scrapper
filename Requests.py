@@ -170,7 +170,10 @@ class ReviewsRequest(Request):
             return False
         reviews_count_raw = reviews_count_el.text.split('total ratings, ')
         if len(reviews_count_raw) > 1:
-            reviews_count = int(reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip())
+            reviews_count = reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip()
+            if 'with review' in reviews_count:
+                reviews_count = reviews_count.replace(' with review', '')
+            reviews_count = int(reviews_count)
         else:
             reviews_count = None
 
