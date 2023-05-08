@@ -43,9 +43,8 @@ try:
     sleep(5)
     search_input.send_keys(Keys.ENTER)
     sleep(5)
+    max_page = 7
     # get data
-    last_page = selenium.get_items('.s-pagination-container span.s-pagination-item')[-1]
-    max_page = int(last_page.text.strip())
     # get `qid` param: click to any pagination link
     pagination_button = selenium.get_items('a.s-pagination-item.s-pagination-button', wait=False, single=True)
     if pagination_button:
@@ -62,7 +61,9 @@ try:
     start_page = int(st['page'] or 1)
     start_page += int(st['page_ready'] or 0)
 
-    for page in range(start_page, max_page + 1):
+    page = start_page
+
+    while page <= max_page:
         st['page'] = page
         st['page_ready'] = 0
         st['error_on_page'] = 0
@@ -73,12 +74,17 @@ try:
         if not req.send(selenium):
             print('ERROR!')
             st['error_on_page'] = 1
+            st.write()
             break
-        req.processing()
+
+        count_all_results = req.processing()
+        if count_all_results > 0:
+            max_page = count_all_results // 48 + 1 if count_all_results // 48 + 1 <= 7 else 7
 
         st['page_ready'] = 1
-        st['shift_sections'] = 0
+        st['last_asin'] = ''
         st.write()
+        page += 1
 
     selenium.close()
 except Exception as e:

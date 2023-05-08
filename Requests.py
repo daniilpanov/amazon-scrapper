@@ -74,9 +74,14 @@ class ProductsRequest(Request):
         self.state.write()
 
         ready = not self.state['last_asin']
+        count_all_products = 0
 
         for item in raw_data:
-            if 'data-main-slot:search-result-' in item[1] and (ready or item[2]['asin'] == self.state['last_asin']):
+            if count_all_products > 0 and count_all_products // 48 + 1 < self.params['pageNumber']:
+                return count_all_products
+            if 'data-search-metadata' in item[1]:
+                count_all_products = item[2]['metadata']['totalResultCount']
+            elif 'data-main-slot:search-result-' in item[1] and (ready or item[2]['asin'] == self.state['last_asin']):
                 ready = True
                 if self.state['last_asin_ready']:
                     self.state['last_asin_ready'] = 0
@@ -96,6 +101,8 @@ class ProductsRequest(Request):
                     self.state.write()
                 self.state['last_asin_ready'] = 1
                 self.state.write()
+
+        return count_all_products
 
 
 class ReviewsPoolRequests:
