@@ -58,7 +58,7 @@ class ProductsRequest(Request):
     def __init__(self, directory, state, **kwargs):
         self.directory = directory
         self.state = state
-        kwargs = {'pageNumber': 1, 'scope': 'reviewsAjax0', 'reftag': 'cm_cr_arp_d_viewopt_sr'} | kwargs
+        kwargs = {'pageNumber': 1, 'scope': 'reviewsAjax0', 'reftag': 'cm_cr_arp_d_viewopt_sr', **kwargs}
         super().__init__(**kwargs)
         self.web_driver = kwargs.get('web_driver')
 
