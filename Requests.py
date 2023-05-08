@@ -159,13 +159,14 @@ class ReviewsRequest(Request):
 
     def __init__(self, **kwargs):
         kwargs = {
-                     'sortBy': 'helpful',
-                     'filterByStar': 'five_star',
-                     'scope': 'reviewsAjax3',
-                     'reftag': 'cm_cr_arp_d_viewopt_srt',
-                     'pageSize': 13,
-                     'pageNumber': 1,
-                 } | kwargs
+            'sortBy': 'helpful',
+            'filterByStar': 'five_star',
+            'scope': 'reviewsAjax3',
+            'reftag': 'cm_cr_arp_d_viewopt_srt',
+            'pageSize': 13,
+            'pageNumber': 1,
+            **kwargs
+        }
         super().__init__(**kwargs)
 
     def processing(self):
