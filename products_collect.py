@@ -35,6 +35,11 @@ try:
     page = 1
 
     args = get_args(selenium, True, True)
+    if '-v' in sys.argv:
+        print('arguments loaded successfully')
+        print('-----------')
+        print(args)
+        print('-----------')
 
     # processing
     with open(os.path.join(FOLDER_NAME, 'products_list.csv'), 'w') as f:
