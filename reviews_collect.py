@@ -1,9 +1,10 @@
 import os
 import sys
+from time import sleep
 
 from Requests import ReviewsPoolRequests
 from initialization import initialize
-from configuration import State, FOLDER_NAME
+from configuration import State, FOLDER_NAME, MAX_RETRIES
 
 try:
     # SETTINGS UP
@@ -74,9 +75,26 @@ except Exception as e:
             print(e)
     else:
         print('An error was occurred when collecting. Will try to reload script')
+
+        args = [sys.executable, sys.argv[0]]
         if '-v' in sys.argv:
             print(e)
+            args.append('-v')
 
-        os.execv(sys.executable, [sys.executable, sys.argv[0]])
+        trying = 0
+        for i in range(len(sys.argv) - 1):
+            if sys.argv[i] == '--trying':
+                trying = (int(sys.argv[i + 1]) + 1) if sys.argv[i + 1].isdigit() else 0
+                break
+
+        if trying < MAX_RETRIES:
+            args.append('--trying')
+            args.append(str(trying))
+            os.execv(sys.executable, args)
+        elif trying == MAX_RETRIES:
+            sleep(60)
+            args.append('--trying')
+            args.append(str(trying))
+            os.execv(sys.executable, args)
+
     sys.exit(0)
-
