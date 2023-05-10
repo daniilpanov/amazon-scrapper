@@ -46,6 +46,9 @@ class State:
                 self.data[row[0]] = '='.join(row[1:]) if len(row) > 1 else ''
         self.write()
 
+    def set_data(self, data: dict):
+        self.data = data
+
     def write(self):
         with open(self.filename, 'w') as state_file:
             if self.data:

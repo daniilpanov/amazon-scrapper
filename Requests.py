@@ -1,4 +1,5 @@
 import os
+from io import TextIOWrapper
 from json import JSONDecoder
 from time import sleep
 from typing import Union
@@ -55,9 +56,9 @@ class ProductsRequest(Request):
     def url(self):
         return 'https://www.amazon.com/s/query' + self.params_to_str()
 
-    def __init__(self, directory, state, **kwargs):
+    def __init__(self, directory, file, **kwargs):
         self.directory = directory
-        self.state = state
+        self.file: TextIOWrapper = file
         kwargs = {'pageNumber': 1, 'scope': 'reviewsAjax0', 'reftag': 'cm_cr_arp_d_viewopt_sr', **kwargs}
         super().__init__(**kwargs)
         self.web_driver = kwargs.get('web_driver')
@@ -69,38 +70,17 @@ class ProductsRequest(Request):
 
     def processing(self):
         raw_data = super().processing()
-        self.state['last_asin']: Union[str, None]
-        self.state['last_asin_ready'] = int(self.state['last_asin_ready'] or 0)
-        self.state.write()
-
-        ready = not self.state['last_asin']
         count_all_products = 0
+        asins = []
 
         for item in raw_data:
             if count_all_products > 0 and count_all_products // 48 + 1 < self.params['pageNumber']:
                 return count_all_products
             if 'data-search-metadata' in item[1]:
                 count_all_products = item[2]['metadata']['totalResultCount']
-            elif 'data-main-slot:search-result-' in item[1] and (ready or item[2]['asin'] == self.state['last_asin']):
-                ready = True
-                if self.state['last_asin_ready']:
-                    self.state['last_asin_ready'] = 0
-                    continue
-                self.state['last_asin_ready'] = 0
-                self.state.write()
-                product_asin = self.state['last_asin'] = item[2]['asin']
-                self.state['stars'] = int(self.state['stars'] or 1)
-                if self.state['stars'] > 5:
-                    self.state['stars'] = 1
-                for i in range(self.state['stars'], 6):
-                    print('https://www.amazon.com/dp/' + product_asin, '; stars:', i)
-                    req = ReviewsPoolRequests(product_asin, i, self.web_driver, self.directory, self.state)
-                    req.processing()
-                    self.state['reviews_page'] = 0
-                    self.state['stars'] = i + 1
-                    self.state.write()
-                self.state['last_asin_ready'] = 1
-                self.state.write()
+            elif 'data-main-slot:search-result-' in item[1]:
+                asins.append(item[2]['asin'] + '\n')
+        self.file.writelines(asins)
 
         return count_all_products
 
@@ -148,8 +128,8 @@ class ReviewsPoolRequests:
 
     def iter(self, data):
         df = DataFrame(data)
-        path = os.path.join(self.directory, 'reviews.csv')
-        wm = get_file_write_mode('reviews.csv')
+        path = os.path.join(self.directory, 'reviews_list.csv')
+        wm = get_file_write_mode('reviews_list.csv')
         df.to_csv(path, index=False, mode=wm, header=wm == 'w')
 
 
