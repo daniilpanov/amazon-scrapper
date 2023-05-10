@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 
-def uniqulize(filepath):
+def uniqulize(filepath, output='output.csv'):
     with open(filepath, encoding='utf-8') as f:
         datalist = [row.strip() + '\n' for row in f]
         dataset = set(datalist)
 
-    with open('output.csv', 'w', encoding='utf-8') as f:
+    with open(output, 'w', encoding='utf-8') as f:
         for row in datalist:
             if row in dataset:
                 dataset.remove(row)
@@ -14,7 +14,7 @@ def uniqulize(filepath):
 
 
 if __name__ == '__main__':
-    # uniquliser
+    # uniqulizer
     import os.path
 
     path: str = "reviews.csv"
