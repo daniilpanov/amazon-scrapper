@@ -1,8 +1,6 @@
 import os
 import sys
 
-import pandas as pd
-
 from Requests import ReviewsPoolRequests
 from initialization import initialize
 from configuration import State, FOLDER_NAME
