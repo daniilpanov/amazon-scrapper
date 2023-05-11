@@ -87,12 +87,8 @@ except Exception as e:
                 trying = (int(sys.argv[i + 1]) + 1) if sys.argv[i + 1].isdigit() else 0
                 break
 
-        if trying < MAX_RETRIES:
-            args.append('--trying')
-            args.append(str(trying))
-            os.execv(sys.executable, args)
-        elif trying == MAX_RETRIES:
-            sleep(60)
+        if trying <= int(MAX_RETRIES):
+            sleep(10)
             args.append('--trying')
             args.append(str(trying))
             os.execv(sys.executable, args)
