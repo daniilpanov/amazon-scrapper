@@ -11,7 +11,7 @@ try:
     st = State('reviews_collect__state.dat')
 
     # PREPARE
-    selenium = initialize()
+    selenium, thread = initialize(True)
     selenium.get('https://www.amazon.com/')
     # GET DATA
     # Loading dump
@@ -23,6 +23,8 @@ try:
         print(' ******************************** ')
     current_asin = st['current_asin']
     ready = not current_asin
+    sleep(20)
+    thread.start()
 
     # processing
     for product in products:
@@ -59,10 +61,12 @@ try:
         st['asin_ready'] = 1
         st.write()
 
+    thread.stop()
     selenium.close()
     print('Reviews collecting done! Running uniqulizer and closing script...')
-    from uniqulizer import uniqulize
-    uniqulize(
+    from uniqulizer import uniqulize_by_df
+
+    uniqulize_by_df(
         os.path.join(FOLDER_NAME, 'reviews_list.csv'),
         os.path.join(FOLDER_NAME, 'unique_reviews_list.csv'),
     )

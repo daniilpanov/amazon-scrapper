@@ -1,3 +1,4 @@
+import random
 from time import sleep
 
 from selenium.webdriver.chrome.webdriver import WebDriver
@@ -8,7 +9,7 @@ from selenium.common.exceptions import WebDriverException, TimeoutException, NoS
 import logging
 
 
-def initialize():
+def initialize(simulate_user=False):
     from selenium import webdriver
 
     from random_user_agent.user_agent import UserAgent
@@ -35,7 +36,34 @@ def initialize():
     logger = logging.getLogger('selenium.webdriver.remote.remote_connection')
     logger.setLevel(logging.CRITICAL)  # or any variant from WARNING, ERROR, CRITICAL or NOTSET
 
-    return CustomSelenium(WEBDRIVER_PATH, options=options)
+    cs = CustomSelenium(WEBDRIVER_PATH, options=options)
+    if simulate_user:
+        from selenium.webdriver.common.keys import Keys
+        from selenium.webdriver.common.action_chains import ActionChains
+        import threading
+        import time
+
+        def input_thread():
+            actions = [
+                Keys.ARROW_DOWN, Keys.ARROW_UP, Keys.ARROW_LEFT, Keys.ARROW_RIGHT,
+                Keys.PAGE_UP, Keys.PAGE_DOWN,
+                Keys.PAGE_UP, Keys.PAGE_DOWN,
+                Keys.PAGE_UP, Keys.PAGE_DOWN,
+            ]
+            while True:
+                # create an ActionChains object
+                action = ActionChains(cs)
+                # perform a key-press action
+                cs.execute_script("document.body.focus();")
+                action.send_keys(actions[random.randint(0, len(actions) - 1)]).perform()
+                # wait for some time
+                time.sleep(random.randint(1, 60))
+
+        # create a new thread for the input actions
+        inputThread = threading.Thread(target=input_thread)
+        return cs, inputThread
+
+    return cs
 
 
 class CustomSelenium(WebDriver):
