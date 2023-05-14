@@ -6,6 +6,8 @@ from Requests import ReviewsPoolRequests
 from initialization import initialize
 from configuration import State, FOLDER_NAME, MAX_RETRIES
 
+selenium = None
+
 try:
     # SETTINGS UP
     st = State('reviews_collect__state.dat')
@@ -70,6 +72,8 @@ try:
         os.path.join(FOLDER_NAME, 'unique_reviews_list.csv'),
     )
 except Exception as e:
+    if selenium:
+        selenium.close()
     if '-S' in sys.argv:
         raise e
     elif '-s' in sys.argv:
