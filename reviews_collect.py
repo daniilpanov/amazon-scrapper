@@ -15,6 +15,10 @@ try:
     # PREPARE
     selenium, thread = initialize(True)
     selenium.get('https://www.amazon.com/')
+    sleep(5)
+    if not selenium.captcha_check():
+        print("CAPTCHA!")
+        sys.exit(0)
     # GET DATA
     # Loading dump
     with open(os.path.join(FOLDER_NAME, 'products_list.csv')) as datafile:
@@ -25,7 +29,7 @@ try:
         print(' ******************************** ')
     current_asin = st['current_asin']
     ready = not current_asin
-    sleep(20)
+    sleep(10)
     thread.start()
 
     # processing

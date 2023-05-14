@@ -69,6 +69,23 @@ def initialize(simulate_user=False):
 class CustomSelenium(WebDriver):
     jquery_inserted = False
 
+    def captcha_check(self, just_check=False):
+        captcha = self.get_items(
+            'div.a-box.a-alert.a-alert-info.a-spacing-base > div.a-box-inner > h4',
+            wait=False,
+            single=True,
+        )
+        if just_check:
+            return captcha is None or captcha.text != 'Enter the characters you see below'
+
+        if captcha and captcha.text == 'Enter the characters you see below':
+            buttons = self.get_items('a[onclick="window.location.reload()"]', wait=False)
+            for button in buttons:
+                if button.text == 'Try different image':
+                    button.click()
+                    sleep(5)
+                    return self.captcha_check(True)
+
     def insert_jquery(self):
         if not self.jquery_inserted:
             self.execute_script("""
@@ -98,5 +115,5 @@ class CustomSelenium(WebDriver):
             if wait:
                 WebDriverWait(self, 10000).until(EC.presence_of_element_located((by, path)))
             return self.find_element(by, path) if single else self.find_elements(by, path)
-        except NoSuchElementException | TimeoutException | WebDriverException:
+        except WebDriverException:
             return None
