@@ -61,7 +61,6 @@ try:
         st['asin_ready'] = 1
         st.write()
 
-    thread.stop()
     selenium.close()
     print('Reviews collecting done! Running uniqulizer and closing script...')
     from uniqulizer import uniqulize_by_df

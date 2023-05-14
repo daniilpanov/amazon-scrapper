@@ -60,7 +60,7 @@ def initialize(simulate_user=False):
                 time.sleep(random.randint(1, 60))
 
         # create a new thread for the input actions
-        inputThread = threading.Thread(target=input_thread)
+        inputThread = threading.Thread(target=input_thread, daemon=True)
         return cs, inputThread
 
     return cs
