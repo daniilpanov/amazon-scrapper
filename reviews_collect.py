@@ -13,12 +13,19 @@ try:
     st = State('reviews_collect__state.dat')
 
     # PREPARE
-    selenium, thread = initialize(True)
+    selenium, thread = initialize(True, '-p' in sys.argv)
     selenium.get('https://www.amazon.com/')
-    sleep(5)
-    if not selenium.captcha_check():
-        print("CAPTCHA!")
-        sys.exit(0)
+    sleep(10)
+    if '-C' in sys.argv:
+        if not selenium.captcha_solve():
+            print("CAPTCHA can't be solved!")
+            selenium.close()
+            sys.exit(0)
+    else:
+        if not selenium.captcha_check(not ('-c' in sys.argv)):
+            print("CAPTCHA!")
+            selenium.close()
+            sys.exit(0)
     # GET DATA
     # Loading dump
     with open(os.path.join(FOLDER_NAME, 'products_list.csv')) as datafile:

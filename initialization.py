@@ -1,15 +1,38 @@
+import os.path
 import random
 from time import sleep
 
+import requests
+from bs4 import BeautifulSoup
+from selenium.webdriver import Keys
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException, TimeoutException, NoSuchElementException
+from selenium.common.exceptions import WebDriverException
 import logging
 
+from captcha_solver.solve_captcha_with_model import CaptchaSolver
 
-def initialize(simulate_user=False):
+
+def get_proxy():
+    url = "https://free-proxy-list.net/"
+    # формируем объект sp, получив ответ http
+    sp = BeautifulSoup(requests.get(url).content, "html.parser")
+    proxy = []
+    for row in sp.find("table", attrs={"class": "table table-striped table-bordered"}).find_all("tr")[1:]:
+        tds = row.find_all("td")
+        try:
+            ip = tds[0].text.strip()
+            port = tds[1].text.strip()
+            host = f"{ip}:{port}"
+            proxy.append(host)
+        except IndexError:
+            continue
+    return proxy
+
+
+def initialize(simulate_user=False, proxy=False):
     from selenium import webdriver
 
     from random_user_agent.user_agent import UserAgent
@@ -24,6 +47,10 @@ def initialize(simulate_user=False):
     options.add_experimental_option('useAutomationExtension', False)
     if HEADLESS:
         options.add_argument('--headless')
+    if proxy:
+        proxy = get_proxy()
+        proxy = proxy[random.randint(0, len(proxy) - 1)]
+        options.add_argument('--proxy-server=%s' % proxy)
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-gpu')
     options.add_argument('--disable-dev-shm-usage')
@@ -68,6 +95,31 @@ def initialize(simulate_user=False):
 
 class CustomSelenium(WebDriver):
     jquery_inserted = False
+
+    def captcha_solve(self, retry=True):
+        if not self.captcha_check():
+            captcha = self.get_items('img[src]', wait=False, single=True)
+            img_source = requests.get(captcha.get_attribute('src'))
+            if not img_source:
+                return False
+            if not os.path.exists(os.path.join('.', 'tmp')):
+                os.makedirs('tmp')
+            file = open(os.path.join('tmp', 'captcha.jpg'), 'wb')
+            file.write(img_source.content)
+            file.close()
+            solver = CaptchaSolver('captcha_solver')
+            text = solver.solve('tmp/captcha.jpg')
+            input_element = self.get_items('input[type="text"]', wait=False, single=True)
+            for symbol in text:
+                input_element.send_keys(symbol)
+                sleep(random.randint(0, 2))
+            input_element.send_keys(Keys.ENTER)
+            sleep(10)
+            if not self.captcha_check():
+                if retry:
+                    return self.captcha_solve(False)
+                return False
+        return True
 
     def captcha_check(self, just_check=False):
         captcha = self.get_items(
