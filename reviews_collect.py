@@ -17,10 +17,11 @@ try:
     selenium.get('https://www.amazon.com/')
     sleep(10)
     if '-C' in sys.argv:
-        if not selenium.captcha_solve():
-            print("CAPTCHA can't be solved!")
-            selenium.close()
-            sys.exit(0)
+        # if not selenium.captcha_solve():
+        #     print("CAPTCHA can't be solved!")
+        #     selenium.close()
+        #     sys.exit(0)
+        pass
     else:
         if not selenium.captcha_check(not ('-c' in sys.argv)):
             print("CAPTCHA!")

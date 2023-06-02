@@ -12,7 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
 import logging
 
-from captcha_solver.solve_captcha_with_model import CaptchaSolver
+# from captcha_solver.solve_captcha_with_model import CaptchaSolver
 
 
 def get_proxy():
@@ -96,30 +96,30 @@ def initialize(simulate_user=False, proxy=False):
 class CustomSelenium(WebDriver):
     jquery_inserted = False
 
-    def captcha_solve(self, retry=True):
-        if not self.captcha_check():
-            captcha = self.get_items('img[src]', wait=False, single=True)
-            img_source = requests.get(captcha.get_attribute('src'))
-            if not img_source:
-                return False
-            if not os.path.exists(os.path.join('.', 'tmp')):
-                os.makedirs('tmp')
-            file = open(os.path.join('tmp', 'captcha.jpg'), 'wb')
-            file.write(img_source.content)
-            file.close()
-            solver = CaptchaSolver('captcha_solver')
-            text = solver.solve('tmp/captcha.jpg')
-            input_element = self.get_items('input[type="text"]', wait=False, single=True)
-            for symbol in text:
-                input_element.send_keys(symbol)
-                sleep(random.randint(0, 2))
-            input_element.send_keys(Keys.ENTER)
-            sleep(10)
-            if not self.captcha_check():
-                if retry:
-                    return self.captcha_solve(False)
-                return False
-        return True
+    # def captcha_solve(self, retry=True):
+    #     if not self.captcha_check():
+    #         captcha = self.get_items('img[src]', wait=False, single=True)
+    #         img_source = requests.get(captcha.get_attribute('src'))
+    #         if not img_source:
+    #             return False
+    #         if not os.path.exists(os.path.join('.', 'tmp')):
+    #             os.makedirs('tmp')
+    #         file = open(os.path.join('tmp', 'captcha.jpg'), 'wb')
+    #         file.write(img_source.content)
+    #         file.close()
+    #         solver = CaptchaSolver('captcha_solver')
+    #         text = solver.solve('tmp/captcha.jpg')
+    #         input_element = self.get_items('input[type="text"]', wait=False, single=True)
+    #         for symbol in text:
+    #             input_element.send_keys(symbol)
+    #             sleep(random.randint(0, 2))
+    #         input_element.send_keys(Keys.ENTER)
+    #         sleep(10)
+    #         if not self.captcha_check():
+    #             if retry:
+    #                 return self.captcha_solve(False)
+    #             return False
+    #     return True
 
     def captcha_check(self, just_check=False):
         captcha = self.get_items(
