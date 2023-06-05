@@ -9,7 +9,8 @@ from selenium.webdriver import Keys
 from Requests import ProductsRequest
 from get_args import get_args
 from initialization import initialize
-from configuration import FOLDER_NAME, TIMEOUT, update_config, MAX_RETRIES
+from configuration import FOLDER_NAME, TIMEOUT, update_config, MAX_RETRIES, State
+from uniqulizer import uniqulize_by_df
 
 selenium = None
 
@@ -36,8 +37,10 @@ try:
     if '-v' in sys.argv:
         print('Web driver loaded successfully')
 
+    st = State('products_collect__state.dat')
+
     max_page = 7
-    page = 1
+    page = int(st['page'] or 1)
 
     args = get_args(selenium, True, True)
     if '-v' in sys.argv:
@@ -51,26 +54,36 @@ try:
     error = False
 
     # processing
-    with open(os.path.join(FOLDER_NAME, 'products_list.csv'), 'w') as f:
-        while page <= max_page:
-            args.update(page=page)
-            req = ProductsRequest(FOLDER_NAME, f, **args)
-            if not req.send(selenium):
-                print('ERROR!')
-                error = True
-                break
+    while page <= max_page:
+        f = open(os.path.join(FOLDER_NAME, 'products_list.csv'), 'a' if page > 1 else 'w')
+        args.update(page=page)
+        req = ProductsRequest(FOLDER_NAME, f, **args)
+        if not req.send(selenium, False):
+            print('ERROR!')
+            error = True
+            break
 
-            count_all_results = req.processing()
-            if count_all_results > 0:
-                max_page = count_all_results // 48 + 1 if count_all_results // 48 + 1 <= 7 else 7
-            page += 1
+        count_all_results = req.processing()
+        if count_all_results > 0:
+            max_page = count_all_results // 48 + 1 if count_all_results // 48 + 1 <= 7 else 7
+
+        page += 1
+        st['page'] = str(page)
+        st.write()
 
     selenium.close()
     if '-v' in sys.argv:
+        print('Make the data unique...')
+    uniqulize_by_df(
+        os.path.join(FOLDER_NAME, 'products_list.csv'),
+        os.path.join(FOLDER_NAME, 'uniqulized_products_list.csv'),
+        0
+    )
+    if '-v' in sys.argv:
         if error:
-            print('Products loading ends with some error')
+            print('Products collecting ends with some errors')
         else:
-            print('Products loading done. Now you need to start another script: `reviews_collect.py`')
+            print('Products collecting done. Now you need to start another script: `reviews_collect.py`')
 except WebDriverException as e:
     print('An error was occurred.')
 
@@ -95,7 +108,7 @@ except WebDriverException as e:
     if n > 0:
         args = [sys.executable, sys.argv[0], '-v'] if '-v' in sys.argv else [sys.executable, sys.argv[0]]
         args.append('-n')
-        args.append(n - 1)
+        args.append(str(n - 1))
         os.execv(sys.executable, args)
 except Exception as e:
     print('An error was occurred.')

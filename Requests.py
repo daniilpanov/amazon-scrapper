@@ -1,4 +1,5 @@
 import os
+import sys
 from io import TextIOWrapper
 from json import JSONDecoder
 from time import sleep
@@ -16,6 +17,7 @@ class Request:
     params_auto_paste = False
     method = 'post'
     result = None
+    web_driver: CustomSelenium = None
 
     def __init__(self, **kwargs):
         self.params = kwargs
@@ -23,10 +25,11 @@ class Request:
     def params_to_str(self):
         return '?' + '&'.join('='.join(map(str, keyval)) for keyval in self.params.items())
 
-    def send(self, web_driver: CustomSelenium):
+    def send(self, web_driver: CustomSelenium, except_processing=True):
         if not self.url:
             raise NotImplementedError('Please type the URL')
         try:
+            self.web_driver = web_driver
             web_driver.insert_jquery()
             sleep(1)
             if self.params_auto_paste:
@@ -40,8 +43,11 @@ class Request:
             self.result: str = result
             return True
         except JavascriptException as e:
-            print(e)
-            return False
+            if except_processing:
+                print(e)
+                return False
+            else:
+                raise e
 
     def processing(self):
         if not self.result:
@@ -51,6 +57,8 @@ class Request:
 
 
 class ProductsRequest(Request):
+    web_driver: CustomSelenium
+
     @property
     def url(self):
         return 'https://www.amazon.com/s/query' + self.params_to_str()
@@ -62,15 +70,15 @@ class ProductsRequest(Request):
         super().__init__(**kwargs)
         self.web_driver = kwargs.get('web_driver')
 
-    def send(self, web_driver=None):
+    def send(self, web_driver=None, except_processing=True):
         if not self.web_driver:
             self.web_driver = web_driver
-        return super().send(web_driver or self.web_driver)
+        return super().send(web_driver or self.web_driver, except_processing)
 
     def processing(self):
         raw_data = super().processing()
         count_all_products = 0
-        rows = [] if self.params.get('page') > 1 else ['asin,overall_rating,rating1,rating2,rating3,rating4,rating5\n']
+        rows = [] if self.params.get('page') > 1 else ['asin,rating,reviews_count,1star,2star,3star,4star,5star\n']
 
         for item in raw_data:
             if count_all_products > 0 and count_all_products // 48 + 1 < self.params['pageNumber']:
@@ -82,18 +90,76 @@ class ProductsRequest(Request):
                 overall_rating_el = soup.select_one(
                     '.a-size-small > span > .a-declarative[data-csa-c-func-deps="aui-da-a-popover"] span.a-icon-alt')
                 if not overall_rating_el:
-                    overall_rating = '0,0,0,0,0,0'
+                    print(item[2]['asin'] + ' has no reviews')
+                    overall_rating = '0,0,0,0,0,0,0'
                 else:
-                    overall_rating = overall_rating_el.text.replace(' out of 5 stars', '').strip()
-                    for i in range(1, 5):
-                        r_request = ReviewsRequest(asin=item[2]['asin'], filterByStar=ReviewsPoolRequests.get_star(i))
-                        r_request.send(self.web_driver)
-                        overall_rating += ',' + str(r_request.processing(True))
+                    overall_rating = overall_rating_el.text.replace(' out of 5 stars', '').strip() + ',0,0,0,0,0,0'
+                    req = ReviewsTotalRequest(item[2]['asin'])
+                    req.send(self.web_driver)
+                    data = req.processing()
+                    print(data)
+                    if data:
+                        overall_rating = ','.join(data)
+                    print(item[2]['asin'] + ': ' + overall_rating)
+
                 rows.append(item[2]['asin'] + ',' + str(overall_rating) + '\n')
 
         self.file.writelines(rows)
+        self.file.close()
 
         return count_all_products
+
+
+class ReviewsTotalRequest(Request):
+    method = 'get'
+
+    @property
+    def url(self):
+        return 'https://www.amazon.com/gp/customer-reviews/widgets/average-customer-review/popover/ref=dpx_acr_pop_'\
+               + self.params_to_str()
+
+    def __init__(self, asin, retry=True):
+        self.retry = retry
+        kwargs = {'asin': asin, 'contextId': 'dpx'}
+        super().__init__(**kwargs)
+
+    def processing(self):
+        if not self.result:
+            if self.retry:
+                req = ReviewsTotalRequest(self.params.get('asin'), False)
+                req.send(self.web_driver)
+                return req.processing()
+            return False
+        soup = BeautifulSoup(self.result, features='html.parser')
+        data = []
+        # rating
+        print(0)
+        rating = soup.find('span', attrs={'data-hook': 'acr-average-stars-rating-text'})
+        if not rating:
+            return False
+        rating = rating.text.replace(' out of 5', '').strip()
+        print(1)
+        if not rating or not rating.replace('.', '').isdecimal():
+            return False
+        print(2)
+        data.append(rating)
+        # reviews count
+        total_reviews = soup.find('span', attrs={'data-hook': 'total-review-count'})
+        if not total_reviews:
+            return False
+        print(3)
+        total_reviews = total_reviews.text.replace(' global ratings', '').replace(' global rating', '')\
+            .replace(',', '').strip()
+        if not total_reviews.isdigit():
+            return False
+        print(4)
+        data.append(total_reviews)
+        # stars
+        reviews_table = soup.select('#histogramTable tr td.a-text-right.a-nowrap')
+        for item in reviews_table:
+            data.append(item.text.strip())
+        print(5)
+        return data
 
 
 class ReviewsPoolRequests:
@@ -166,6 +232,8 @@ class ReviewsRequest(Request):
 
     def processing(self, count_reviews_only=False):
         raw_data = super().processing()
+        if not raw_data:
+            return False
         data_with_quantity = raw_data[1][2]
         parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
         reviews_count_el = parser.find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
@@ -178,7 +246,7 @@ class ReviewsRequest(Request):
                 reviews_count = reviews_count.replace(' with review', '')
             reviews_count = int(reviews_count)
         else:
-            reviews_count = None
+            reviews_count = 0
 
         if count_reviews_only:
             return reviews_count
