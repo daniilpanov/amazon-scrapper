@@ -1,10 +1,9 @@
-import os.path
 import random
+import time
 from time import sleep
 
 import requests
 from bs4 import BeautifulSoup
-from selenium.webdriver import Keys
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -95,6 +94,11 @@ def initialize(simulate_user=False, proxy=False):
 
 class CustomSelenium(WebDriver):
     jquery_inserted = False
+    start_timestamp: float
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start_timestamp = time.time()
 
     # def captcha_solve(self, retry=True):
     #     if not self.captcha_check():
@@ -122,6 +126,7 @@ class CustomSelenium(WebDriver):
     #     return True
 
     def captcha_check(self, just_check=False):
+        self.insert_jquery()
         captcha = self.get_items(
             'div.a-box.a-alert.a-alert-info.a-spacing-base > div.a-box-inner > h4',
             wait=False,
@@ -155,6 +160,7 @@ class CustomSelenium(WebDriver):
         """)
 
     def write_answer(self, js_code):
+        self.insert_jquery()
         self.execute_script("""
         $("#answer").text({});
         """.format(js_code))

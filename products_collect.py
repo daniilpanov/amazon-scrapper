@@ -1,13 +1,17 @@
 import os.path
 import sys
+import time
 from time import sleep
 
+from selenium.common import WebDriverException
 from selenium.webdriver import Keys
 
 from Requests import ProductsRequest
 from get_args import get_args
 from initialization import initialize
-from configuration import FOLDER_NAME
+from configuration import FOLDER_NAME, TIMEOUT, update_config, MAX_RETRIES
+
+selenium = None
 
 try:
     # SETTINGS UP
@@ -20,7 +24,7 @@ try:
     if '-v' in sys.argv:
         print('Products loading started...')
     # PREPARE
-    selenium = initialize()
+    selenium, thread = initialize(True)
     selenium.get('https://www.amazon.com/')
     # type the request
     search_input = selenium.get_items('#twotabsearchtextbox,#nav-bb-search', single=True)
@@ -28,6 +32,7 @@ try:
     sleep(5)
     search_input.send_keys(Keys.ENTER)
     sleep(5)
+    selenium.insert_jquery()
     if '-v' in sys.argv:
         print('Web driver loaded successfully')
 
@@ -41,6 +46,10 @@ try:
         print(args)
         print('-----------')
 
+    sleep(10)
+    thread.start()
+    error = False
+
     # processing
     with open(os.path.join(FOLDER_NAME, 'products_list.csv'), 'w') as f:
         while page <= max_page:
@@ -48,6 +57,7 @@ try:
             req = ProductsRequest(FOLDER_NAME, f, **args)
             if not req.send(selenium):
                 print('ERROR!')
+                error = True
                 break
 
             count_all_results = req.processing()
@@ -57,8 +67,39 @@ try:
 
     selenium.close()
     if '-v' in sys.argv:
-        print('Products loading done. Now you need to start another script: `reviews_collect.py`')
+        if error:
+            print('Products loading ends with some error')
+        else:
+            print('Products loading done. Now you need to start another script: `reviews_collect.py`')
+except WebDriverException as e:
+    print('An error was occurred.')
+
+    if selenium:
+        interval = time.time() - selenium.start_timestamp
+        if interval < TIMEOUT:
+            TIMEOUT = interval
+            update_config()
+        selenium.close()
+
+    if '-v' in sys.argv:
+        if '-s' in sys.argv:
+            raise e
+        else:
+            print(e)
+
+    n = MAX_RETRIES
+    for i in range(len(sys.argv) - 1):
+        if sys.argv[i] == '-n' and sys.argv[i + 1].isdigit():
+            n -= int(sys.argv[i + 1])
+            break
+    if n > 0:
+        args = [sys.executable, sys.argv[0], '-v'] if '-v' in sys.argv else [sys.executable, sys.argv[0]]
+        args.append('-n')
+        args.append(n - 1)
+        os.execv(sys.executable, args)
 except Exception as e:
     print('An error was occurred.')
+    if selenium:
+        selenium.close()
     if '-v' in sys.argv:
         raise e
