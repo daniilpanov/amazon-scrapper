@@ -2,7 +2,6 @@ import os
 from io import TextIOWrapper
 from json import JSONDecoder
 from time import sleep
-from typing import Union
 
 from bs4 import BeautifulSoup
 from pandas import DataFrame
@@ -71,7 +70,7 @@ class ProductsRequest(Request):
     def processing(self):
         raw_data = super().processing()
         count_all_products = 0
-        asins = []
+        rows = [] if self.params.get('page') > 1 else ['asin,overall_rating,rating1,rating2,rating3,rating4,rating5\n']
 
         for item in raw_data:
             if count_all_products > 0 and count_all_products // 48 + 1 < self.params['pageNumber']:
@@ -79,8 +78,20 @@ class ProductsRequest(Request):
             if 'data-search-metadata' in item[1]:
                 count_all_products = item[2]['metadata']['totalResultCount']
             elif 'data-main-slot:search-result-' in item[1]:
-                asins.append(item[2]['asin'] + '\n')
-        self.file.writelines(asins)
+                soup = BeautifulSoup(item[2]['html'], features="html.parser")
+                overall_rating_el = soup.select_one(
+                    '.a-size-small > span > .a-declarative[data-csa-c-func-deps="aui-da-a-popover"] span.a-icon-alt')
+                if not overall_rating_el:
+                    overall_rating = '0,0,0,0,0,0'
+                else:
+                    overall_rating = overall_rating_el.text.replace(' out of 5 stars', '').strip()
+                    for i in range(1, 5):
+                        r_request = ReviewsRequest(asin=item[2]['asin'], filterByStar=ReviewsPoolRequests.get_star(i))
+                        r_request.send(self.web_driver)
+                        overall_rating += ',' + str(r_request.processing(True))
+                rows.append(item[2]['asin'] + ',' + str(overall_rating) + '\n')
+
+        self.file.writelines(rows)
 
         return count_all_products
 
@@ -88,10 +99,14 @@ class ProductsRequest(Request):
 class ReviewsPoolRequests:
     def __init__(self, product_asin, reviews_stars, web_driver, directory, state):
         self.asin = product_asin
-        self.stars = {1: 'one_star', 2: 'two_star', 3: 'three_star', 4: 'four_star', 5: 'five_star'}[reviews_stars]
+        self.stars = ReviewsPoolRequests.get_star(reviews_stars)
         self.web_driver = web_driver
         self.directory = directory
         self.state = state
+
+    @staticmethod
+    def get_star(n: int):
+        return {1: 'one_star', 2: 'two_star', 3: 'three_star', 4: 'four_star', 5: 'five_star'}[max(1, min(5, n))]
 
     def processing(self):
         self.state['reviews_page'] = int(self.state['reviews_page'] or 1)
@@ -149,7 +164,7 @@ class ReviewsRequest(Request):
         }
         super().__init__(**kwargs)
 
-    def processing(self):
+    def processing(self, count_reviews_only=False):
         raw_data = super().processing()
         data_with_quantity = raw_data[1][2]
         parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
@@ -164,6 +179,9 @@ class ReviewsRequest(Request):
             reviews_count = int(reviews_count)
         else:
             reviews_count = None
+
+        if count_reviews_only:
+            return reviews_count
 
         data = []
 

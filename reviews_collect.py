@@ -2,6 +2,8 @@ import os
 import sys
 from time import sleep
 
+from pandas import read_csv
+
 from Requests import ReviewsPoolRequests
 from initialization import initialize
 from configuration import State, FOLDER_NAME, MAX_RETRIES
@@ -18,23 +20,39 @@ try:
     sleep(10)
     if '-C' in sys.argv:
         # if not selenium.captcha_solve():
-        #     print("CAPTCHA can't be solved!")
+        #     print('CAPTCHA can't be solved!')
         #     selenium.close()
         #     sys.exit(0)
         pass
     else:
         if not selenium.captcha_check(not ('-c' in sys.argv)):
-            print("CAPTCHA!")
+            print('CAPTCHA!')
             selenium.close()
             sys.exit(0)
     # GET DATA
-    # Loading dump
-    with open(os.path.join(FOLDER_NAME, 'products_list.csv')) as datafile:
-        products = [line.strip() for line in datafile]
+    if not os.path.exists(os.path.join(FOLDER_NAME, 'products_list.csv')):
+        products = input('Please, type the ASINs of products dividing by column: ').replace(' ', '').replace(',', '')
+        if len(products) < 10:
+            print('Error! There is no asins! This program will be closed')
+            sys.exit(0)
+
+
+        def grouper(iterable, n):
+            string_part = [iter(iterable)] * n
+            return zip(*string_part)
+
+
+        products = [''.join(i) for i in grouper(products, 10)]
+    else:
+        # Loading dump
+        products_df = read_csv(os.path.join(FOLDER_NAME, 'products_list.csv'))
+        products = list(map(lambda x: x[1], products_df['asin'].items()))
+
     if '-v' in sys.argv:
         print(' ***** PRODUCTS ASINS LIST: ***** ')
         print('\n'.join(products))
         print(' ******************************** ')
+
     current_asin = st['current_asin']
     ready = not current_asin
     sleep(10)
