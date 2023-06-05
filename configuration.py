@@ -8,10 +8,11 @@ import dotenv
 dotenv.load_dotenv()
 
 WEBDRIVER_PATH = os.environ.get('WEBDRIVER_PATH')
-MAX_RETRIES = os.environ.get('MAX_RETRIES')
-IGNORED_CHAR = os.environ.get('IGNORED_CHAR') or '[✎【】★❤️🎧💕♥🌈🎸🍀【✅✔\U0001f43b]'
+MAX_RETRIES = int(os.environ.get('MAX_RETRIES') or 0)
+# IGNORED_CHAR = os.environ.get('IGNORED_CHAR') or '[✎【】★❤️🎧💕♥🌈🎸🍀【✅✔\U0001f43b]'
 FOLDER_NAME = os.environ.get('DIRECTORY_OUTPUT') or datetime.datetime.now().strftime('%Y-%m-%d')
 HEADLESS = os.environ.get('HEADLESS').lower() == 'true'
+TIMEOUT = float(os.environ.get('TIMEOUT') or 0)
 
 if not os.path.exists('./' + FOLDER_NAME):
     os.makedirs(FOLDER_NAME)
@@ -19,6 +20,18 @@ if not os.path.exists('./' + FOLDER_NAME):
 logging.basicConfig(filename=os.path.join(FOLDER_NAME, 'collect.log'),
                     format='%(levelname)s: %(asctime)s: %(message)s',
                     level=logging.INFO)
+
+
+def update_config():
+    with open('.env', 'w') as env_file:
+        env_file.writelines([
+            f'WEBDRIVER_PATH={WEBDRIVER_PATH}\n',
+            f'MAX_RETRIES={MAX_RETRIES}\n',
+            # f'IGNORED_CHAR={IGNORED_CHAR}\n',
+            f'DIRECTORY_OUTPUT={FOLDER_NAME}\n',
+            f'HEADLESS={HEADLESS}\n',
+            f'TIMEOUT={TIMEOUT}',
+        ])
 
 
 def get_file_write_mode(filename):
