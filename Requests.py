@@ -78,7 +78,7 @@ class ProductsRequest(Request):
     def processing(self):
         raw_data = super().processing()
         count_all_products = 0
-        rows = [] if self.params.get('page') > 1 else ['asin,rating,reviews_count,1star,2star,3star,4star,5star\n']
+        rows = [] if self.params.get('page') > 1 else ['asin,rating,reviews_count,5star,4star,3star,2star,1star\n']
 
         for item in raw_data:
             if count_all_products > 0 and count_all_products // 48 + 1 < self.params['pageNumber']:
@@ -126,6 +126,7 @@ class ReviewsTotalRequest(Request):
     def processing(self):
         if not self.result:
             if self.retry:
+                sleep(10)
                 req = ReviewsTotalRequest(self.params.get('asin'), False)
                 req.send(self.web_driver)
                 return req.processing()
@@ -136,6 +137,7 @@ class ReviewsTotalRequest(Request):
         print(0)
         rating = soup.find('span', attrs={'data-hook': 'acr-average-stars-rating-text'})
         if not rating:
+            print(soup)
             return False
         rating = rating.text.replace(' out of 5', '').strip()
         print(1)

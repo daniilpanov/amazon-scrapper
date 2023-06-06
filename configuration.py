@@ -41,8 +41,8 @@ def get_file_write_mode(filename):
 
 
 class State:
-    def __init__(self, filename, default_data=None):
-        self.filename = os.path.join(FOLDER_NAME, filename)
+    def __init__(self, filename, default_data=None, directory=FOLDER_NAME):
+        self.filename = os.path.join(directory, filename)
         self.data = default_data if default_data else dict()
         if not os.path.exists(self.filename):
             self.write()

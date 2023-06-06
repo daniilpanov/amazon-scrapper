@@ -3,6 +3,8 @@
 venv/*
 __pycache__/*
 out/*
+output/*
+new_res/*
 old/*
 test*
 servconn.bat

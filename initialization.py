@@ -168,10 +168,17 @@ class CustomSelenium(WebDriver):
     def get_answer(self):
         return self.get_items("answer", By.ID, single=True)
 
+    def wait(self, path, by=By.CSS_SELECTOR):
+        try:
+            WebDriverWait(self, 10000).until(EC.presence_of_element_located((by, path)))
+            return True
+        except WebDriverException:
+            return False
+
     def get_items(self, path, by=By.CSS_SELECTOR, wait=True, single=False):
         try:
             if wait:
-                WebDriverWait(self, 10000).until(EC.presence_of_element_located((by, path)))
+                self.wait(path, by)
             return self.find_element(by, path) if single else self.find_elements(by, path)
         except WebDriverException:
             return None

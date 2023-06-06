@@ -11,8 +11,14 @@ from configuration import State, FOLDER_NAME, MAX_RETRIES
 selenium = None
 
 try:
+    FOLDER_NAME = input(f'Please, type the data directory [{FOLDER_NAME}]: ') or FOLDER_NAME
+
+    if not os.path.exists('./' + FOLDER_NAME):
+        os.makedirs(FOLDER_NAME)
+
+    file = input('Please, type the source filename [products_list.csv]: ') or 'products_list.csv'
     # SETTINGS UP
-    st = State('reviews_collect__state.dat')
+    st = State('reviews_collect__state.dat', directory=FOLDER_NAME)
 
     # PREPARE
     selenium, thread = initialize(True, '-p' in sys.argv)
@@ -30,7 +36,7 @@ try:
             selenium.close()
             sys.exit(0)
     # GET DATA
-    if not os.path.exists(os.path.join(FOLDER_NAME, 'products_list.csv')):
+    if not os.path.exists(os.path.join(FOLDER_NAME, file)):
         products = input('Please, type the ASINs of products dividing by column: ').replace(' ', '').replace(',', '')
         if len(products) < 10:
             print('Error! There is no asins! This program will be closed')
@@ -45,7 +51,7 @@ try:
         products = [''.join(i) for i in grouper(products, 10)]
     else:
         # Loading dump
-        products_df = read_csv(os.path.join(FOLDER_NAME, 'products_list.csv'))
+        products_df = read_csv(os.path.join(FOLDER_NAME, file))
         products = list(map(lambda x: x[1], products_df['asin'].items()))
 
     if '-v' in sys.argv:
