@@ -34,8 +34,8 @@ def update_config():
         ])
 
 
-def get_file_write_mode(filename):
-    if os.path.exists(os.path.join(FOLDER_NAME, filename)):
+def get_file_write_mode(filename, directory=FOLDER_NAME):
+    if os.path.exists(os.path.join(directory, filename)):
         return 'a'
     return 'w'
 

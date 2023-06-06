@@ -176,7 +176,7 @@ class ReviewsPoolRequests:
     def get_star(n: int):
         return {1: 'one_star', 2: 'two_star', 3: 'three_star', 4: 'four_star', 5: 'five_star'}[max(1, min(5, n))]
 
-    def processing(self):
+    def processing(self, except_process=True):
         self.state['reviews_page'] = int(self.state['reviews_page'] or 1)
         req = ReviewsRequest(asin=self.asin, filterByStar=self.stars, pageNumber=self.state['reviews_page'])
         req.send(self.web_driver)
@@ -196,7 +196,7 @@ class ReviewsPoolRequests:
         self.state.write()
         for i in range(self.state['reviews_page'], pages):
             req = ReviewsRequest(asin=self.asin, filterByStar=self.stars, pageNumber=i)
-            req.send(self.web_driver)
+            req.send(self.web_driver, except_process)
             r = req.processing()
 
             if not r:
@@ -212,7 +212,7 @@ class ReviewsPoolRequests:
     def iter(self, data):
         df = DataFrame(data)
         path = os.path.join(self.directory, 'reviews_list.csv')
-        wm = get_file_write_mode('reviews_list.csv')
+        wm = get_file_write_mode('reviews_list.csv', self.directory)
         df.to_csv(path, index=False, mode=wm, header=wm == 'w')
 
 

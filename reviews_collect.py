@@ -3,6 +3,7 @@ import sys
 from time import sleep
 
 from pandas import read_csv
+from selenium.common import WebDriverException
 
 from Requests import ReviewsPoolRequests
 from initialization import initialize
@@ -11,12 +12,20 @@ from configuration import State, FOLDER_NAME, MAX_RETRIES
 selenium = None
 
 try:
-    FOLDER_NAME = input(f'Please, type the data directory [{FOLDER_NAME}]: ') or FOLDER_NAME
+    if '-f' in sys.argv:
+        for i in range(len(sys.argv) - 1):
+            if '-f' == sys.argv[i]:
+                FOLDER_NAME = sys.argv[i + 1]
+    else:
+        FOLDER_NAME = input(f'Please, type the data directory [{FOLDER_NAME}]: ') or FOLDER_NAME
 
     if not os.path.exists('./' + FOLDER_NAME):
         os.makedirs(FOLDER_NAME)
 
-    file = input('Please, type the source filename [products_list.csv]: ') or 'products_list.csv'
+    if '-f' in sys.argv:
+        file = 'products_list.csv'
+    else:
+        file = input('Please, type the source filename [products_list.csv]: ') or 'products_list.csv'
     # SETTINGS UP
     st = State('reviews_collect__state.dat', directory=FOLDER_NAME)
 
@@ -87,7 +96,7 @@ try:
             incr = True
             try:
                 req = ReviewsPoolRequests(product, star, selenium, FOLDER_NAME, st)
-                req.processing()
+                req.processing(False)
             except KeyboardInterrupt:
                 incr = False
                 sys.exit(0)
@@ -107,7 +116,7 @@ try:
         os.path.join(FOLDER_NAME, 'reviews_list.csv'),
         os.path.join(FOLDER_NAME, 'unique_reviews_list.csv'),
     )
-except Exception as e:
+except WebDriverException as e:
     if selenium:
         selenium.close()
     if '-S' in sys.argv:
@@ -134,6 +143,13 @@ except Exception as e:
             sleep(10)
             args.append('--trying')
             args.append(str(trying))
+            args.append('-f')
+            args.append(FOLDER_NAME)
             os.execv(sys.executable, args)
 
     sys.exit(0)
+except Exception as e:
+    if selenium:
+        selenium.close()
+
+    raise e
