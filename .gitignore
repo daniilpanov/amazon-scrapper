@@ -2,10 +2,8 @@
 .env
 venv/*
 __pycache__/*
-out/*
-output/*
-new_res/*
-old/*
+OLD__*/*
+out*/*
+old*/*
 test*
 servconn.bat
-out__*/*

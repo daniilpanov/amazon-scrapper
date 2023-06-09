@@ -1,9 +1,11 @@
+import os
 import random
 import time
 from time import sleep
 
 import requests
 from bs4 import BeautifulSoup
+from selenium.webdriver import Keys
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -11,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
 import logging
 
-# from captcha_solver.solve_captcha_with_model import CaptchaSolver
+from captcha_solver.solve_captcha_with_model import CaptchaSolver
 
 
 def get_proxy():
@@ -100,30 +102,40 @@ class CustomSelenium(WebDriver):
         super().__init__(*args, **kwargs)
         self.start_timestamp = time.time()
 
-    # def captcha_solve(self, retry=True):
-    #     if not self.captcha_check():
-    #         captcha = self.get_items('img[src]', wait=False, single=True)
-    #         img_source = requests.get(captcha.get_attribute('src'))
-    #         if not img_source:
-    #             return False
-    #         if not os.path.exists(os.path.join('.', 'tmp')):
-    #             os.makedirs('tmp')
-    #         file = open(os.path.join('tmp', 'captcha.jpg'), 'wb')
-    #         file.write(img_source.content)
-    #         file.close()
-    #         solver = CaptchaSolver('captcha_solver')
-    #         text = solver.solve('tmp/captcha.jpg')
-    #         input_element = self.get_items('input[type="text"]', wait=False, single=True)
-    #         for symbol in text:
-    #             input_element.send_keys(symbol)
-    #             sleep(random.randint(0, 2))
-    #         input_element.send_keys(Keys.ENTER)
-    #         sleep(10)
-    #         if not self.captcha_check():
-    #             if retry:
-    #                 return self.captcha_solve(False)
-    #             return False
-    #     return True
+    def get(self, *args, **kwargs):
+        self.jquery_inserted = False
+        super().get(*args, **kwargs)
+        self.insert_jquery()
+
+    def captcha_solve(self, retry=True):
+        if not self.captcha_check():
+            captcha = self.get_items('img[src]', wait=False, single=True)
+            img_source = requests.get(captcha.get_attribute('src'))
+            if not img_source:
+                return False
+            if not os.path.exists(os.path.join('.', 'tmp')):
+                os.makedirs('tmp')
+            file = open(os.path.join('tmp', 'captcha.jpg'), 'wb')
+            file.write(img_source.content)
+            file.close()
+            solver = CaptchaSolver('captcha_solver')
+            text = solver.solve('tmp/captcha.jpg')
+            input_element = self.get_items('input[type="text"]', wait=False, single=True)
+            for symbol in text:
+                input_element.send_keys(symbol)
+                sleep(random.randint(0, 2))
+            input_element.send_keys(Keys.ENTER)
+            sleep(10)
+            if not self.captcha_check():
+                if retry:
+                    return self.captcha_solve(False)
+                return False
+        return True
+
+    def execute_script(self, *args, jquery=True):
+        if jquery:
+            self.insert_jquery()
+        super().execute_script(*args)
 
     def captcha_check(self, just_check=False):
         self.insert_jquery()
@@ -142,15 +154,16 @@ class CustomSelenium(WebDriver):
                     button.click()
                     sleep(5)
                     return self.captcha_check(True)
+        return True
 
-    def insert_jquery(self):
-        if not self.jquery_inserted:
+    def insert_jquery(self, anyway=False):
+        if not self.jquery_inserted or anyway:
             self.execute_script("""
             var jq = document.createElement('script');
             jq.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js";
             document.getElementsByTagName('head')[0].appendChild(jq);
-            """)
-            sleep(1)
+            """, jquery=False)
+            sleep(2)
             self.jquery_inserted = True
 
     def insert_script(self, js_script: str):

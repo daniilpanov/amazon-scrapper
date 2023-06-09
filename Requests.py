@@ -56,6 +56,42 @@ class Request:
         return list(map(lambda s: decoder.decode(s.strip()), filter(lambda x: x, self.result.strip().split('&&&'))))
 
 
+class SimpleProductsRequest(Request):
+    web_driver: CustomSelenium
+
+    @property
+    def url(self):
+        return 'https://www.amazon.com/s/query' + self.params_to_str()
+
+    def __init__(self, directory, file, **kwargs):
+        self.directory = directory
+        self.file: TextIOWrapper = file
+        kwargs = {'pageNumber': 1, 'scope': 'reviewsAjax0', 'reftag': 'cm_cr_arp_d_viewopt_sr', **kwargs}
+        super().__init__(**kwargs)
+        self.web_driver = kwargs.get('web_driver')
+
+    def send(self, web_driver=None, except_processing=True):
+        if not self.web_driver:
+            self.web_driver = web_driver
+        return super().send(web_driver or self.web_driver, except_processing)
+
+    def processing(self):
+        raw_data = super().processing()
+        count_all_products = 0
+        rows = []
+
+        for item in raw_data:
+            if count_all_products > 0 and count_all_products // 48 + 1 < self.params['pageNumber']:
+                return count_all_products
+            if 'data-main-slot:search-result-' in item[1]:
+                rows.append(item[2]['asin'])
+
+        self.file.writelines(rows)
+        self.file.close()
+
+        return count_all_products
+
+
 class ProductsRequest(Request):
     web_driver: CustomSelenium
 
@@ -86,7 +122,7 @@ class ProductsRequest(Request):
             if 'data-search-metadata' in item[1]:
                 count_all_products = item[2]['metadata']['totalResultCount']
             elif 'data-main-slot:search-result-' in item[1]:
-                soup = BeautifulSoup(item[2]['html'], features="html.parser")
+                soup = BeautifulSoup(item[2]['html'], features='html.parser')
                 overall_rating_el = soup.select_one(
                     '.a-size-small > span > .a-declarative[data-csa-c-func-deps="aui-da-a-popover"] span.a-icon-alt')
                 if not overall_rating_el:

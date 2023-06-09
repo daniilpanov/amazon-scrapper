@@ -3,7 +3,7 @@ import sys
 import time
 from time import sleep
 
-from selenium.common import WebDriverException
+from selenium.common import WebDriverException, InvalidSessionIdException
 from selenium.webdriver import Keys
 
 from Requests import ProductsRequest
@@ -71,7 +71,11 @@ try:
         st['page'] = str(page)
         st.write()
 
-    selenium.close()
+    try:
+        selenium.close()
+    except InvalidSessionIdException:
+        pass
+
     if '-v' in sys.argv:
         print('Make the data unique...')
     uniqulize_by_df(

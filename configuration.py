@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import datetime
-import logging
 import os
 
 import dotenv
@@ -16,10 +15,6 @@ TIMEOUT = float(os.environ.get('TIMEOUT') or 0)
 
 if not os.path.exists('./' + FOLDER_NAME):
     os.makedirs(FOLDER_NAME)
-
-logging.basicConfig(filename=os.path.join(FOLDER_NAME, 'collect.log'),
-                    format='%(levelname)s: %(asctime)s: %(message)s',
-                    level=logging.INFO)
 
 
 def update_config():
