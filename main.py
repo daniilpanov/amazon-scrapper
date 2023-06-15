@@ -7,7 +7,6 @@ if __name__ == '__main__':
     import sys
     from concurrent.futures import ThreadPoolExecutor
 
-
     try:
         print('Hey! This is the AmaScrap v3!')
         print('Choose, what do you need? Type the numbers of the operations dividing by colon')
@@ -51,7 +50,7 @@ if __name__ == '__main__':
                     out, err = process.communicate()
                     output_lines = out.decode().split('\n')
                     if not output_lines or len(output_lines) < 2:
-                        res = 'error'
+                        res = 'closed'
                     else:
                         res = output_lines[-2].strip()
                     lim = 10
@@ -64,7 +63,7 @@ if __name__ == '__main__':
                         out, err = process.communicate()
                         output_lines = out.decode().split('\n')
                         if not output_lines or len(output_lines) < 2:
-                            res = 'error'
+                            res = 'closed'
                         else:
                             res = output_lines[-2].strip()
                         lim -= 1

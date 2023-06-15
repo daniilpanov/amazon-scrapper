@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
     selenium = None
 
-    def close(status: Union[None, str] = 'error', exit_status: Union[None, int] = 1):
+    def close(status: object = 'error', exit_status: Union[None, int] = 1):
         if status:
             print(status)
         try:
@@ -248,8 +248,8 @@ if __name__ == '__main__':
         print('success')
     except WebDriverException:
         close('reload')
+    except KeyboardInterrupt:
+        close('closed')
     except Exception:
-        if selenium:
-            selenium.close()
-        close()
+        close(exit_status=None)
 

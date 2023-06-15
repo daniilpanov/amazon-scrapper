@@ -213,5 +213,7 @@ if __name__ == '__main__':
             )
 
         print('success')
+    except KeyboardInterrupt:
+        close('closed')
     except Exception as e:
         close(exit_status=None)
