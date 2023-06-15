@@ -74,9 +74,22 @@ if __name__ == '__main__':
                         print(f'{statuses} collected to directory ' + secondary_folder)
                     else:
                         print(f'unknown status: {statuses} gathering to', secondary_folder + ':', res)
+                    if os.path.exists(os.path.join(folder, 'reviews_list.csv')):
+                        f = open(os.path.join(folder, 'reviews_list.csv'), 'a')
+                        f2 = open(os.path.join(folder, f'reviews_list_{i}.csv'), 'r')
+                        lines = f2.readlines()[1:]
+                        f2.close()
+                        f.writelines(lines)
+                        f.close()
+                    else:
+                        shutil.copyfile(
+                            os.path.join(folder, 'reviews_list_{i}.csv'),
+                            os.path.join(folder, 'reviews_list.csv'),
+                        )
+                    os.unlink(os.path.join(folder, f'reviews_list_{i}.csv'))
                     return res == 'success'
                 except KeyboardInterrupt:
-                    sys.exit(0)
+                    return False
 
             return wrapper
 
@@ -175,26 +188,6 @@ if __name__ == '__main__':
                 features = {}
                 for asin in asins:
                     features[asin] = executor.submit(gather('reviews', (folder, asin), f'{asin} reviews'))
-                first = True
-                for i in features:
-                    feature = features[i]
-                    r = feature.result()
-                    if r:
-                        if first:
-                            shutil.copyfile(
-                                os.path.join(folder, 'reviews_list.csv'),
-                                os.path.join(folder, 'reviews_list.csv'),
-                            )
-                            first = False
-                        else:
-                            f = open(os.path.join(folder, 'reviews_list.csv'), 'a')
-                            f2 = open(os.path.join(folder, 'reviews_list.csv'), 'r')
-                            lines = f2.readlines()[1:]
-                            f2.close()
-                            f.writelines(lines)
-                            f.close()
-                        shutil.rmtree(folder + str(i))
-
             print('Reviews list prepared!')
     except KeyboardInterrupt:
         sys.exit(0)

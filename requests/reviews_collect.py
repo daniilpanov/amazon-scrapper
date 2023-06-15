@@ -231,20 +231,20 @@ if __name__ == '__main__':
 
         close(None, None)
 
-        # from uniqulizer import uniqulize_by_df
-        #
-        # if os.path.exists(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')):
-        #     uniqulize_by_df(
-        #         os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'),
-        #         os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
-        #         0
-        #     )
-        # if os.path.exists(os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv')):
-        #     os.unlink(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'))
-        #     os.rename(
-        #         os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
-        #         os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')
-        #     )
+        from uniqulizer import uniqulize_by_df
+
+        if os.path.exists(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')):
+            uniqulize_by_df(
+                os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'),
+                os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
+                0
+            )
+        if os.path.exists(os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv')):
+            os.unlink(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'))
+            os.rename(
+                os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
+                os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')
+            )
         print('success')
     except WebDriverException:
         close('reload')
