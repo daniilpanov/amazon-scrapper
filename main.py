@@ -39,6 +39,8 @@ if __name__ == '__main__':
         print("Okay! Let's start!")
 
         closed = False
+        venv_path = os.path.join('venv', 'Scripts', 'python.exe') if sys.platform == 'win32'\
+            else os.path.join('venv', 'bin', 'python3')
 
 
         def gather(script, args, statuses, number=None):
@@ -49,7 +51,7 @@ if __name__ == '__main__':
                 try:
                     secondary_folder = folder if number is None else folder + str(number)
                     process = subprocess.Popen(
-                        [os.path.join('venv', 'Scripts', 'python.exe'), f'requests/{script}_collect.py', '--start', *args],
+                        [venv_path, f'requests/{script}_collect.py', '--start', *args],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE
                     )
                     out, err = process.communicate()
