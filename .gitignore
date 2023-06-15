@@ -1,0 +1,8 @@
+.idea/*
+tmp*/*
+venv/
+.env
+servconn.bat
+test*
+out*
+out*/*
