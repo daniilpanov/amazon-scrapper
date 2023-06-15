@@ -38,9 +38,14 @@ if __name__ == '__main__':
 
         print("Okay! Let's start!")
 
+        closed = False
+
 
         def gather(script, args, statuses, number=None):
             def wrapper():
+                global closed
+                if closed:
+                    return False
                 try:
                     secondary_folder = folder if number is None else folder + str(number)
                     process = subprocess.Popen(
@@ -71,6 +76,9 @@ if __name__ == '__main__':
                         print(f'an error occurred in {statuses} gathering to directory {secondary_folder}...')
                     elif res == 'success':
                         print(f'{statuses} collected to directory ' + secondary_folder)
+                    elif res == 'closed':
+                        print('closed')
+                        closed = True
                     else:
                         print(f'unknown status: {statuses} gathering to', secondary_folder + ':', res)
                     if os.path.exists(os.path.join(folder, 'reviews_list.csv')):
@@ -86,7 +94,7 @@ if __name__ == '__main__':
                             os.path.join(folder, 'reviews_list.csv'),
                         )
                     os.unlink(os.path.join(folder, f'reviews_list_{i}.csv'))
-                    return res == 'success'
+                    return 'closed' if res == 'closed' else res == 'success'
                 except KeyboardInterrupt:
                     return False
 
@@ -183,10 +191,11 @@ if __name__ == '__main__':
 
             asins = list(asins)
 
-            with ThreadPoolExecutor(max_workers=workers_number) as executor:
-                features = {}
-                for asin in asins:
-                    features[asin] = executor.submit(gather('reviews', (folder, asin), f'{asin} reviews'))
+            executor = ThreadPoolExecutor(max_workers=workers_number)
+            features = {}
+            for asin in asins:
+                features[asin] = executor.submit(gather('reviews', (folder, asin), f'{asin} reviews'))
+            executor.shutdown(True)
             print('Reviews list prepared!')
     except KeyboardInterrupt:
         sys.exit(0)
