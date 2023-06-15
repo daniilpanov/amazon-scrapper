@@ -2,7 +2,6 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import re
 from time import sleep
 from typing import Union
 
@@ -49,7 +48,7 @@ class ReviewsPoolRequests:
         self.iter(data)
         self.state['reviews_page'] += 1
         self.state.write()
-        for i in range(self.state['reviews_page'], pages):
+        for i in range(self.state['reviews_page'], pages + 1):
             req = ReviewsRequest(self.web_driver, asin=self.asin, filterByStar=self.stars, pageNumber=i)
             req.send(except_process)
             r = req.processing()
@@ -66,8 +65,8 @@ class ReviewsPoolRequests:
 
     def iter(self, data):
         df = DataFrame(data)
-        path = os.path.join(self.directory, 'reviews_list.csv')
-        wm = get_file_write_mode(os.path.join(self.directory, 'reviews_list.csv'))
+        path = os.path.join(self.directory, f'reviews_list_{self.asin}.csv')
+        wm = get_file_write_mode(os.path.join(self.directory, f'reviews_list_{self.asin}.csv'))
         df.to_csv(path, index=False, mode=wm, header=wm == 'w')
 
 
@@ -97,6 +96,8 @@ class ReviewsRequest(BaseRequest):
         if not reviews_count_el:
             return False
         reviews_count_raw = reviews_count_el.text.split('total ratings, ')
+        if len(reviews_count_raw) == 1:
+            reviews_count_raw = reviews_count_el.text.split('total rating, ')
         if len(reviews_count_raw) > 1:
             reviews_count = reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip()
             if 'with review' in reviews_count:
@@ -206,6 +207,9 @@ if __name__ == '__main__':
         # SETTINGS UP
         file = 'products.list'
         st = State(f'reviews_collect_{product}__state.dat', directory=FOLDER_NAME)
+        start_star = int(st['current_star'] or 1)
+        if start_star > 5:
+            close('success')
 
         # PREPARE
         selenium, thread = initialize(True)
@@ -213,9 +217,6 @@ if __name__ == '__main__':
         thread.start()
 
         # processing
-        start_star = int(st['current_star'] or 1)
-        if start_star > 5:
-            start_star = 1
         for star in range(start_star, 6):
             incr = True
             try:
@@ -228,29 +229,27 @@ if __name__ == '__main__':
             st['reviews_page'] = 1
             st.write()
 
-        close(None, exit_status=None)
+        close(None, None)
 
-        from uniqulizer import uniqulize_by_df
-
-        if os.path.exists(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')):
-            uniqulize_by_df(
-                os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'),
-                os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
-                0
-            )
-        if os.path.exists(os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv')):
-            os.unlink(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'))
-            os.rename(
-                os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
-                os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')
-            )
+        # from uniqulizer import uniqulize_by_df
+        #
+        # if os.path.exists(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')):
+        #     uniqulize_by_df(
+        #         os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'),
+        #         os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
+        #         0
+        #     )
+        # if os.path.exists(os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv')):
+        #     os.unlink(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'))
+        #     os.rename(
+        #         os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
+        #         os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')
+        #     )
         print('success')
     except WebDriverException:
-        if selenium:
-            selenium.close()
-        print('reload')
+        close('reload')
     except Exception:
         if selenium:
             selenium.close()
-        print('error')
+        close()
 
