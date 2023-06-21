@@ -268,3 +268,10 @@ class BaseRequest:
             return list(map(lambda s: decoder.decode(s.strip()), filter(lambda x: x, self.result.strip().split('&&&'))))
         return self.result
 
+
+STATUS = {
+    'success': True,
+    'error': False,
+    'closed': -1,
+    'reload': 2,
+}

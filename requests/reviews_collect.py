@@ -2,15 +2,12 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from time import sleep
-from typing import Union
-
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 from selenium.common import WebDriverException, InvalidSessionIdException
 
-from config import get_file_write_mode
-from BaseRequest import BaseRequest
+from config import State, get_file_write_mode
+from BaseRequest import BaseRequest, initialize, STATUS
 
 
 class ReviewsPoolRequests:
@@ -168,93 +165,97 @@ class ReviewsRequest(BaseRequest):
         return reviews_count, data
 
 
-if __name__ == '__main__':
-    from config import State
-    from BaseRequest import initialize
-
+def reviews_collect(folder, product_asin):
     selenium = None
     thread = None
     stop_ev = None
 
-    def close(status: object = 'error', exit_status: Union[None, int] = 1):
-        if status:
-            print(status)
+    def close(status: object = 'error'):
+        global selenium
         try:
             if selenium:
                 selenium.close()
+                selenium = None
         except InvalidSessionIdException:
             pass
         finally:
             if thread and stop_ev:
                 stop_ev.set()
-        if exit_status is not None:
-            sys.exit(exit_status)
+            if status:
+                return STATUS[status]
 
     try:
-        args_start_index = 1
-        for i in sys.argv:
-            if i == '--start':
-                break
-            args_start_index += 1
-        FOLDER_NAME = sys.argv[args_start_index]
-
-        if not os.path.exists('./' + FOLDER_NAME):
-            os.mkdir(FOLDER_NAME)
-
-        if len(sys.argv) > args_start_index + 1 and sys.argv[args_start_index + 1]:
-            product = sys.argv[args_start_index + 1].strip()
-            if len(product) != 10:
-                close()
-        else:
-            close()
+        if not os.path.exists('./' + folder):
+            os.mkdir(folder)
 
         # SETTINGS UP
-        file = 'products.list'
-        st = State(f'reviews_collect_{product}__state.dat', directory=FOLDER_NAME)
+        st = State(f'reviews_collect_{product_asin}__state.dat', directory=folder)
         start_star = int(st['current_star'] or 1)
         if start_star > 5:
-            close('success')
+            return close('success')
 
         # PREPARE
         selenium, thread, stop_ev = initialize(True)
         # sleep(5)
         thread.start()
-        close('r')
 
         # processing
         for star in range(start_star, 6):
             incr = True
             try:
-                req = ReviewsPoolRequests(product, star, selenium, FOLDER_NAME, st)
+                req = ReviewsPoolRequests(product_asin, star, selenium, folder, st)
                 req.processing(False)
             except KeyboardInterrupt:
-                incr = False
                 sys.exit(0)
             st['current_star'] = star + incr
             st['reviews_page'] = 1
             st.write()
 
-        close(None, None)
+        close(None)
 
         from uniqulizer import uniqulize_by_df
 
-        if os.path.exists(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')):
+        if os.path.exists(os.path.join(folder, f'reviews_list_{product_asin}.csv')):
             uniqulize_by_df(
-                os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'),
-                os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
+                os.path.join(folder, f'reviews_list_{product_asin}.csv'),
+                os.path.join(folder, f'unique_reviews_list_{product_asin}.csv'),
                 0
             )
-        if os.path.exists(os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv')):
-            os.unlink(os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv'))
+        if os.path.exists(os.path.join(folder, f'unique_reviews_list_{product_asin}.csv')):
+            os.unlink(os.path.join(folder, f'reviews_list_{product_asin}.csv'))
             os.rename(
-                os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
-                os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')
+                os.path.join(folder, f'unique_reviews_list_{product_asin}.csv'),
+                os.path.join(folder, f'reviews_list_{product_asin}.csv')
             )
-        close('success')
+        return close('success')
     except KeyboardInterrupt:
-        close('closed')
+        return close('closed')
     except WebDriverException:
-        close('reload')
-    except Exception as e:
-        close(str(e), exit_status=None)
+        return close('reload')
+    except Exception:
+        return close('error')
 
+
+if __name__ == '__main__':
+    args_start_index = 1
+    for i in sys.argv:
+        if i == '--start':
+            break
+        args_start_index += 1
+    folder = sys.argv[args_start_index]
+    if len(sys.argv) > args_start_index + 1 and sys.argv[args_start_index + 1]:
+        product = sys.argv[args_start_index + 1].strip()
+        if len(product) != 10:
+            print('error!')
+            sys.exit(0)
+    else:
+        print('error!')
+        sys.exit(0)
+
+    res = reviews_collect(folder, product)
+    if res == STATUS['success']:
+        print('success')
+    elif res == STATUS['error']:
+        print('error')
+    elif res == STATUS['closed']:
+        print('closed')

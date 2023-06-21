@@ -1,7 +1,4 @@
-import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+import re
 from time import sleep
 from typing import Union
 from urllib.parse import quote_plus
@@ -10,8 +7,7 @@ from selenium.common import InvalidSessionIdException
 from selenium.webdriver import Keys
 
 from config import State
-from BaseRequest import initialize
-from BaseRequest import BaseRequest
+from BaseRequest import BaseRequest, initialize, STATUS
 
 
 class ProductDetailsCollect(BaseRequest):
@@ -123,21 +119,22 @@ def get_asins(folder):
     return asins
 
 
-if __name__ == '__main__':
-    wd = None
+wd = None
 
 
-    def close(status: Union[None, str] = 'error', exit_status: Union[None, int] = 1):
-        if status:
-            print(status)
+def products_details_collect(folder, asins):
+
+    def close(status: Union[None, str] = 'error'):
+        global wd
         try:
             if wd:
                 wd.close()
+                wd = None
         except InvalidSessionIdException:
             pass
-        if exit_status is not None:
-            sys.exit(exit_status)
-
+        finally:
+            if status:
+                return STATUS[status]
 
     try:
         import sys
@@ -145,26 +142,14 @@ if __name__ == '__main__':
         import re
         import random
 
-        args_start_index = 1
-        for i in sys.argv:
-            if i == '--start':
-                break
-            args_start_index += 1
-
         # SETTINGS UP
         categories = ['pc', 'computer', 'hair', 'gum', 'gummies', 'gym']
         category = categories[random.randint(0, len(categories) - 1)]
-        FOLDER_NAME = sys.argv[args_start_index]
 
-        if not os.path.exists(FOLDER_NAME):
-            os.mkdir(FOLDER_NAME)
+        if not os.path.exists(folder):
+            os.mkdir(folder)
 
-        st = State('products_details_collect.state', FOLDER_NAME, {'ready': ''})
-
-        if len(sys.argv) > args_start_index + 1 and sys.argv[args_start_index + 1]:
-            asins = set(sys.argv[args_start_index + 1].strip().split(','))
-        else:
-            asins = get_asins(FOLDER_NAME)
+        st = State('products_details_collect.state', folder, {'ready': ''})
 
         ready = st['ready']
         if ready:
@@ -181,13 +166,13 @@ if __name__ == '__main__':
             wd = initialize()
 
             if not wd:
-                close()
+                return close()
 
-            collecting = ProductDetailsCollect(wd, category, asins, FOLDER_NAME, st)
+            collecting = ProductDetailsCollect(wd, category, asins, folder, st)
             if not collecting.success:
-                close()
+                return close()
 
-            filepath = os.path.join(FOLDER_NAME, 'products_list.csv')
+            filepath = os.path.join(folder, 'products_list.csv')
             if not os.path.exists(filepath):
                 f = open(filepath, 'w')
                 f.write('asin,link,title,rating,reviews_count,5star,4star,3star,2star,1star,price,brand,main_image\n')
@@ -199,21 +184,49 @@ if __name__ == '__main__':
 
         from uniqulizer import uniqulize_by_df
 
-        if os.path.exists(os.path.join(FOLDER_NAME, 'products_list.csv')):
+        if os.path.exists(os.path.join(folder, 'products_list.csv')):
             uniqulize_by_df(
-                os.path.join(FOLDER_NAME, 'products_list.csv'),
-                os.path.join(FOLDER_NAME, 'uniqulized_products_list.csv'),
+                os.path.join(folder, 'products_list.csv'),
+                os.path.join(folder, 'uniqulized_products_list.csv'),
                 0
             )
-        if os.path.exists(os.path.join(FOLDER_NAME, 'uniqulized_products_list.csv')):
-            os.unlink(os.path.join(FOLDER_NAME, 'products_list.csv'))
+        if os.path.exists(os.path.join(folder, 'uniqulized_products_list.csv')):
+            os.unlink(os.path.join(folder, 'products_list.csv'))
             os.rename(
-                os.path.join(FOLDER_NAME, 'uniqulized_products_list.csv'),
-                os.path.join(FOLDER_NAME, 'products_list.csv')
+                os.path.join(folder, 'uniqulized_products_list.csv'),
+                os.path.join(folder, 'products_list.csv')
             )
-
-        print('success')
+        return close('success')
     except KeyboardInterrupt:
-        close('closed')
-    except Exception as e:
-        close(exit_status=None)
+        return close('closed')
+    except Exception:
+        return close()
+
+
+if __name__ == '__main__':
+    import os
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+    args_start_index = 1
+    for i in sys.argv:
+        if i == '--start':
+            break
+        args_start_index += 1
+
+    # SETTINGS UP
+    folder = sys.argv[args_start_index]
+
+    if len(sys.argv) > args_start_index + 1 and sys.argv[args_start_index + 1]:
+        asins = set(sys.argv[args_start_index + 1].strip().split(','))
+    else:
+        asins = get_asins(folder)
+
+    res = products_details_collect(folder, asins)
+    if res == STATUS['success']:
+        print('success')
+    elif res == STATUS['error']:
+        print('error')
+    elif res == STATUS['closed']:
+        print('closed')
+    
