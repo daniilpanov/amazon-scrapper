@@ -4,10 +4,12 @@ if __name__ == '__main__':
     import os.path
     import re
     import shutil
-    import subprocess
     import sys
     from concurrent.futures import ThreadPoolExecutor
     from threading import Event
+    from _requests.BaseRequest import STATUS
+    from _requests.products_details_collect import products_details_collect
+    from _requests.reviews_collect import reviews_collect
 
     try:
         print('Hey! This is the AmaScrap v3!')
@@ -41,55 +43,28 @@ if __name__ == '__main__':
         print("Okay! Let's start!")
 
         closed = Event()
-        venv_path = os.path.join('venv', 'Scripts', 'python.exe') if sys.platform == 'win32'\
-            else os.path.join('venv', 'bin', 'python3')
 
 
-        def gather(script, args, statuses, number=None):
+        def gather(func, args, statuses, number=None):
             def wrapper():
                 global closed
                 if closed.is_set():
                     return False
                 try:
                     secondary_folder = folder if number is None else folder + str(number)
-                    process = subprocess.Popen(
-                        [venv_path, f'requests/{script}_collect.py', '--start', *args],
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                    )
-                    print('first process opened')
-                    out, err = process.communicate()
-                    print('first process end!')
-                    output_lines = out.decode().split('\n')
-                    print('info:', output_lines)
-                    if not output_lines or len(output_lines) < 2:
-                        res = 'closed'
-                    else:
-                        res = output_lines[-2].strip()
+                    res = func(*args)
                     print('result:', res)
                     lim = 10
-                    while res in ('captcha', 'error', 'reload') and lim > 0:
-                        print(f'reload {statuses} gathering to directory ' + secondary_folder)
-                        process = subprocess.Popen(
-                            [os.path.join('venv', 'Scripts', 'python.exe'), f'requests/{script}_collect.py', '--start', *args],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                        )
-                        print('next process opened')
-                        out, err = process.communicate()
-                        print('next process end!')
-                        output_lines = out.decode().split('\n')
-                        print('info:', output_lines)
-                        if not output_lines or len(output_lines) < 2:
-                            res = 'closed'
-                        else:
-                            res = output_lines[-2].strip()
+                    while res in (STATUS['error'], STATUS['reload']) and lim > 0:
+                        res = func(*args)
                         print('result:', res)
                         lim -= 1
                     print('OK!')
-                    if res == 'error' or lim <= 0:
+                    if res == STATUS['error'] or lim <= 0:
                         print(f'an error occurred in {statuses} gathering to directory {secondary_folder}...')
-                    elif res == 'success':
+                    elif res == STATUS['success']:
                         print(f'{statuses} collected to directory ' + secondary_folder)
-                    elif res == 'closed':
+                    elif res == STATUS['closed']:
                         print('closed')
                         closed.set()
                     else:
@@ -107,7 +82,7 @@ if __name__ == '__main__':
                             os.path.join(folder, 'reviews_list.csv'),
                         )
                     os.unlink(os.path.join(folder, f'reviews_list_{i}.csv'))
-                    return 'closed' if res == 'closed' else res == 'success'
+                    return 'closed' if res == STATUS['closed'] else res == STATUS['success']
                 except KeyboardInterrupt:
                     return False
 
@@ -156,7 +131,7 @@ if __name__ == '__main__':
             def multithread_gather(number, asins):
                 if not os.path.exists(folder + str(number)):
                     os.mkdir(folder + str(number))
-                return gather('products_details', [folder + str(number), ','.join(asins)], 'products\' details', number)
+                return gather(products_details_collect, [folder + str(number), asins], 'products\' details', number)
 
             with ThreadPoolExecutor() as executor:
                 features = []
@@ -207,7 +182,7 @@ if __name__ == '__main__':
             executor = ThreadPoolExecutor(max_workers=workers_number)
             features = {}
             for asin in asins:
-                features[asin] = executor.submit(gather('reviews', (folder, asin), f'{asin} reviews'))
+                features[asin] = executor.submit(gather(reviews_collect, (folder, asin), f'{asin} reviews'))
             executor.shutdown(True)
             print('Reviews list prepared!')
     except KeyboardInterrupt:

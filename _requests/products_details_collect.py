@@ -1,3 +1,4 @@
+import os
 import re
 from time import sleep
 from typing import Union
@@ -7,7 +8,7 @@ from selenium.common import InvalidSessionIdException
 from selenium.webdriver import Keys
 
 from config import State
-from BaseRequest import BaseRequest, initialize, STATUS
+from _requests.BaseRequest import BaseRequest, initialize, STATUS
 
 
 class ProductDetailsCollect(BaseRequest):
@@ -204,7 +205,6 @@ def products_details_collect(folder, asins):
 
 
 if __name__ == '__main__':
-    import os
     import sys
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 

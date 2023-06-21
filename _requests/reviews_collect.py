@@ -1,13 +1,10 @@
 import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 from selenium.common import WebDriverException, InvalidSessionIdException
 
 from config import State, get_file_write_mode
-from BaseRequest import BaseRequest, initialize, STATUS
+from _requests.BaseRequest import BaseRequest, initialize, STATUS
 
 
 class ReviewsPoolRequests:
@@ -183,11 +180,9 @@ def reviews_collect(folder, product_asin):
                 stop_ev.set()
             if status:
                 return STATUS[status]
-
     try:
         if not os.path.exists('./' + folder):
             os.mkdir(folder)
-
         # SETTINGS UP
         st = State(f'reviews_collect_{product_asin}__state.dat', directory=folder)
         start_star = int(st['current_star'] or 1)
@@ -206,7 +201,7 @@ def reviews_collect(folder, product_asin):
                 req = ReviewsPoolRequests(product_asin, star, selenium, folder, st)
                 req.processing(False)
             except KeyboardInterrupt:
-                sys.exit(0)
+                return STATUS['closed']
             st['current_star'] = star + incr
             st['reviews_page'] = 1
             st.write()
@@ -237,6 +232,9 @@ def reviews_collect(folder, product_asin):
 
 
 if __name__ == '__main__':
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
     args_start_index = 1
     for i in sys.argv:
         if i == '--start':
