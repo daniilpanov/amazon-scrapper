@@ -173,6 +173,8 @@ if __name__ == '__main__':
     from BaseRequest import initialize
 
     selenium = None
+    thread = None
+    stop_ev = None
 
     def close(status: object = 'error', exit_status: Union[None, int] = 1):
         if status:
@@ -182,6 +184,9 @@ if __name__ == '__main__':
                 selenium.close()
         except InvalidSessionIdException:
             pass
+        finally:
+            if thread and stop_ev:
+                stop_ev.set()
         if exit_status is not None:
             sys.exit(exit_status)
 
@@ -191,7 +196,6 @@ if __name__ == '__main__':
             if i == '--start':
                 break
             args_start_index += 1
-
         FOLDER_NAME = sys.argv[args_start_index]
 
         if not os.path.exists('./' + FOLDER_NAME):
@@ -212,9 +216,10 @@ if __name__ == '__main__':
             close('success')
 
         # PREPARE
-        selenium, thread = initialize(True)
-        sleep(5)
+        selenium, thread, stop_ev = initialize(True)
+        # sleep(5)
         thread.start()
+        close('r')
 
         # processing
         for star in range(start_star, 6):
@@ -245,11 +250,11 @@ if __name__ == '__main__':
                 os.path.join(FOLDER_NAME, f'unique_reviews_list_{product}.csv'),
                 os.path.join(FOLDER_NAME, f'reviews_list_{product}.csv')
             )
-        print('success')
-    except WebDriverException:
-        close('reload')
+        close('success')
     except KeyboardInterrupt:
         close('closed')
-    except Exception:
-        close(exit_status=None)
+    except WebDriverException:
+        close('reload')
+    except Exception as e:
+        close(str(e), exit_status=None)
 

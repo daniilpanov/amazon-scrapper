@@ -1,3 +1,4 @@
+
 if __name__ == '__main__':
     import math
     import os.path
@@ -6,6 +7,7 @@ if __name__ == '__main__':
     import subprocess
     import sys
     from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
 
     try:
         print('Hey! This is the AmaScrap v3!')
@@ -38,7 +40,7 @@ if __name__ == '__main__':
 
         print("Okay! Let's start!")
 
-        closed = False
+        closed = Event()
         venv_path = os.path.join('venv', 'Scripts', 'python.exe') if sys.platform == 'win32'\
             else os.path.join('venv', 'bin', 'python3')
 
@@ -46,7 +48,7 @@ if __name__ == '__main__':
         def gather(script, args, statuses, number=None):
             def wrapper():
                 global closed
-                if closed:
+                if closed.is_set():
                     return False
                 try:
                     secondary_folder = folder if number is None else folder + str(number)
@@ -54,12 +56,16 @@ if __name__ == '__main__':
                         [venv_path, f'requests/{script}_collect.py', '--start', *args],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE
                     )
+                    print('first process opened')
                     out, err = process.communicate()
+                    print('first process end!')
                     output_lines = out.decode().split('\n')
+                    print('info:', output_lines)
                     if not output_lines or len(output_lines) < 2:
                         res = 'closed'
                     else:
                         res = output_lines[-2].strip()
+                    print('result:', res)
                     lim = 10
                     while res in ('captcha', 'error', 'reload') and lim > 0:
                         print(f'reload {statuses} gathering to directory ' + secondary_folder)
@@ -67,20 +73,25 @@ if __name__ == '__main__':
                             [os.path.join('venv', 'Scripts', 'python.exe'), f'requests/{script}_collect.py', '--start', *args],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE
                         )
+                        print('next process opened')
                         out, err = process.communicate()
+                        print('next process end!')
                         output_lines = out.decode().split('\n')
+                        print('info:', output_lines)
                         if not output_lines or len(output_lines) < 2:
                             res = 'closed'
                         else:
                             res = output_lines[-2].strip()
+                        print('result:', res)
                         lim -= 1
+                    print('OK!')
                     if res == 'error' or lim <= 0:
                         print(f'an error occurred in {statuses} gathering to directory {secondary_folder}...')
                     elif res == 'success':
                         print(f'{statuses} collected to directory ' + secondary_folder)
                     elif res == 'closed':
                         print('closed')
-                        closed = True
+                        closed.set()
                     else:
                         print(f'unknown status: {statuses} gathering to', secondary_folder + ':', res)
                     if os.path.exists(os.path.join(folder, 'reviews_list.csv')):

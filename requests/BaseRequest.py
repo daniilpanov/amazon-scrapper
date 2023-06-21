@@ -2,6 +2,7 @@ import logging
 import os
 import random
 from json import JSONDecoder
+from threading import Event
 from time import sleep
 
 import requests
@@ -55,6 +56,8 @@ def initialize(simulate_user=False):
             import threading
             import time
 
+            ev = Event()
+
             def input_thread():
                 actions = [
                     Keys.ARROW_DOWN, Keys.ARROW_UP, Keys.ARROW_LEFT, Keys.ARROW_RIGHT,
@@ -62,7 +65,7 @@ def initialize(simulate_user=False):
                     Keys.PAGE_UP, Keys.PAGE_DOWN,
                     Keys.PAGE_UP, Keys.PAGE_DOWN,
                 ]
-                while True:
+                while not ev.is_set():
                     # create an ActionChains object
                     action = ActionChains(wd)
                     # perform a key-press action
@@ -73,7 +76,7 @@ def initialize(simulate_user=False):
 
             # create a new thread for the input actions
             inputThread = threading.Thread(target=input_thread, daemon=True)
-            return wd, inputThread
+            return wd, inputThread, ev
 
         return wd
     except:

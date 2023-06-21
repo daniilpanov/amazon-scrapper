@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # uniqulizer
     import os.path
 
-    path = "reviews.csv"
+    path = "reviews_list.csv"
     f_out = "output.csv"
     header = False
     while not os.path.exists(os.path.abspath(path)):
