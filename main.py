@@ -45,7 +45,7 @@ if __name__ == '__main__':
         closed = Event()
 
 
-        def gather(func, args, statuses, number=None):
+        def gather(func, args, statuses, filename, base_filename, number=None):
             def wrapper():
                 global closed
                 if closed.is_set():
@@ -69,19 +69,19 @@ if __name__ == '__main__':
                         closed.set()
                     else:
                         print(f'unknown status: {statuses} gathering to', secondary_folder + ':', res)
-                    if os.path.exists(os.path.join(folder, 'reviews_list.csv')):
-                        f = open(os.path.join(folder, 'reviews_list.csv'), 'a')
-                        f2 = open(os.path.join(folder, f'reviews_list_{i}.csv'), 'r')
+                    print('ok1')
+                    if os.path.exists(base_filename):
+                        print('ok2')
+                        f = open(base_filename, 'a')
+                        f2 = open(filename, 'r')
                         lines = f2.readlines()[1:]
                         f2.close()
                         f.writelines(lines)
                         f.close()
                     else:
-                        shutil.copyfile(
-                            os.path.join(folder, 'reviews_list_{i}.csv'),
-                            os.path.join(folder, 'reviews_list.csv'),
-                        )
-                    os.unlink(os.path.join(folder, f'reviews_list_{i}.csv'))
+                        print('ok3', filename, base_filename)
+                        shutil.copyfile(filename, base_filename)
+                    os.unlink(filename)
                     return 'closed' if res == STATUS['closed'] else res == STATUS['success']
                 except KeyboardInterrupt:
                     return False
@@ -98,14 +98,17 @@ if __name__ == '__main__':
             workers_number = int(workers_number) if workers_number.isdigit() else 4
         # Gathering brands
         if '1' in switches:
-            gather('brands', [folder, search], 'brands')()
+            # gather('brands', [folder, search], 'brands')()
+            pass
         # Gathering products (simple)
         if '2' in switches:
-            gather('products_simple', [folder, search], 'simple products')()
+            # gather('products_simple', [folder, search], 'simple products')()
+            pass
         # Gathering products (upgraded - by brands)
         if '3' in switches:
             # TODO: see the brands file (if exists) and chunk it between the workers
-            gather('products', [folder, search], 'products')()
+            # gather('products', [folder, search], 'products')()
+            pass
         # Gathering products details
         if '4' in switches:
             if not os.path.isfile(os.path.join(folder, 'products.list')):
@@ -131,7 +134,13 @@ if __name__ == '__main__':
             def multithread_gather(number, asins):
                 if not os.path.exists(folder + str(number)):
                     os.mkdir(folder + str(number))
-                return gather(products_details_collect, [folder + str(number), asins], 'products\' details', number)
+                return gather(
+                    products_details_collect,
+                    [folder + str(number), asins],
+                    'products\' details',
+                    os.path.join(folder + str(number), 'products_list.csv'),
+                    os.path.join(folder, 'products_list.csv'),
+                    number)
 
             with ThreadPoolExecutor() as executor:
                 features = []
@@ -182,7 +191,15 @@ if __name__ == '__main__':
             executor = ThreadPoolExecutor(max_workers=workers_number)
             features = {}
             for asin in asins:
-                features[asin] = executor.submit(gather(reviews_collect, (folder, asin), f'{asin} reviews'))
+                features[asin] = executor.submit(
+                    gather(
+                        reviews_collect,
+                        (folder, asin),
+                        f'{asin} reviews',
+                        os.path.join(folder, f'reviews_list_{asin}.csv'),
+                        os.path.join(folder, 'reviews_list.csv'),
+                    )
+                )
             executor.shutdown(True)
             print('Reviews list prepared!')
     except KeyboardInterrupt:

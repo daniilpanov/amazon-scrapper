@@ -162,8 +162,11 @@ class ReviewsRequest(BaseRequest):
         return reviews_count, data
 
 
+selenium = None
+
+
 def reviews_collect(folder, product_asin):
-    selenium = None
+    global selenium
     thread = None
     stop_ev = None
 
@@ -186,27 +189,25 @@ def reviews_collect(folder, product_asin):
         # SETTINGS UP
         st = State(f'reviews_collect_{product_asin}__state.dat', directory=folder)
         start_star = int(st['current_star'] or 1)
-        if start_star > 5:
-            return close('success')
+        if start_star <= 5:
+            # PREPARE
+            selenium, thread, stop_ev = initialize(True)
+            # sleep(5)
+            thread.start()
 
-        # PREPARE
-        selenium, thread, stop_ev = initialize(True)
-        # sleep(5)
-        thread.start()
+            # processing
+            for star in range(start_star, 6):
+                incr = True
+                try:
+                    req = ReviewsPoolRequests(product_asin, star, selenium, folder, st)
+                    req.processing(False)
+                except KeyboardInterrupt:
+                    return STATUS['closed']
+                st['current_star'] = star + incr
+                st['reviews_page'] = 1
+                st.write()
 
-        # processing
-        for star in range(start_star, 6):
-            incr = True
-            try:
-                req = ReviewsPoolRequests(product_asin, star, selenium, folder, st)
-                req.processing(False)
-            except KeyboardInterrupt:
-                return STATUS['closed']
-            st['current_star'] = star + incr
-            st['reviews_page'] = 1
-            st.write()
-
-        close(None)
+            close(None)
 
         from uniqulizer import uniqulize_by_df
 
