@@ -149,15 +149,15 @@ class ReviewsRequest(BaseRequest):
                 review_options = ''
 
             data.append({
-                'product_url': 'https://www.amazon.com/dp/' + self.params['asin'],
-                'asin': self.params['asin'],
-                'date_info': review_date,
-                'name': customer_name,
-                'title': review_title,
-                'content': review_body,
-                'rating': review_rating,
-                'helpful': helpful_votes,
-                'options': review_options,
+                'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
+                'ASIN': self.params['asin'],
+                'Review Created Date': review_date,
+                'Review User Name': customer_name,
+                'Review Title': review_title,
+                'Review Body': review_body,
+                'Review Rating': review_rating,
+                'Review Helpful Votes': helpful_votes,
+                'Product Options': review_options,
             })
         return reviews_count, data
 

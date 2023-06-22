@@ -10,14 +10,14 @@ if __name__ == '__main__':
     from _requests.BaseRequest import STATUS
 
     try:
-        print('Hey! This is the AmaScrap v3!')
-        print('Choose, what do you need? Type the numbers of the operations dividing by colon')
-        print('Important note: If you want to gather products\' information/reviews from your list,'
-              ' you should create a folder and put a file with the list of ASIN products in text format there.'
+        print('Hey! This is AmaScrap v3!')
+        print('Choose what you need? Enter transaction numbers, separating them with a comma')
+        print('Important Note: If you want to collect information/reviews about products from your list,'
+              ' you should create a folder and place the ASIN product list file in text format there.'
               ' The file should be called "products.list".')
-        print('1 - gather products ASINs\n'
-              '2 - gather products details\n'
-              '3 - gather products text reviews')
+        print('1 - collect products ASINs\n'
+              '2 - collect products details\n'
+              '3 - collect products text reviews')
         switches = input('_> ').strip().split(',')
         if not switches:
             print('error')
@@ -31,9 +31,9 @@ if __name__ == '__main__':
                 print('error')
                 sys.exit(0)
 
-        folder = input('Okay. Now please type the data folder\n_>  ')
+        folder = input('Fine. Now enter the data folder name\n_>  ')
         if not os.path.exists(folder) or not os.path.isdir(folder):
-            print('This folder does not exist. Creating it')
+            print('This folder does not exist. Create it')
             os.mkdir(folder)
 
         print("Okay! Let's start!")
@@ -54,14 +54,14 @@ if __name__ == '__main__':
                         res = func(*args)
                         lim -= 1
                     if res == STATUS['error'] or lim <= 0:
-                        print(f'an error occurred in {statuses} gathering to directory {secondary_folder}...')
+                        print(f'an error occurred in {statuses} collecting to directory {secondary_folder}...')
                     elif res == STATUS['success']:
                         print(f'{statuses} collected to directory ' + secondary_folder)
                     elif res == STATUS['closed']:
                         print('closed')
                         closed.set()
                     else:
-                        print(f'unknown status: {statuses} gathering to', secondary_folder + ':', res)
+                        print(f'unknown status: {statuses} collecting to', secondary_folder + ':', res)
 
                     if filename and base_filename:
                         if os.path.exists(base_filename):
@@ -83,13 +83,13 @@ if __name__ == '__main__':
 
         # needle questions
         if '2' in switches or '3' in switches:
-            workers_number = input('Please type the workers number '
-                                   '(if you\'ll type not number it will be default value - 4)\n_>  ').strip()
+            workers_number = input('Enter the maximum number of parallel jobs '
+                                   '(if you enter not a number, the default value will be 4)\n_>  ').strip()
             workers_number = int(workers_number) if workers_number.isdigit() else 4
         # Gathering products
         if '1' in switches:
             from _requests.products_collect import products_collect
-            search = input('Please type the search request\n_>  ').strip()
+            search = input('Enter the search request\n_>  ').strip()
             gather(products_collect, [folder, search], 'simple products')()
         # Gathering products details
         if '2' in switches:
