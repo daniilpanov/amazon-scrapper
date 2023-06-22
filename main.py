@@ -8,8 +8,6 @@ if __name__ == '__main__':
     from concurrent.futures import ThreadPoolExecutor
     from threading import Event
     from _requests.BaseRequest import STATUS
-    from _requests.products_details_collect import products_details_collect
-    from _requests.reviews_collect import reviews_collect
 
     try:
         print('Hey! This is the AmaScrap v3!')
@@ -17,11 +15,9 @@ if __name__ == '__main__':
         print('Important note: If you want to gather products\' information/reviews from your list,'
               ' you should create a folder and put a file with the list of ASIN products in text format there.'
               ' The file should be called "products.list".')
-        print('1 - gather brands of search requests\n'
-              '2 - gather products ASINs (simple gathering)\n'
-              '3 - gather products ASINs (gathering by each found brand)\n'
-              '4 - gather products details\n'
-              '5 - gather products text reviews')
+        print('1 - gather products ASINs\n'
+              '2 - gather products details\n'
+              '3 - gather products text reviews')
         switches = input('_> ').strip().split(',')
         if not switches:
             print('error')
@@ -45,7 +41,7 @@ if __name__ == '__main__':
         closed = Event()
 
 
-        def gather(func, args, statuses, filename, base_filename, number=None):
+        def gather(func, args, statuses, filename=None, base_filename=None, number=None):
             def wrapper():
                 global closed
                 if closed.is_set():
@@ -53,11 +49,9 @@ if __name__ == '__main__':
                 try:
                     secondary_folder = folder if number is None else folder + str(number)
                     res = func(*args)
-                    print('result:', res)
                     lim = 10
                     while res in (STATUS['error'], STATUS['reload']) and lim > 0:
                         res = func(*args)
-                        print('result:', res)
                         lim -= 1
                     if res == STATUS['error'] or lim <= 0:
                         print(f'an error occurred in {statuses} gathering to directory {secondary_folder}...')
@@ -69,16 +63,17 @@ if __name__ == '__main__':
                     else:
                         print(f'unknown status: {statuses} gathering to', secondary_folder + ':', res)
 
-                    if os.path.exists(base_filename):
-                        f = open(base_filename, 'a')
-                        f2 = open(filename, 'r')
-                        lines = f2.readlines()[1:]
-                        f2.close()
-                        f.writelines(lines)
-                        f.close()
-                    else:
-                        shutil.copyfile(filename, base_filename)
-                    os.unlink(filename)
+                    if filename and base_filename:
+                        if os.path.exists(base_filename):
+                            f = open(base_filename, 'a')
+                            f2 = open(filename, 'r')
+                            lines = f2.readlines()[1:]
+                            f2.close()
+                            f.writelines(lines)
+                            f.close()
+                        else:
+                            shutil.copyfile(filename, base_filename)
+                        os.unlink(filename)
                     return 'closed' if res == STATUS['closed'] else res == STATUS['success']
                 except KeyboardInterrupt:
                     return False
@@ -87,27 +82,18 @@ if __name__ == '__main__':
 
 
         # needle questions
-        if '1' in switches or '2' in switches or '3' in switches:
-            search = input('Please type the search request\n_>  ').strip()
-        if '3' in switches or '4' in switches or '5' in switches:
+        if '2' in switches or '3' in switches:
             workers_number = input('Please type the workers number '
                                    '(if you\'ll type not number it will be default value - 4)\n_>  ').strip()
             workers_number = int(workers_number) if workers_number.isdigit() else 4
-        # Gathering brands
+        # Gathering products
         if '1' in switches:
-            # gather('brands', [folder, search], 'brands')()
-            pass
-        # Gathering products (simple)
-        if '2' in switches:
-            # gather('products_simple', [folder, search], 'simple products')()
-            pass
-        # Gathering products (upgraded - by brands)
-        if '3' in switches:
-            # TODO: see the brands file (if exists) and chunk it between the workers
-            # gather('products', [folder, search], 'products')()
-            pass
+            from _requests.products_collect import products_collect
+            search = input('Please type the search request\n_>  ').strip()
+            gather(products_collect, [folder, search], 'simple products')()
         # Gathering products details
-        if '4' in switches:
+        if '2' in switches:
+            from _requests.products_details_collect import products_details_collect
             if not os.path.isfile(os.path.join(folder, 'products.list')):
                 print('error. list of ASINs not found')
                 sys.exit(1)
@@ -153,7 +139,9 @@ if __name__ == '__main__':
 
             print('Products list prepared!')
         # Gathering products reviews
-        if '5' in switches:
+        if '3' in switches:
+            from _requests.reviews_collect import reviews_collect
+
             if not os.path.isfile(os.path.join(folder, 'products.list')):
                 print('error. list of ASINs not found')
                 sys.exit(1)

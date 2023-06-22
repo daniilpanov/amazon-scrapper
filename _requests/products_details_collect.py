@@ -201,7 +201,6 @@ def products_details_collect(folder, asins):
     except KeyboardInterrupt:
         return close('closed')
     except Exception as e:
-        print(e)
         return close()
 
 

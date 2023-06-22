@@ -245,10 +245,10 @@ if __name__ == '__main__':
     if len(sys.argv) > args_start_index + 1 and sys.argv[args_start_index + 1]:
         product = sys.argv[args_start_index + 1].strip()
         if len(product) != 10:
-            print('error!')
+            print('error')
             sys.exit(0)
     else:
-        print('error!')
+        print('error')
         sys.exit(0)
 
     res = reviews_collect(folder, product)

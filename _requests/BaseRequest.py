@@ -186,10 +186,10 @@ class BaseRequest:
     def wait_for_loading(self):
         self.wait('html', By.TAG_NAME)
 
-    def execute_script(self, script, jquery=True):
+    def execute_script(self, script, *args, jquery=True):
         if jquery:
             self.insert_jquery()
-        self.webdriver.execute_script(script)
+        self.webdriver.execute_script(script, *args)
 
     def insert_jquery(self, anyway=False):
         if not self.jquery_inserted or anyway:
@@ -197,7 +197,7 @@ class BaseRequest:
             var jq = document.createElement('script');
             jq.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js";
             document.getElementsByTagName('head')[0].appendChild(jq);
-            """, False)
+            """, jquery=False)
             sleep(2)
             self.jquery_inserted = True
 
