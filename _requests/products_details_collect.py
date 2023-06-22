@@ -101,7 +101,7 @@ class ProductDetailsCollect(BaseRequest):
             f.write(f'{row}\n')
             f.flush()
             f.close()
-            self.state['ready'] = ','.join(filter(lambda x: bool(x), st['ready'].split(',') + [asin]))
+            self.state['ready'] = ','.join(filter(lambda x: bool(x), self.state['ready'].split(',') + [asin]))
             self.state.write()
 
 
@@ -200,7 +200,8 @@ def products_details_collect(folder, asins):
         return close('success')
     except KeyboardInterrupt:
         return close('closed')
-    except Exception:
+    except Exception as e:
+        print(e)
         return close()
 
 

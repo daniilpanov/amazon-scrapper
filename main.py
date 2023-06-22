@@ -59,7 +59,6 @@ if __name__ == '__main__':
                         res = func(*args)
                         print('result:', res)
                         lim -= 1
-                    print('OK!')
                     if res == STATUS['error'] or lim <= 0:
                         print(f'an error occurred in {statuses} gathering to directory {secondary_folder}...')
                     elif res == STATUS['success']:
@@ -69,9 +68,8 @@ if __name__ == '__main__':
                         closed.set()
                     else:
                         print(f'unknown status: {statuses} gathering to', secondary_folder + ':', res)
-                    print('ok1')
+
                     if os.path.exists(base_filename):
-                        print('ok2')
                         f = open(base_filename, 'a')
                         f2 = open(filename, 'r')
                         lines = f2.readlines()[1:]
@@ -79,7 +77,6 @@ if __name__ == '__main__':
                         f.writelines(lines)
                         f.close()
                     else:
-                        print('ok3', filename, base_filename)
                         shutil.copyfile(filename, base_filename)
                     os.unlink(filename)
                     return 'closed' if res == STATUS['closed'] else res == STATUS['success']
@@ -152,19 +149,6 @@ if __name__ == '__main__':
                     feature = features[i]
                     r = feature.result()
                     if r:
-                        if first:
-                            shutil.copyfile(
-                                os.path.join(folder + str(i), 'products_list.csv'),
-                                os.path.join(folder, 'products_list.csv'),
-                            )
-                            first = False
-                        else:
-                            f = open(os.path.join(folder, 'products_list.csv'), 'a')
-                            f2 = open(os.path.join(folder + str(i), 'products_list.csv'), 'r')
-                            lines = f2.readlines()[1:]
-                            f2.close()
-                            f.writelines(lines)
-                            f.close()
                         shutil.rmtree(folder + str(i))
 
             print('Products list prepared!')
