@@ -112,15 +112,27 @@ class ReviewsRequest(BaseRequest):
             if item_parser.find('div', class_='a-divider-section') \
                     or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
                 continue
-            # Date
+            # Country & Date
             review_date = item_parser.find('span', attrs={'data-hook': 'review-date'})
-            review_date = review_date.text.strip().replace("\n", " ") if review_date else ''
+            if review_date:
+                review_date = review_date.text.strip().replace("\n", " ")\
+                    .replace('Reviewed in the ', '').replace(',', '').replace('"', '')
+                rdc = review_date.split(' on ')
+                review_date = rdc[-1]
+                review_country = ' on '.join(rdc[:-1])
+            else:
+                review_date = ''
+                review_country = ''
             # Customer name
             customer_name = item_parser.find('span', attrs={'class': 'a-profile-name'})
             customer_name = customer_name.text.strip().replace("\n", " ") if customer_name else ''
             # Title
             review_title = item_parser.find('a', attrs={'data-hook': 'review-title'})
-            review_title = review_title.text.strip().replace("\n", " ") if review_title else ''
+            if review_title:
+                review_title = review_title.text.strip().replace("\n", " ").split('.0 out of 5 stars ')
+                review_title = review_title[1] if len(review_title) > 1 else ''
+            else:
+                review_title = ''
             # Content
             review_body = item_parser.find('span', attrs={'data-hook': 'review-body'})
             review_body = review_body.text.strip().replace("\n", " ") if review_body else ''
@@ -152,6 +164,7 @@ class ReviewsRequest(BaseRequest):
                 'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
                 'ASIN': self.params['asin'],
                 'Review Created Date': review_date,
+                'Country': review_country,
                 'Review User Name': customer_name,
                 'Review Title': review_title,
                 'Review Body': review_body,
