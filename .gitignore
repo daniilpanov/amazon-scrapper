@@ -8,3 +8,4 @@ servconn.bat
 test*
 out*
 out*/*
+chromedriver
