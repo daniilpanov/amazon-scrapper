@@ -123,7 +123,8 @@ if __name__ == '__main__':
                     'products\' details',
                     os.path.join(folder + str(number), 'products_list.csv'),
                     os.path.join(folder, 'products_list.csv'),
-                    number)
+                    number
+                )
 
             with ThreadPoolExecutor() as executor:
                 features = []
@@ -175,4 +176,5 @@ if __name__ == '__main__':
             executor.shutdown(True)
             print('Reviews list prepared!')
     except KeyboardInterrupt:
+        print('stop')
         sys.exit(0)

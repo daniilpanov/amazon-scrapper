@@ -200,7 +200,7 @@ def products_details_collect(folder, asins):
         return close('success')
     except KeyboardInterrupt:
         return close('closed')
-    except Exception as e:
+    except Exception:
         return close()
 
 

@@ -1,12 +1,14 @@
 import logging
 import os
 import random
+import sys
 from json import JSONDecoder
 from threading import Event
 from time import sleep
 
 import requests
 from selenium import webdriver
+from undetected_chromedriver import Chrome
 from selenium.common import WebDriverException, JavascriptException
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
@@ -32,8 +34,8 @@ def initialize(simulate_user=False):
         options = webdriver.ChromeOptions()
         # options.add_argument('--window-size=1920,1080')
         options.add_argument('--start-maximized')
-        options.add_experimental_option('excludeSwitches', ['enable-automation'])
-        options.add_experimental_option('useAutomationExtension', False)
+        # options.add_experimental_option('excludeSwitches', ['enable-automation'])
+        # options.add_experimental_option('useAutomationExtension', False)
         if HEADLESS:
             options.add_argument('--headless')
         options.add_argument('--no-sandbox')
@@ -48,7 +50,7 @@ def initialize(simulate_user=False):
         logger = logging.getLogger('selenium.webdriver.remote.remote_connection')
         logger.setLevel(logging.NOTSET)  # or any variant from WARNING, ERROR, CRITICAL or NOTSET
 
-        wd = webdriver.Chrome(executable_path=WEBDRIVER_PATH, options=options)
+        wd = Chrome(options=options)
         wd.delete_all_cookies()
         if simulate_user:
             from selenium.webdriver.common.keys import Keys
@@ -75,11 +77,13 @@ def initialize(simulate_user=False):
                     time.sleep(random.randint(1, 60))
 
             # create a new thread for the input actions
-            inputThread = threading.Thread(target=input_thread, daemon=True)
-            return wd, inputThread, ev
+            input_thread = threading.Thread(target=input_thread, daemon=True)
+            return wd, input_thread, ev
 
         return wd
-    except:
+    except Exception as e:
+        print(e)
+        # sys.exit(0)
         return False
 
 

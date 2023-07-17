@@ -113,9 +113,10 @@ class ReviewsRequest(BaseRequest):
                     or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
                 continue
             # Country & Date
-            review_date = item_parser.find('span', attrs={'data-hook': 'review-date'})
-            if review_date:
-                review_date = review_date.text.strip().replace("\n", " ")\
+            review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
+            if review_date_raw:
+                review_date_raw = review_date_raw.text.strip()
+                review_date = review_date_raw.replace("\n", " ")\
                     .replace('Reviewed in the ', '').replace(',', '').replace('"', '')
                 rdc = review_date.split(' on ')
                 review_date = rdc[-1]
@@ -160,17 +161,29 @@ class ReviewsRequest(BaseRequest):
             else:
                 review_options = ''
 
+            # data.append({
+            #     'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
+            #     'ASIN': self.params['asin'],
+            #     'Review Created Date': review_date,
+            #     'Country': review_country,
+            #     'Review User Name': customer_name,
+            #     'Review Title': review_title,
+            #     'Review Body': review_body,
+            #     'Review Rating': review_rating,
+            #     'Review Helpful Votes': helpful_votes,
+            #     'Product Options': review_options,
+            # })
+            # product_url,asin,date_info,name,title,content,rating,helpful,options
             data.append({
-                'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
-                'ASIN': self.params['asin'],
-                'Review Created Date': review_date,
-                'Country': review_country,
-                'Review User Name': customer_name,
-                'Review Title': review_title,
-                'Review Body': review_body,
-                'Review Rating': review_rating,
-                'Review Helpful Votes': helpful_votes,
-                'Product Options': review_options,
+                'product_url': 'https://www.amazon.com/dp/' + self.params['asin'],
+                'asin': self.params['asin'],
+                'date_info': review_date_raw,
+                'name': customer_name,
+                'title': review_title,
+                'content': review_body,
+                'rating': review_rating,
+                'helpful': helpful_votes,
+                'options': review_options,
             })
         return reviews_count, data
 

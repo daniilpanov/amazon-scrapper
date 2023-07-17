@@ -3,7 +3,7 @@
 
 def uniqulize_by_df(filepath, output='output.csv', header_row=None):
     import pandas
-    df = pandas.read_csv(filepath, header=header_row)
+    df = pandas.read_csv(filepath, header=header_row, low_memory=False)
     df.drop_duplicates().to_csv(output, index=False, header=(header_row == 0))
 
 
