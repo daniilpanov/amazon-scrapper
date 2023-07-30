@@ -226,12 +226,7 @@ def process_data():
 
         asin, seed, process_data_res = process_data_res
 
-        process_data_res = re.sub(
-            r'(, ?\\?\'?\\?n? ?\["script","if\(window\.ue\) \{[^]]+]\\?n?\\?\'?)'
-            r'|( ?\\?\'?\\?n? ?\["script","if\(window\.ue\) \{[^]]+]\\?n?\\?\'?, ?)',
-            '',
-            process_data_res.strip(),
-        )
+        process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
         raw = list(map(lambda s: jsd.decode(s.strip()), filter(lambda x: x, process_data_res.split('&&&'))))
         data_with_quantity = raw[1][2]
         parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
