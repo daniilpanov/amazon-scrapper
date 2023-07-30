@@ -344,7 +344,6 @@ def send_request(asin, seed):
         ajax = f"$.post(\"{url}\", " \
                + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
                + ", null, 'text');"
-        print(ajax)
 
         try:
             res = webdriver.execute_script("return " + ajax)
@@ -387,7 +386,7 @@ def main():
     options.add_argument(
         f'user-agent={UserAgent(software_names=(SoftwareName.CHROME.value,), operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value), limit=120).get_random_user_agent()}'
     )
-    # options.add_argument('--headless')
+    options.add_argument('--headless')
     options.add_argument('--start-maximized')
     options.add_argument('--ignore-certificate-errors-spki-list')
     options.add_argument('--ignore-ssl-errors')
@@ -429,7 +428,6 @@ def main():
         print('DONE.')
     except (InvalidSessionIdException, RetryException):
         print('ERROR: invalid session. Program will be restarted')
-        sleep(1000)
         print('wait for writing the data...')
         data_queue.put(None)
         ev.set()
