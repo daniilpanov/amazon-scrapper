@@ -1,5 +1,7 @@
 import os.path
 import random
+import re
+import sys
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from queue import Queue
@@ -224,7 +226,13 @@ def process_data():
 
         asin, seed, process_data_res = process_data_res
 
-        raw = list(map(lambda s: jsd.decode(s.strip()), filter(lambda x: x, process_data_res.strip().split('&&&'))))
+        process_data_res = re.sub(
+            r'(, ?\\?\'?\\?n? ?\["script","if\(window\.ue\) \{[^]]+]\\?n?\\?\'?)'
+            r'|( ?\\?\'?\\?n? ?\["script","if\(window\.ue\) \{[^]]+]\\?n?\\?\'?, ?)',
+            '',
+            process_data_res.strip(),
+        )
+        raw = list(map(lambda s: jsd.decode(s.strip()), filter(lambda x: x, process_data_res.split('&&&'))))
         data_with_quantity = raw[1][2]
         parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
         reviews_count_el = parser.find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
