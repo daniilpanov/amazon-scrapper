@@ -225,109 +225,111 @@ def process_data():
             return
 
         asin, seed, process_data_res = process_data_res
-
-        process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
-        raw = list(map(lambda s: jsd.decode(s.strip()), filter(lambda x: x, process_data_res.split('&&&'))))
-        data_with_quantity = raw[1][2]
-        parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
-        reviews_count_el = parser.find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
-        if not reviews_count_el:
-            return None
-        reviews_count_raw = reviews_count_el.text.split('total ratings, ')
-        if len(reviews_count_raw) == 1:
-            reviews_count_raw = reviews_count_el.text.split('total rating, ')
-        if len(reviews_count_raw) > 1:
-            reviews_count = reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip()
-            if 'with review' in reviews_count:
-                reviews_count = reviews_count.replace(' with review', '')
-            reviews_count = int(reviews_count)
-        else:
-            reviews_count = 0
-
-        res = []
-
-        for item in raw[6:]:
-            if item[1] != "#cm_cr-review_list" or not item[2].strip():
-                break
-            item_parser = BeautifulSoup(item[2].strip(), features='html.parser')
-            if item_parser.find('div', class_='a-divider-section') \
-                    or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
-                continue
-            # Country & Date
-            review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
-            if review_date_raw:
-                review_date_raw = review_date_raw.text.strip()
-                review_date = review_date_raw.replace("\n", " ") \
-                    .replace('Reviewed in the ', '').replace(',', '').replace('"', '')
-                rdc = review_date.split(' on ')
-                review_date = rdc[-1]
-                review_country = ' on '.join(rdc[:-1])
+        try:
+            process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
+            raw = list(map(lambda s: jsd.decode(s.strip()), filter(lambda x: x.strip(), process_data_res.split('&&&'))))
+            data_with_quantity = raw[1][2]
+            parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
+            reviews_count_el = parser.find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
+            if not reviews_count_el:
+                return None
+            reviews_count_raw = reviews_count_el.text.split('total ratings, ')
+            if len(reviews_count_raw) == 1:
+                reviews_count_raw = reviews_count_el.text.split('total rating, ')
+            if len(reviews_count_raw) > 1:
+                reviews_count = reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip()
+                if 'with review' in reviews_count:
+                    reviews_count = reviews_count.replace(' with review', '')
+                reviews_count = int(reviews_count)
             else:
-                review_date = ''
-                review_country = ''
-            # Customer name
-            customer_name = item_parser.find('span', attrs={'class': 'a-profile-name'})
-            customer_name = customer_name.text.strip().replace("\n", " ") if customer_name else ''
-            # Title
-            review_title = item_parser.find('a', attrs={'data-hook': 'review-title'})
-            if review_title:
-                review_title = review_title.text.strip().replace("\n", " ").split('.0 out of 5 stars ')
-                review_title = review_title[1] if len(review_title) > 1 else ''
-            else:
-                review_title = ''
-            # Content
-            review_body = item_parser.find('span', attrs={'data-hook': 'review-body'})
-            review_body = review_body.text.strip().replace("\n", " ") if review_body else ''
-            # Rating
-            review_star_rating = item_parser.find('i', {'data-hook': 'review-star-rating'})
-            if not review_star_rating:
-                review_star_rating = item_parser.find('i', {'data-hook': 'cmps-review-star-rating'})
-            if not review_star_rating:
-                review_star_rating = item_parser.find('i', class_='cr-lightbox-review-rating')
-            review_rating = review_star_rating.find('span').text.split(' ')[0].strip()
-            # Helpful votes
-            helpful_votes = item_parser.find('span', {'data-hook': 'helpful-vote-statement'})
-            if helpful_votes:
-                helpful_votes = helpful_votes.text.split(' ')[0]
-                if helpful_votes == 'One':
-                    helpful_votes = 1
+                reviews_count = 0
+
+            res = []
+
+            for item in raw[6:]:
+                if item[1] != "#cm_cr-review_list" or not item[2].strip():
+                    break
+                item_parser = BeautifulSoup(item[2].strip(), features='html.parser')
+                if item_parser.find('div', class_='a-divider-section') \
+                        or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
+                    continue
+                # Country & Date
+                review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
+                if review_date_raw:
+                    review_date_raw = review_date_raw.text.strip()
+                    review_date = review_date_raw.replace("\n", " ") \
+                        .replace('Reviewed in the ', '').replace(',', '').replace('"', '')
+                    rdc = review_date.split(' on ')
+                    review_date = rdc[-1]
+                    review_country = ' on '.join(rdc[:-1])
                 else:
-                    helpful_votes = int(helpful_votes.replace(',', ''))
-            else:
-                helpful_votes = 0
-            # Options
-            review_options = item_parser.find_all('a', {'data-hook': 'format-strip'})
-            if review_options:
-                review_options = '|'.join(map(lambda x: x.text, review_options)).replace("\n", " ")
-            else:
-                review_options = ''
+                    review_date = ''
+                    review_country = ''
+                # Customer name
+                customer_name = item_parser.find('span', attrs={'class': 'a-profile-name'})
+                customer_name = customer_name.text.strip().replace("\n", " ") if customer_name else ''
+                # Title
+                review_title = item_parser.find('a', attrs={'data-hook': 'review-title'})
+                if review_title:
+                    review_title = review_title.text.strip().replace("\n", " ").split('.0 out of 5 stars ')
+                    review_title = review_title[1] if len(review_title) > 1 else ''
+                else:
+                    review_title = ''
+                # Content
+                review_body = item_parser.find('span', attrs={'data-hook': 'review-body'})
+                review_body = review_body.text.strip().replace("\n", " ") if review_body else ''
+                # Rating
+                review_star_rating = item_parser.find('i', {'data-hook': 'review-star-rating'})
+                if not review_star_rating:
+                    review_star_rating = item_parser.find('i', {'data-hook': 'cmps-review-star-rating'})
+                if not review_star_rating:
+                    review_star_rating = item_parser.find('i', class_='cr-lightbox-review-rating')
+                review_rating = review_star_rating.find('span').text.split(' ')[0].strip()
+                # Helpful votes
+                helpful_votes = item_parser.find('span', {'data-hook': 'helpful-vote-statement'})
+                if helpful_votes:
+                    helpful_votes = helpful_votes.text.split(' ')[0]
+                    if helpful_votes == 'One':
+                        helpful_votes = 1
+                    else:
+                        helpful_votes = int(helpful_votes.replace(',', ''))
+                else:
+                    helpful_votes = 0
+                # Options
+                review_options = item_parser.find_all('a', {'data-hook': 'format-strip'})
+                if review_options:
+                    review_options = '|'.join(map(lambda x: x.text, review_options)).replace("\n", " ")
+                else:
+                    review_options = ''
 
-            # data.append({
-            #     'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
-            #     'ASIN': self.params['asin'],
-            #     'Review Created Date': review_date,
-            #     'Country': review_country,
-            #     'Review User Name': customer_name,
-            #     'Review Title': review_title,
-            #     'Review Body': review_body,
-            #     'Review Rating': review_rating,
-            #     'Review Helpful Votes': helpful_votes,
-            #     'Product Options': review_options,
-            # })
-            # product_url,asin,date_info,name,title,content,rating,helpful,options
-            res.append({
-                'product_url': 'https://www.amazon.com/dp/' + asin,
-                'asin': asin,
-                'date_info': review_date_raw,
-                'name': customer_name,
-                'title': review_title,
-                'content': review_body,
-                'rating': review_rating,
-                'helpful': helpful_votes,
-                'options': review_options,
-            })
+                # data.append({
+                #     'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
+                #     'ASIN': self.params['asin'],
+                #     'Review Created Date': review_date,
+                #     'Country': review_country,
+                #     'Review User Name': customer_name,
+                #     'Review Title': review_title,
+                #     'Review Body': review_body,
+                #     'Review Rating': review_rating,
+                #     'Review Helpful Votes': helpful_votes,
+                #     'Product Options': review_options,
+                # })
+                # product_url,asin,date_info,name,title,content,rating,helpful,options
+                res.append({
+                    'product_url': 'https://www.amazon.com/dp/' + asin,
+                    'asin': asin,
+                    'date_info': review_date_raw,
+                    'name': customer_name,
+                    'title': review_title,
+                    'content': review_body,
+                    'rating': review_rating,
+                    'helpful': helpful_votes,
+                    'options': review_options,
+                })
 
-        write_queue.put([asin, seed, res])
+            write_queue.put([asin, seed, res])
+        except:
+            pass
 
 
 def send_request(asin, seed):
