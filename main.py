@@ -328,8 +328,8 @@ def process_data():
                 })
 
             write_queue.put([asin, seed, res])
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
 
 def send_request(asin, seed):
