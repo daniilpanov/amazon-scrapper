@@ -177,41 +177,45 @@ def state(asin, seed):
 
 
 def write_state():
-    with open('state.json', 'w+', encoding='utf-8') as f:
-        f.write(jse.encode(data))
-        while True:
-            # Wait for a data from the queue
-            state_data = state_queue.get()
+    if not file_exists:
+        f = open('state.json', 'w', encoding='utf-8')
+        f.write('{}')
+        f.close()
+    while True:
+        # Wait for a data from the queue
+        state_data = state_queue.get()
 
-            # Stop flag!
-            if state_data is None:
-                return
+        # Stop flag!
+        if state_data is None:
+            return
 
-            asin, seed = state_data
+        asin, seed = state_data
 
-            f.seek(0)
-            f.write(state(asin, seed))
+        f = open('state.json', 'w', encoding='utf-8')
+        f.write(state(asin, seed))
+        f.close()
 
 
 def write_data():
-    with open('reviews_list.csv', 'a' if file_exists else 'w', encoding='utf-8') as f:
-        if not file_exists:
-            f.write('product_url,asin,date_info,name,title,content,rating,helpful,options\n')
-        while True:
-            # Wait for a data from the queue
-            write_data_res = write_queue.get()
+    if not file_exists:
+        f = open('reviews_list.csv', 'w', encoding='utf-8')
+        f.write('product_url,asin,date_info,name,title,content,rating,helpful,options\n')
+        f.close()
+    while True:
+        # Wait for a data from the queue
+        write_data_res = write_queue.get()
 
-            # Stop flag!
-            if write_data_res is None:
-                state_queue.put(None)
-                return
+        # Stop flag!
+        if write_data_res is None:
+            state_queue.put(None)
+            return
 
-            asin, seed, write_data_res = write_data_res
-
-            for item in write_data_res:
-                f.write(','.join(map(str, item.values())) + '\n')
-
-            state_queue.put([asin, seed])
+        asin, seed, write_data_res = write_data_res
+        f = open('reviews_list.csv', 'a' if file_exists else 'w', encoding='utf-8')
+        for item in write_data_res:
+            f.write(','.join(map(str, item.values())) + '\n')
+        f.close()
+        state_queue.put([asin, seed])
 
 
 def process_data():
@@ -228,11 +232,16 @@ def process_data():
         try:
             process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
             raw = list(map(lambda s: jsd.decode(s.strip()), filter(lambda x: x.strip(), process_data_res.split('&&&'))))
-            data_with_quantity = raw[1][2]
+            data_with_quantity = None
+            for item in raw:
+                if len(item) >= 3 and item[1] == '#filter-info-section':
+                    data_with_quantity = item[2]
+            if not data_with_quantity:
+                continue
             parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
             reviews_count_el = parser.find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
             if not reviews_count_el:
-                return None
+                continue
             reviews_count_raw = reviews_count_el.text.split('total ratings, ')
             if len(reviews_count_raw) == 1:
                 reviews_count_raw = reviews_count_el.text.split('total rating, ')
@@ -328,8 +337,8 @@ def process_data():
                 })
 
             write_queue.put([asin, seed, res])
-        except Exception as e:
-            print(e)
+        except Exception as ex:
+            print(ex)
 
 
 def send_request(asin, seed):
@@ -353,7 +362,7 @@ def send_request(asin, seed):
         try:
             res = webdriver.execute_script("return " + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
-                print('something went wrong')
+                print('something went wrong. retry... ')
                 raise RetryException()
         except (JavascriptException, RetryException):
             try:
@@ -363,6 +372,7 @@ def send_request(asin, seed):
                 if not res or 'BAAAAAAD ASIN!' in res:
                     print('error')
                     raise Exception()
+                print('success. continue')
             except Exception as e:
                 print(e)
                 try:
@@ -372,6 +382,7 @@ def send_request(asin, seed):
                 return False
 
         data_queue.put([asin, seed, res])
+        print('data is sent')
     else:
         data_queue.put(None)
     return True
