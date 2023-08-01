@@ -25,6 +25,7 @@ from google_sheets import get_asins, write_reviews_data
 try:
     import tensorflow
     from captcha_solver.solve_captcha_with_model import CaptchaSolver
+
     captchaAI = True
 except ImportError as e:
     CaptchaSolver = None
@@ -255,7 +256,7 @@ def process_data():
 
             res = []
 
-            for item in raw[6:]:
+            for item in raw:
                 if item[1] != "#cm_cr-review_list" or not item[2].strip():
                     break
                 item_parser = BeautifulSoup(item[2].strip(), features='html.parser')
@@ -382,7 +383,6 @@ def send_request(asin, seed):
                 return False
 
         data_queue.put([asin, seed, res])
-        print('data is sent')
     else:
         data_queue.put(None)
     return True
@@ -462,6 +462,7 @@ if __name__ == '__main__':
     try:
         main()
         from uniqulizer import uniqulize_by_df
+
         uniqulize_by_df('reviews_list.csv', 'output_reviews_list.csv', 0)
         write_reviews_data()
     except KeyboardInterrupt:
