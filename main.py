@@ -212,7 +212,7 @@ def write_data():
             return
 
         asin, seed, write_data_res = write_data_res
-        f = open('reviews_list.csv', 'a' if file_exists else 'w', encoding='utf-8')
+        f = open('reviews_list.csv', 'a', encoding='utf-8')
         for item in write_data_res:
             f.write(','.join(map(str, item.values())) + '\n')
         f.close()
@@ -237,6 +237,7 @@ def process_data():
             for item in raw:
                 if len(item) >= 3 and item[1] == '#filter-info-section':
                     data_with_quantity = item[2]
+                    break
             if not data_with_quantity:
                 continue
             parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
@@ -257,10 +258,11 @@ def process_data():
             res = []
 
             for item in raw:
-                if item[1] != "#cm_cr-review_list" or not item[2].strip():
-                    break
+                if len(item) < 3 or item[1] != "#cm_cr-review_list" or not item[2].strip():
+                    continue
                 item_parser = BeautifulSoup(item[2].strip(), features='html.parser')
-                if item_parser.find('div', class_='a-divider-section') \
+                if not item_parser or not item_parser.find(attrs={'data-hook': 'review'}) \
+                        or item_parser.find('div', class_='a-divider-section') \
                         or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
                     continue
                 # Country & Date
@@ -340,6 +342,7 @@ def process_data():
             write_queue.put([asin, seed, res])
         except Exception as ex:
             print(ex)
+            raise ex
 
 
 def send_request(asin, seed):
