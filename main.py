@@ -232,7 +232,14 @@ def process_data():
         asin, seed, process_data_res = process_data_res
         try:
             process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
-            raw = list(map(lambda s: jsd.decode(s.strip()), filter(lambda x: x.strip(), process_data_res.split('&&&'))))
+            try:
+                raw = list(map(
+                    lambda s: jsd.decode(s.strip()),
+                    [i for i in process_data_res.splitlines() if i.strip() and '&&&' != i.strip()],
+                ))
+            except Exception as e:
+                print(e)
+                continue
             data_with_quantity = None
             for item in raw:
                 if len(item) >= 3 and item[1] == '#filter-info-section':
