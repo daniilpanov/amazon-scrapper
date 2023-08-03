@@ -10,6 +10,7 @@ from time import sleep
 from alive_progress import alive_bar
 
 import requests
+from pandas import DataFrame
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import OperatingSystem, SoftwareName
 from bs4 import BeautifulSoup
@@ -212,10 +213,11 @@ def write_data():
             return
 
         asin, seed, write_data_res = write_data_res
-        f = open('reviews_list.csv', 'a', encoding='utf-8')
-        for item in write_data_res:
-            f.write(','.join(map(str, item.values())) + '\n')
-        f.close()
+        df = DataFrame(
+            write_data_res,
+            columns=['product_url', 'asin', 'date_info', 'name', 'title', 'content', 'rating', 'helpful', 'options'],
+        )
+        df.to_csv('reviews_list.csv', index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])
 
 
