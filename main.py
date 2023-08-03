@@ -1,7 +1,6 @@
 import os.path
 import random
 import re
-import sys
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from queue import Queue
@@ -472,9 +471,9 @@ if __name__ == '__main__':
     try:
         main()
         from uniqulizer import uniqulize_by_df
-
         uniqulize_by_df('reviews_list.csv', 'output_reviews_list.csv', 0)
-        write_reviews_data()
+        from pandas import read_csv
+        write_reviews_data(read_csv('output_reviews_list.csv', encoding='utf-8'))
     except KeyboardInterrupt:
         print('STOP')
         data_queue.put(None)
