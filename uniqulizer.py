@@ -11,9 +11,10 @@ if __name__ == '__main__':
     # uniqulizer
     import os.path
 
-    path = "reviews_list.csv"
-    f_out = "output.csv"
-    header = False
+    path = input("Please, type the filepath: ")
+    header = input("Have this file header? [yes/no]: ").lower() in ('yes', 'y')
+    f_out = input("Please, type the output file or just press enter to choose default filepath - ./output.csv: ") \
+                or "output.csv"
     while not os.path.exists(os.path.abspath(path)):
         path = input("Please, type the filepath: ")
         header = input("Have this file header? [yes/no]: ").lower() in ('yes', 'y')

@@ -372,9 +372,9 @@ def send_request(asin, seed):
         try:
             res = webdriver.execute_script("return " + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
-                print('something went wrong. retry... ')
                 raise RetryException()
         except (JavascriptException, RetryException):
+            print('something went wrong. retry... ')
             try:
                 wait_for_loading()
                 insert_jquery()
@@ -433,18 +433,20 @@ def main():
     ASINs = get_asins()
     index = 0
     try:
-        for asin in ASINs:
-            if asin in data:
-                if data[asin] >= params_len - 1:
-                    continue
-                index = data[asin]
-            print('COLLECTING REVIEWS FOR ASIN', asin + ':')
-            with alive_bar(params_len, bar='classic') as bar:
-                bar(index, skipped=True)
-                for params_seed in range(index, params_len):
-                    send_request(asin, params_seed)
-                    bar()
-            index = 0
+        for brand in ASINs:
+            for asin in ASINs[brand]:
+                asin = asin[0]
+                if asin in data:
+                    if data[asin] >= params_len - 1:
+                        continue
+                    index = data[asin]
+                print('COLLECTING REVIEWS FOR ASIN', asin + ':')
+                with alive_bar(params_len, bar='classic') as bar:
+                    bar(index, skipped=True)
+                    for params_seed in range(index, params_len):
+                        send_request(asin, params_seed)
+                        bar()
+                index = 0
         print('wait for writing the data...')
         data_queue.put(None)
         process_thread.join()
@@ -473,7 +475,10 @@ if __name__ == '__main__':
         from uniqulizer import uniqulize_by_df
         uniqulize_by_df('reviews_list.csv', 'output_reviews_list.csv', 0)
         from pandas import read_csv
-        write_reviews_data(read_csv('output_reviews_list.csv', encoding='utf-8'))
+        p = 'output_reviews_list.csv'
+        while not os.path.exists(p):
+            p = input('Default file can not be found. Please type the path of the CSV file with collected reviews: ')
+        write_reviews_data(read_csv(p, encoding='utf-8'))
     except KeyboardInterrupt:
         print('STOP')
         data_queue.put(None)
