@@ -1,6 +1,7 @@
 import os.path
 import random
 import re
+import threading
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from queue import Queue
@@ -191,10 +192,15 @@ def write_state():
             return
 
         asin, seed = state_data
-
-        f = open('state.json', 'w', encoding='utf-8')
-        f.write(state(asin, seed))
-        f.close()
+        try:
+            f = open('state.json', 'w', encoding='utf-8')
+            f.write(state(asin, seed))
+            f.close()
+        except IOError:
+            sleep(10)
+            f = open('state.json', 'w', encoding='utf-8')
+            f.write(state(asin, seed))
+            f.close()
 
 
 def write_data():
