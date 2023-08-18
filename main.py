@@ -1,6 +1,7 @@
 import os.path
 import random
 import re
+import sys
 import threading
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
@@ -488,3 +489,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('STOP')
         data_queue.put(None)
+    except:
+        print('Something went wrong... reloading all script after 20 seconds')
+        sleep(20)
+        os.execv(sys.executable, [sys.executable, sys.argv])
