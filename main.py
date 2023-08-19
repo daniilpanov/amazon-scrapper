@@ -492,4 +492,4 @@ if __name__ == '__main__':
     except:
         print('Something went wrong... reloading all script after 20 seconds')
         sleep(20)
-        os.execv(sys.executable, [sys.executable, sys.argv])
+        os.execv(sys.executable, [sys.executable] + sys.argv)
