@@ -2,7 +2,6 @@ import os.path
 import random
 import re
 import sys
-import threading
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from queue import Queue
