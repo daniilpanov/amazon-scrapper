@@ -1,7 +1,7 @@
+import datetime
 import os.path
 import random
 import re
-import sys
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from queue import Queue
@@ -20,8 +20,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from undetected_chromedriver import ChromeOptions, Chrome
 from selenium.webdriver.support import expected_conditions as EC
-
-from google_sheets import get_asins, write_reviews_data
 
 try:
     import tensorflow
@@ -178,9 +176,9 @@ def state(asin, seed):
     return jse.encode(data)
 
 
-def write_state():
+def write_state(folder='.'):
     if not file_exists:
-        f = open('state.json', 'w', encoding='utf-8')
+        f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
         f.write('{}')
         f.close()
     while True:
@@ -193,19 +191,19 @@ def write_state():
 
         asin, seed = state_data
         try:
-            f = open('state.json', 'w', encoding='utf-8')
+            f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
             f.write(state(asin, seed))
             f.close()
         except IOError:
             sleep(10)
-            f = open('state.json', 'w', encoding='utf-8')
+            f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
             f.write(state(asin, seed))
             f.close()
 
 
-def write_data():
+def write_data(folder='.'):
     if not file_exists:
-        f = open('reviews_list.csv', 'w', encoding='utf-8')
+        f = open(os.path.join(folder, 'reviews_list.csv'), 'w', encoding='utf-8')
         f.write('product_url,asin,date_info,name,title,content,rating,helpful,options\n')
         f.close()
     while True:
@@ -222,7 +220,7 @@ def write_data():
             write_data_res,
             columns=['product_url', 'asin', 'date_info', 'name', 'title', 'content', 'rating', 'helpful', 'options'],
         )
-        df.to_csv('reviews_list.csv', index=False, header=False, mode='a', encoding='utf-8')
+        df.to_csv(os.path.join(folder, 'reviews_list.csv'), index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])
 
 
@@ -403,11 +401,13 @@ def send_request(asin, seed):
     return True
 
 
-def main():
+def main(ASINs, folder='.'):
+    # timestamp
+    start_time = datetime.datetime.now()
     print('loading webdriver')
     global webdriver, ev, file_exists
 
-    file_exists = os.path.exists('reviews_list.csv')
+    file_exists = os.path.exists(os.path.join(folder, 'reviews_list.csv'))
 
     ev = Event()
     options = ChromeOptions()
@@ -417,7 +417,7 @@ def main():
     options.add_argument(
         f'user-agent={UserAgent(software_names=(SoftwareName.CHROME.value,), operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value), limit=120).get_random_user_agent()}'
     )
-    options.add_argument('--headless')
+    # options.add_argument('--headless')
     options.add_argument('--start-maximized')
     options.add_argument('--ignore-certificate-errors-spki-list')
     options.add_argument('--ignore-ssl-errors')
@@ -429,19 +429,32 @@ def main():
 
     user_emulate_thread = Thread(target=user_emulate, daemon=True)
     process_thread = Thread(target=process_data)
-    writer_thread = Thread(target=write_data)
-    state_writer_thread = Thread(target=write_state)
+    writer_thread = Thread(target=write_data, args=(folder,))
+    state_writer_thread = Thread(target=write_state, args=(folder,))
     user_emulate_thread.start()
     process_thread.start()
     writer_thread.start()
     state_writer_thread.start()
 
-    ASINs = get_asins()
     index = 0
     try:
-        for brand in ASINs:
-            for asin in ASINs[brand]:
-                asin = asin[0]
+        if type(ASINs) is dict:
+            for brand in ASINs:
+                for asin in ASINs[brand]:
+                    asin = asin[0]
+                    if asin in data:
+                        if data[asin] >= params_len - 1:
+                            continue
+                        index = data[asin]
+                    print('COLLECTING REVIEWS FOR ASIN', asin + ':')
+                    with alive_bar(params_len, bar='classic') as bar:
+                        bar(index, skipped=True)
+                        for params_seed in range(index, params_len):
+                            send_request(asin, params_seed)
+                            bar()
+                    index = 0
+        elif type(ASINs) is list:
+            for asin in ASINs:
                 if asin in data:
                     if data[asin] >= params_len - 1:
                         continue
@@ -459,7 +472,8 @@ def main():
         writer_thread.join()
         state_writer_thread.join()
         print('DONE.')
-    except (InvalidSessionIdException, RetryException):
+        return start_time, datetime.datetime.now()
+    except (InvalidSessionIdException, RetryException) as e:
         print('ERROR: invalid session. Program will be restarted')
         print('wait for writing the data...')
         data_queue.put(None)
@@ -470,25 +484,9 @@ def main():
         state_writer_thread.join()
         print('done. reloading...')
         sleep(10)
-        main()
-
-
-# Mainloop
-if __name__ == '__main__':
-    print('PROGRAM STARTED')
-    try:
-        main()
-        from uniqulizer import uniqulize_by_df
-        uniqulize_by_df('reviews_list.csv', 'output_reviews_list.csv', 0)
-        from pandas import read_csv
-        p = 'output_reviews_list.csv'
-        while not os.path.exists(p):
-            p = input('Default file can not be found. Please type the path of the CSV file with collected reviews: ')
-        write_reviews_data(read_csv(p, encoding='utf-8'))
+        return main(ASINs, folder)
     except KeyboardInterrupt:
-        print('STOP')
+        print('Script stopped')
         data_queue.put(None)
-    except:
-        print('Something went wrong... reloading all script after 20 seconds')
-        sleep(20)
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        return start_time, datetime.datetime.now()
+
