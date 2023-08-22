@@ -417,7 +417,7 @@ def main(ASINs, folder='.'):
     options.add_argument(
         f'user-agent={UserAgent(software_names=(SoftwareName.CHROME.value,), operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value), limit=120).get_random_user_agent()}'
     )
-    # options.add_argument('--headless')
+    options.add_argument('--headless')
     options.add_argument('--start-maximized')
     options.add_argument('--ignore-certificate-errors-spki-list')
     options.add_argument('--ignore-ssl-errors')
