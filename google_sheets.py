@@ -46,14 +46,14 @@ def write_reviews_data(dataframe: DataFrame, chunk_size=5000, skip_chunks_count=
                 found = True
                 break
         if not found:
-            brands.append('Unknown brand')
+            brands.append('')
     # Appending column
     dataframe.insert(0, 'Brand', brands)
     # Проверка, является ли количество строк в DataFrame больше 1 чанка
     if len(dataframe) > chunk_size:
         chunk_count = len(dataframe) // chunk_size + 1
         # Выбор нужного листа
-        sheet = sh.worksheet('output')
+        sheet = sh.worksheet('output2')
         offset = get_last_row(sheet)
 
         i = 0
@@ -78,7 +78,7 @@ def write_reviews_data(dataframe: DataFrame, chunk_size=5000, skip_chunks_count=
 
     else:
         # Выбор нужного листа
-        sheet = sh.worksheet('output')
+        sheet = sh.worksheet('output2')
 
         # Загрузка DataFrame в Google Sheets
         set_with_dataframe(sheet, dataframe)
