@@ -104,6 +104,9 @@ def write_data(folder='.'):
 
 
 def process_data():
+    months = ['January', 'February', 'March', 'April', 'May',
+              'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
     while True:
         # Wait for a data from the queue
         process_data_res = data_queue.get()
@@ -159,12 +162,14 @@ def process_data():
                 # Country & Date
                 review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
                 if review_date_raw:
-                    review_date_raw = review_date_raw.text.strip()
-                    review_date = review_date_raw.replace("\n", " ") \
-                        .replace('Reviewed in the ', '').replace(',', '').replace('"', '')
-                    rdc = review_date.split(' on ')
-                    review_date = rdc[-1]
-                    review_country = ' on '.join(rdc[:-1])
+                    review_date_raw = review_date_raw.text.replace("\n", " ").strip()
+                    review_date_data, year = review_date_raw.split(', ')
+                    year = int(year)
+                    review_country, review_date = review_date_data.split(' on ')
+                    month, day = review_date.split(' ')
+                    month = months.index(month) + 1
+                    day = int(day)
+                    review_date = f'{year}-{month:02}-{day:02}'
                 else:
                     review_date = ''
                     review_country = ''
@@ -221,7 +226,8 @@ def process_data():
                 res.append({
                     'product_url': 'https://www.amazon.com/dp/' + asin,
                     'asin': asin,
-                    'date_info': review_date_raw,
+                    'date': review_date,
+                    'country': review_country,
                     'name': customer_name,
                     'title': review_title,
                     'content': review_body,
