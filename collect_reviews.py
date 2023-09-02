@@ -9,13 +9,10 @@ from time import sleep
 from alive_progress import alive_bar
 
 from pandas import DataFrame
-from random_user_agent.user_agent import UserAgent
-from random_user_agent.params import OperatingSystem, SoftwareName
 from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException
-from undetected_chromedriver import ChromeOptions, Chrome
 
-from functions import captcha_solve, RetryException, wait_for_loading, insert_jquery, user_emulate
+from functions import RetryException, wait_for_loading, insert_jquery, user_emulate, chrome_init
 
 params = {
     'sortBy': ['helpful', 'recent'],
@@ -295,22 +292,7 @@ def main(ASINs, folder='.'):
     file_exists = os.path.exists(os.path.join(folder, 'reviews_list.csv'))
 
     ev = Event()
-    options = ChromeOptions()
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument(
-        f'user-agent={UserAgent(software_names=(SoftwareName.CHROME.value,), operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value), limit=120).get_random_user_agent()}'
-    )
-    options.add_argument('--headless')
-    options.add_argument('--start-maximized')
-    options.add_argument('--ignore-certificate-errors-spki-list')
-    options.add_argument('--ignore-ssl-errors')
-    options.add_argument('--log-level=3')
-    webdriver = Chrome(options=options)
-    webdriver.get('https://www.amazon.com/product-reviews/B08JPS4554')
-    wait_for_loading(webdriver)
-    captcha_solve(webdriver)
+    webdriver = chrome_init()
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)

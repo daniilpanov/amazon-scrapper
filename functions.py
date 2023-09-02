@@ -3,11 +3,14 @@ import random
 from time import sleep
 
 import requests
+from random_user_agent.params import SoftwareName, OperatingSystem
+from random_user_agent.user_agent import UserAgent
 from selenium.common import WebDriverException, NoSuchElementException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from undetected_chromedriver import Chrome, ChromeOptions
 
 try:
     import tensorflow
@@ -124,3 +127,23 @@ def user_emulate(webdriver, ev):
 
 class RetryException(Exception):
     pass
+
+
+def chrome_init():
+    options = ChromeOptions()
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument(
+        f'user-agent={UserAgent(software_names=(SoftwareName.CHROME.value,), operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value), limit=120).get_random_user_agent()}'
+    )
+    options.add_argument('--headless')
+    options.add_argument('--start-maximized')
+    options.add_argument('--ignore-certificate-errors-spki-list')
+    options.add_argument('--ignore-ssl-errors')
+    options.add_argument('--log-level=3')
+    webdriver = Chrome(options=options)
+    webdriver.get('https://www.amazon.com/product-reviews/B08JPS4554')
+    wait_for_loading(webdriver)
+    captcha_solve(webdriver)
+    return webdriver
