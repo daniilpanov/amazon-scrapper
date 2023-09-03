@@ -10,6 +10,7 @@ from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from seleniumbase import Driver
 from undetected_chromedriver import Chrome, ChromeOptions
 
 try:
@@ -130,6 +131,7 @@ class RetryException(Exception):
 
 
 def chrome_init():
+    webdriver = Driver(uc=True, undetectable=True, no_sandbox=True)
     options = ChromeOptions()
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-gpu')
