@@ -6,12 +6,11 @@ from selenium.webdriver.common.by import By
 from functions import chrome_init, wait_for_loading
 
 
-def collect_asins(market_niche=None):
-    webdriver = chrome_init()
-    webdriver.get('https://amazon.com')
-    wait_for_loading(webdriver)
-    # переход к необходимой локации - US (UM)
+def collect_asins(query, market_niche=None):
     try:
+        webdriver = chrome_init(modern=True, headless=False, goto='https://amazon.com')
+        webdriver.activate_jquery()
+        # переход к необходимой локации - US (UM)
         webdriver.execute_script(
             '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
             '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
@@ -33,14 +32,21 @@ def collect_asins(market_niche=None):
         )
     except:
         return False
-    sleep(1)
+    finally:
+        webdriver._BaseCase__close_all_drivers()
+
+    webdriver.sleep(1)
     webdriver.refresh()
-    wait_for_loading(webdriver)
     try:
-        search_input = webdriver.find_element(By.CSS_SELECTOR, '#twotabsearchtextbox,#nav-bb-search')
-    except NoSuchElementException:
-        print('ERROR! Search box not found')
-        return False
+        print(webdriver.get_element('#searchDropdownBox'))
+        webdriver.select_option_by_text('#searchDropdownBox', 'Arts & Crafts')
+        webdriver.sleep(10)
+        webdriver.type('#twotabsearchtextbox,#nav-bb-search', query)
+    finally:
+        try:
+            webdriver._BaseCase__close_all_drivers()
+        except:
+            pass
 
 
 def collect_products_info():
@@ -71,4 +77,4 @@ def reviews_write(data):
 writer_funcs = (asin_write, product_info_write, reviews_write)
 
 if __name__ == '__main__':
-    pass
+    collect_asins('hair gummies', 'fsdfd')

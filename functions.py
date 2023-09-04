@@ -50,17 +50,13 @@ def captcha_check(webdriver, just_check=False):
 
 
 def captcha_check_modern(webdriver, just_check=False):
-    wait_for_loading(webdriver)
-    insert_jquery(webdriver)
+    webdriver.activate_jquery()
     try:
-        captcha = webdriver.find_element(
-            By.CSS_SELECTOR,
-            'div.a-box.a-alert.a-alert-info.a-spacing-base > div.a-box-inner > h4',
-        )
+        captcha = webdriver.get_element('div.a-box.a-alert.a-alert-info.a-spacing-base > div.a-box-inner > h4')
         if just_check:
             return captcha.text == 'Enter the characters you see below'
         if captcha and captcha.text == 'Enter the characters you see below':
-            buttons = webdriver.find_elements(By.CSS_SELECTOR, 'a[onclick="window.location.reload()"]')
+            buttons = webdriver.get_elements('a[onclick="window.location.reload()"]')
             for button in buttons:
                 if button.text == 'Try different image':
                     button.click()
@@ -118,7 +114,7 @@ def captcha_solve_modern(webdriver, retry=10):
             sleep(15)
             return captcha_check_modern(webdriver, True)
         sleep(1)
-        captcha = webdriver.find_element('img[src]')
+        captcha = webdriver.get_element('img[src]')
         img_source = requests.get(captcha.get_attribute('src'))
         if not img_source:
             return False
@@ -137,13 +133,10 @@ def captcha_solve_modern(webdriver, retry=10):
         os.remove(filepath)
         if not text:
             return False
-        input_element = webdriver.find_element(value='captchacharacters')
-        for symbol in text:
-            input_element.send_keys(symbol)
-            sleep(random.randint(0, 2))
-        input_element.send_keys(Keys.ENTER)
-        sleep(1)
-        insert_jquery(webdriver)
+        webdriver.type('#captchacharacters', text)
+        webdriver.submit('#captchacharacters')
+        webdriver.sleep(2)
+        webdriver.activate_jquery()
         if captcha_check_modern(webdriver):
             if retry:
                 return captcha_solve(webdriver, retry - 1)

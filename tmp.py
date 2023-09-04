@@ -1,8 +1,8 @@
 from time import sleep
 
 from functions import chrome_init
-# TODO:
-wd = chrome_init(modern=True, headless=False)
+# TODO: check jquery
+wd = chrome_init(modern=True, headless=False, goto=None)
 try:
     wd.get("https://seleniumbase.io/coffee/")
     wd.assert_title("Coffee Cart")
@@ -14,8 +14,14 @@ try:
     wd.click("button.pay")
     wd.type("input#name", "Selenium Coffee")
     wd.type("input#email", "test@test.test")
-    wd.click("button#submit-payment")
+    wd.submit("input#email")
+    # wd.click("button#submit-payment")
     wd.assert_text("Thanks for your purchase.", "#app .success")
 except Exception as e:
     raise e
+finally:
+    try:
+        wd._BaseCase__close_all_drivers()
+    except:
+        pass
 
