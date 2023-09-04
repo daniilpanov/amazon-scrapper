@@ -1,11 +1,11 @@
-import seleniumbase as sel
+from time import sleep
 
-w = sel.SB()
-wd = w.__enter__()
+from functions import chrome_init
+# TODO:
+wd = chrome_init(modern=True, headless=False)
 try:
-    wd.open("https://seleniumbase.io/coffee/")
+    wd.get("https://seleniumbase.io/coffee/")
     wd.assert_title("Coffee Cart")
-    print('ok')
     wd.click('div[data-sb="Cappuccino"]')
     wd.click('div[data-sb="Flat-White"]')
     wd.click('div[data-sb="Cafe-Latte"]')
@@ -17,6 +17,5 @@ try:
     wd.click("button#submit-payment")
     wd.assert_text("Thanks for your purchase.", "#app .success")
 except Exception as e:
-    w.__exit__(type(e), e, e.__traceback__)
     raise e
 
