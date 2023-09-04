@@ -1,12 +1,8 @@
-from time import sleep
-
-from selenium.common import NoSuchElementException
-from selenium.webdriver.common.by import By
-
-from functions import chrome_init, wait_for_loading
+from functions import chrome_init
 
 
 def collect_asins(query, market_niche=None):
+    webdriver = None
     try:
         webdriver = chrome_init(modern=True, headless=False, goto='https://amazon.com')
         webdriver.activate_jquery()
@@ -31,22 +27,32 @@ def collect_asins(query, market_niche=None):
             '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
         )
     except:
+        if webdriver:
+            try:
+                webdriver.driver.close()
+            except:
+                pass
         return False
-    finally:
-        webdriver._BaseCase__close_all_drivers()
 
     webdriver.sleep(1)
     webdriver.refresh()
     try:
-        print(webdriver.get_element('#searchDropdownBox'))
-        webdriver.select_option_by_text('#searchDropdownBox', 'Arts & Crafts')
+        webdriver.select_option_by_text('#searchDropdownBox', market_niche)
         webdriver.sleep(10)
         webdriver.type('#twotabsearchtextbox,#nav-bb-search', query)
-    finally:
+        webdriver.submit('#twotabsearchtextbox,#nav-bb-search')
+    except:
         try:
-            webdriver._BaseCase__close_all_drivers()
-        except:
-            pass
+            webdriver.driver.close()
+        finally:
+            return False
+
+    # TODO: COLLECTING
+
+    try:
+        webdriver.driver.close()
+    finally:
+        return True
 
 
 def collect_products_info():
@@ -77,4 +83,4 @@ def reviews_write(data):
 writer_funcs = (asin_write, product_info_write, reviews_write)
 
 if __name__ == '__main__':
-    collect_asins('hair gummies', 'fsdfd')
+    print(collect_asins('hair gummies', 'Amazon Devices'))

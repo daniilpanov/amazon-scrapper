@@ -80,7 +80,7 @@ def write_state(folder='.'):
 def write_data(folder='.'):
     if not file_exists:
         f = open(os.path.join(folder, 'reviews_list.csv'), 'w', encoding='utf-8')
-        f.write('product_url,asin,date_info,name,title,content,rating,helpful,options\n')
+        f.write('product_url,asin,date,country,name,title,content,rating,helpful,options\n')
         f.close()
     while True:
         # Wait for a data from the queue
@@ -92,10 +92,18 @@ def write_data(folder='.'):
             return
 
         asin, seed, write_data_res = write_data_res
-        df = DataFrame(
-            write_data_res,
-            columns=['product_url', 'asin', 'date_info', 'name', 'title', 'content', 'rating', 'helpful', 'options'],
-        )
+        df = DataFrame(write_data_res, columns=[
+            'product_url',
+            'asin',
+            'date',
+            'country',
+            'name',
+            'title',
+            'content',
+            'rating',
+            'helpful',
+            'options',
+        ])
         df.to_csv(os.path.join(folder, 'reviews_list.csv'), index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])
 
@@ -160,7 +168,8 @@ def process_data():
                 review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
                 if review_date_raw:
                     review_date_raw = review_date_raw.text.replace("\n", " ").strip()
-                    review_date_data, year = review_date_raw.split(', ')
+                    review_date_data, year = \
+                        (review_date_raw[16:] if review_date_raw[12] == 't' else review_date_raw[12:]).split(', ')
                     year = int(year)
                     review_country, review_date = review_date_data.split(' on ')
                     month, day = review_date.split(' ')
@@ -262,8 +271,7 @@ def send_request(asin, seed):
         except (JavascriptException, RetryException):
             print('something went wrong. retry... ')
             try:
-                wait_for_loading(webdriver)
-                insert_jquery(webdriver)
+                webdriver.activate_jquery()
                 res = webdriver.execute_script("return " + ajax)
                 if not res or 'BAAAAAAD ASIN!' in res:
                     print('error')
@@ -272,10 +280,9 @@ def send_request(asin, seed):
             except Exception as e:
                 print(e)
                 try:
-                    webdriver.close()
-                except:
-                    pass
-                return False
+                    webdriver.driver.close()
+                finally:
+                    return False
 
         data_queue.put([asin, seed, res])
     else:
@@ -292,7 +299,7 @@ def main(ASINs, folder='.'):
     file_exists = os.path.exists(os.path.join(folder, 'reviews_list.csv'))
 
     ev = Event()
-    webdriver = chrome_init()
+    webdriver = chrome_init(modern=True)
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
@@ -356,4 +363,9 @@ def main(ASINs, folder='.'):
         print('Script stopped')
         data_queue.put(None)
         return start_time, datetime.datetime.now()
+    finally:
+        try:
+            webdriver.driver.close()
+        except:
+            pass
 

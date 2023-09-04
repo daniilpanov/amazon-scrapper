@@ -171,13 +171,13 @@ def insert_jquery(webdriver):
 def user_emulate(webdriver, ev):
     try:
         while not ev.is_set():
-            action = ActionChains(webdriver)
-            webdriver.execute_script("document.body.focus();")
+            action = ActionChains(webdriver.driver)
+            webdriver.focus('body')
             for i in range(random.randint(20, 50)):
                 action.scroll_by_amount(0, random.randint(-4, 4) * 10).perform()
                 sleep(0.2)
             if not random.randint(0, 5):
-                action.send_keys(Keys.PAGE_DOWN).perform()
+                action.send_keys(Keys.ARROW_LEFT).perform()
             sleep(random.randint(5, 15))
     except Exception as ex:
         print('User emulation is stopped because of this error:', ex)
