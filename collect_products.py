@@ -1,9 +1,13 @@
 import urllib
 from json import JSONDecoder
+from queue import Queue
 
 from functions import chrome_init
 
-# TODO: queues system (writer, products_info, reviews)
+writer_queue = Queue()
+products_info_queue = Queue()
+reviews_queue = Queue()
+collected_asins = []
 
 
 def collect_asins(query, market_niche=None):
@@ -42,11 +46,12 @@ def collect_asins(query, market_niche=None):
     webdriver.sleep(1)
     webdriver.refresh()
     try:
+        # Set needle niche and search query
         webdriver.select_option_by_text('#searchDropdownBox', market_niche)
-        webdriver.sleep(10)
         webdriver.type('#twotabsearchtextbox,#nav-bb-search', query)
         webdriver.submit('#twotabsearchtextbox,#nav-bb-search')
 
+        # Get all query arguments (crid, qid, etc.)
         webdriver.click('a.s-pagination-item.s-pagination-button')
         webdriver.sleep(1)
         params_str = webdriver.get_current_url().split('?')[1]
@@ -55,10 +60,26 @@ def collect_asins(query, market_niche=None):
                          for item in params_str.split('&')))
         webdriver.activate_jquery()
         q = '?' + '&'.join('='.join(map(str, keyval)) for keyval in args.items())
-        result = webdriver.execute_script(f"$.post(\"https://www.amazon.com/s/query{q}\", "
-                                          "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in args.items()]) + ""
-                                          "\"}, null, 'text');")
-        asin_write(result, args['pageNumber'])
+
+        # we're ready to collect!
+        # ALGORITHM: find the last page, then iterate each page before last page,
+        # then goto the last page in browser and check again. If the last page will be the same - break cycle
+        while True:
+            last_page_el = webdriver.get_element('.s-pagination-item.s-pagination-disabled:last-of-type')
+            if not last_page_el:
+                last_page_el = webdriver.find_elements('.s-pagination-item.s-pagination-button')
+                if last_page_el and len(last_page_el) > 2:
+                    last_page_el = last_page_el[-2]
+                else:
+                    break
+            elif 'Next' in last_page_el.text:
+                break
+            last_page = int(last_page_el.text.strip())
+            for i in range(1, last_page + 1):
+                strargs = '",'.join([':"'.join(map(str, keyval)) for keyval in (args | {'page': i}).items()]) + '"'
+                result = webdriver.execute_script(f"$.post(\"https://www.amazon.com/s/query{q}\", "
+                                                  "{" + strargs + "}, null, 'text');")
+                writer_queue.put([0, result])
         return True
     except:
         return False
@@ -74,23 +95,39 @@ def collect_reviews():
     pass
 
 
-# 0 - asin, 1 - product info, 2 - review(s)
-def writer(item, data):
-    pass
+def writer():
+    # 0 - asin, 1 - product info, 2 - review(s)
+    list_of_functions = [asin_write, product_info_write, reviews_write]
+    not_broken = len(list_of_functions)
+
+    while True:
+        if not_broken:
+            # [0 - item, 1 - data]
+            el = writer_queue.get()
+            if el[1] is None:
+                not_broken -= 1
+                continue
+            list_of_functions[el[0]](el[1])
+        else:
+            return
 
 
-def asin_write(data, page):
+def asin_write(data):
     decoder = JSONDecoder()
     raw_data = list(map(lambda s: decoder.decode(s.strip()), filter(lambda x: x, data.strip().split('&&&'))))
-    count_all_products = 0
     rows = []
 
     with open('products.list', 'a') as f:
         for item in raw_data:
-            if count_all_products > 0 and count_all_products // 48 + 1 < page:
-                return count_all_products
             if 'data-main-slot:search-result-' in item[1]:
-                rows.append(item[2]['asin'] + '\n')
+                if item[2]['asin'] in collected_asins:
+                    continue
+                else:
+                    rows.append(item[2]['asin'] + '\n')
+                    collected_asins.append(item[2]['asin'])
+                    # collect product info and reviews
+                    products_info_queue.put(item[2]['asin'])
+                    reviews_queue.put(item[2]['asin'])
         f.writelines(rows)
 
 
