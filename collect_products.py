@@ -1,13 +1,24 @@
 import urllib
 from json import JSONDecoder
+from queue import Queue
+from threading import Thread
+from typing import Union
+
+from seleniumbase import BaseCase
 
 from functions import chrome_init
 
-# TODO: queues system (writer, products_info, reviews)
-
 
 def collect_asins(query, market_niche=None):
-    webdriver = None
+    webdriver: Union[BaseCase, None] = None
+    # Queues
+    writer_queue = Queue()
+    products_info_queue = Queue()
+    reviews_queue = Queue()
+    # Threads
+    writer_thr = Thread(target=writer, args=(writer_queue, ))
+    products_info_thr = Thread(target=collect_products_info, args=(products_info_queue, ))
+    reviews_thr = Thread(target=collect_reviews, args=(reviews_queue, ))
     try:
         webdriver = chrome_init(modern=True, headless=False, goto='https://amazon.com')
         webdriver.activate_jquery()
@@ -54,15 +65,42 @@ def collect_asins(query, market_niche=None):
                                    map(lambda x: x.replace('+', ' '), item.split('='))))
                          for item in params_str.split('&')))
         webdriver.activate_jquery()
-        q = '?' + '&'.join('='.join(map(str, keyval)) for keyval in args.items())
-        result = webdriver.execute_script(f"$.post(\"https://www.amazon.com/s/query{q}\", "
-                                          "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in args.items()]) + ""
-                                          "\"}, null, 'text');")
-        asin_write(result, args['pageNumber'])
+        # START THREADS
+        writer_thr.start()
+        products_info_thr.start()
+        reviews_thr.start()
+        # BEGIN COLLECTING
+        q = '&'.join('='.join(map(str, keyval)) for keyval in args.items())
+        page = 1
+        # get the last page (and later we need to update it)
+        # TODO: update it!
+        max_page_el = None
+        if 'Next' in max_page_el.text:
+            max_page = 1
+        else:
+            max_page = 10
+        while True:
+            p = args
+            p['page'] = str(page)
+            p = p.items()
+            result = webdriver.execute_script(f"$.post(\"https://www.amazon.com/s/query?{q}\", "
+                                              "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in p]) + ""
+                                              "\"}, null, 'text');")
+            writer_queue.put((0, (result, )))
+            page += 1
+            if page >= max_page:
+                # TODO: update the last page!
+                max_page_el = None
+                if 'Next' in max_page_el.text:
+                    break
+                max_page = 10
         return True
     except:
         return False
     finally:
+        writer_queue.put((-1, None))
+        products_info_queue.put(None)
+        reviews_queue.put(None)
         webdriver.driver.close()
 
 
@@ -75,21 +113,22 @@ def collect_reviews():
 
 
 # 0 - asin, 1 - product info, 2 - review(s)
-def writer(item, data):
-    pass
+def writer(writer_queue):
+    while True:
+        item, data = writer_queue.get()
+        if item == -1:
+            break
+        writer_funcs[item](*data)
 
 
-def asin_write(data, page):
+def asin_write(data):
     decoder = JSONDecoder()
     raw_data = list(map(lambda s: decoder.decode(s.strip()), filter(lambda x: x, data.strip().split('&&&'))))
-    count_all_products = 0
     rows = []
 
     with open('products.list', 'a') as f:
         for item in raw_data:
-            if count_all_products > 0 and count_all_products // 48 + 1 < page:
-                return count_all_products
-            if 'data-main-slot:search-result-' in item[1]:
+            if len(item) > 1 and 'data-main-slot:search-result-' in item[1] and 'asin' in item[2]:
                 rows.append(item[2]['asin'] + '\n')
         f.writelines(rows)
 
