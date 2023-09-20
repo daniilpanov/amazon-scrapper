@@ -73,27 +73,25 @@ def collect_asins(query, market_niche=None):
         q = '&'.join('='.join(map(str, keyval)) for keyval in args.items())
         page = 1
         # get the last page (and later we need to update it)
-        # TODO: update it!
-        max_page_el = None
+        max_page_el = webdriver.get_element('span.s-pagination-item.s-pagination-disabled')
         if 'Next' in max_page_el.text:
             max_page = 1
         else:
-            max_page = 10
+            max_page = int(max_page_el.text.strip())
         while True:
             p = args
             p['page'] = str(page)
             p = p.items()
-            result = webdriver.execute_script(f"$.post(\"https://www.amazon.com/s/query?{q}\", "
+            result = webdriver.execute_script(f"return $.post(\"https://www.amazon.com/s/query?{q}\", "
                                               "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in p]) + ""
                                               "\"}, null, 'text');")
-            writer_queue.put((0, (result, )))
+            writer_queue.put((0, (result, reviews_queue)))
             page += 1
             if page >= max_page:
-                # TODO: update the last page!
-                max_page_el = None
+                max_page_el = webdriver.get_element('span.s-pagination-item.s-pagination-disabled')
                 if 'Next' in max_page_el.text:
                     break
-                max_page = 10
+                max_page = int(max_page_el.text.strip())
         return True
     except:
         return False
@@ -104,12 +102,16 @@ def collect_asins(query, market_niche=None):
         webdriver.driver.close()
 
 
-def collect_products_info():
+def collect_products_info(products_info_queue):
     pass
 
 
-def collect_reviews():
-    pass
+def collect_reviews(reviews_queue):
+    el = reviews_queue.get()
+    while el:
+        # TODO: call to reviews_collect
+
+        el = reviews_queue.get()
 
 
 # 0 - asin, 1 - product info, 2 - review(s)
@@ -121,16 +123,20 @@ def writer(writer_queue):
         writer_funcs[item](*data)
 
 
-def asin_write(data):
+def asin_write(data, reviews_queue):
     decoder = JSONDecoder()
     raw_data = list(map(lambda s: decoder.decode(s.strip()), filter(lambda x: x, data.strip().split('&&&'))))
     rows = []
+    asins = []
 
     with open('products.list', 'a') as f:
         for item in raw_data:
             if len(item) > 1 and 'data-main-slot:search-result-' in item[1] and 'asin' in item[2]:
                 rows.append(item[2]['asin'] + '\n')
+                asins.append(item[2]['asin'])
         f.writelines(rows)
+    # load reviews collecting for a page of products
+    reviews_queue.put(asins)
 
 
 def product_info_write(data):
@@ -144,4 +150,4 @@ def reviews_write(data):
 writer_funcs = (asin_write, product_info_write, reviews_write)
 
 if __name__ == '__main__':
-    print(collect_asins('hair gummies', 'Amazon Devices'))
+    print(collect_asins('hair gummies', 'Beauty & Personal Care'))
