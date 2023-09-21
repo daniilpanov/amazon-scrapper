@@ -1,12 +1,12 @@
 import urllib
 from json import JSONDecoder
 from queue import Queue
-from threading import Thread
+from threading import Thread, Event
 from typing import Union
 
 from seleniumbase import BaseCase
 
-from functions import chrome_init
+from functions import chrome_init, user_emulate
 
 
 def collect_asins(query, market_niche=None):
@@ -15,12 +15,14 @@ def collect_asins(query, market_niche=None):
     writer_queue = Queue()
     products_info_queue = Queue()
     reviews_queue = Queue()
+    # Emulation user switcher
+    ev = Event()
     # Threads
     writer_thr = Thread(target=writer, args=(writer_queue, ))
     products_info_thr = Thread(target=collect_products_info, args=(products_info_queue, ))
     reviews_thr = Thread(target=collect_reviews, args=(reviews_queue, ))
     try:
-        webdriver = chrome_init(modern=True, headless=False, goto='https://amazon.com')
+        webdriver = chrome_init(modern=True, goto='https://amazon.com')
         webdriver.activate_jquery()
         # переход к необходимой локации - US (UM)
         webdriver.execute_script(
@@ -52,6 +54,9 @@ def collect_asins(query, market_niche=None):
 
     webdriver.sleep(1)
     webdriver.refresh()
+    # Emulate user mouse moves
+    user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev))
+    user_emulate_thread.start()
     try:
         webdriver.select_option_by_text('#searchDropdownBox', market_niche)
         webdriver.sleep(10)
@@ -99,6 +104,7 @@ def collect_asins(query, market_niche=None):
         writer_queue.put((-1, None))
         products_info_queue.put(None)
         reviews_queue.put(None)
+        ev.set()
         webdriver.driver.close()
 
 

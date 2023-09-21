@@ -5,7 +5,7 @@ from time import sleep
 import requests
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
-from selenium.common import WebDriverException, NoSuchElementException
+from selenium.common import WebDriverException, NoSuchElementException, JavascriptException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -16,6 +16,12 @@ from seleniumbase.fixtures import constants
 from undetected_chromedriver import Chrome, ChromeOptions
 
 sb_config = sbc
+
+
+class WebDriver (BaseCase):
+    def activate_jquery(self):
+        return insert_jquery(self)
+
 
 try:
     import tensorflow
@@ -157,8 +163,8 @@ def wait_for_loading(webdriver, p=None, by=By.CSS_SELECTOR):
 
 def insert_jquery(webdriver):
     try:
-        webdriver.find_element(value='JQUERY_ELEMENT_SCRIPT')
-    except NoSuchElementException:
+        webdriver.execute_script('jQuery("html")')
+    except JavascriptException:
         webdriver.execute_script("""
         var jq = document.createElement('script');
         jq.id = 'JQUERY_ELEMENT_SCRIPT';
@@ -181,7 +187,9 @@ def user_emulate(webdriver, ev):
             sleep(random.randint(5, 15))
     except Exception as ex:
         print('User emulation is stopped because of this error:', ex)
-        return
+        print('Reloading...')
+        sleep(20)
+        return user_emulate(webdriver, ev)
 
 
 class RetryException(Exception):
@@ -288,7 +296,7 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None):
     sb_config.cap_file = None
     sb_config.cap_string = None
 
-    sb = BaseCase()
+    sb = WebDriver()
     sb.with_testing_base = sb_config.with_testing_base
     sb.browser = sb_config.browser
     sb.is_behave = False
