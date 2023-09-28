@@ -1,15 +1,20 @@
+import os.path
 import urllib
 from json import JSONDecoder
 from queue import Queue
 from threading import Thread, Event
+from time import sleep
 from typing import Union
 
+from pandas import DataFrame
+from selenium.common import JavascriptException
+from selenium.webdriver.common.by import By
 from seleniumbase import BaseCase
 
 from functions import chrome_init, user_emulate
 
 
-def collect_asins(query, market_niche=None):
+def collect_asins(query, market_niche=None, page=1):
     webdriver: Union[BaseCase, None] = None
     # Queues
     writer_queue = Queue()
@@ -18,11 +23,11 @@ def collect_asins(query, market_niche=None):
     # Emulation user switcher
     ev = Event()
     # Threads
-    writer_thr = Thread(target=writer, args=(writer_queue, ))
-    products_info_thr = Thread(target=collect_products_info, args=(products_info_queue, ))
-    reviews_thr = Thread(target=collect_reviews, args=(reviews_queue, ))
+    writer_thr = Thread(target=writer, args=(writer_queue,))
+    products_info_thr = Thread(target=collect_products_info, args=(products_info_queue, writer_queue))
+    reviews_thr = Thread(target=collect_reviews, args=(reviews_queue,))
     try:
-        webdriver = chrome_init(modern=True, goto='https://amazon.com')
+        webdriver = chrome_init(modern=True, headless=False, goto='https://amazon.com')
         webdriver.activate_jquery()
         # переход к необходимой локации - US (UM)
         webdriver.execute_script(
@@ -76,7 +81,6 @@ def collect_asins(query, market_niche=None):
         reviews_thr.start()
         # BEGIN COLLECTING
         q = '&'.join('='.join(map(str, keyval)) for keyval in args.items())
-        page = 1
         # get the last page (and later we need to update it)
         max_page_el = webdriver.get_element('span.s-pagination-item.s-pagination-disabled')
         if 'Next' in max_page_el.text:
@@ -87,10 +91,20 @@ def collect_asins(query, market_niche=None):
             p = args
             p['page'] = str(page)
             p = p.items()
-            result = webdriver.execute_script(f"return $.post(\"https://www.amazon.com/s/query?{q}\", "
-                                              "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in p]) + ""
-                                              "\"}, null, 'text');")
-            writer_queue.put((0, (result, reviews_queue)))
+            try:
+                result = webdriver.execute_script(f"return $.post(\"https://www.amazon.com/s/query?{q}\", "
+                                                  "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in p]) + ""
+                                                                                                                   "\"}, null, 'text');")
+            except JavascriptException:
+                # if error - reload webdriver
+                writer_queue.put((-1, None))
+                products_info_queue.put(None)
+                reviews_queue.put(None)
+                ev.set()
+                webdriver.driver.close()
+                sleep(30)
+                return collect_asins(query, market_niche, page)
+            writer_queue.put((0, (result, reviews_queue, products_info_queue)))
             page += 1
             if page >= max_page:
                 max_page_el = webdriver.get_element('span.s-pagination-item.s-pagination-disabled')
@@ -108,8 +122,87 @@ def collect_asins(query, market_niche=None):
         webdriver.driver.close()
 
 
-def collect_products_info(products_info_queue):
-    pass
+def collect_products_info(products_info_queue, writer_queue):
+    # Initializing webdriver with extension
+    webdriver = chrome_init(True, headless=False, extension=os.path.abspath('JSextension'), goto='chrome://extensions')
+    # find ID of the extension
+    webdriver.sleep(3)
+    items = None
+    for i in range(2):
+        try:
+            webdriver.switch_to_tab(i)
+            # click to devmode
+            webdriver.sleep(1)
+            root_el = webdriver.get_element('extensions-manager', timeout=1).shadow_root
+            items = root_el.find_element(By.CSS_SELECTOR, '#container extensions-item-list').shadow_root.find_elements(
+                By.CSS_SELECTOR,
+                '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
+            )
+            break
+        except:
+            pass
+    _id = None
+    if items:
+        for item in items:
+            if 'Jungle Scout' in item.shadow_root.find_element(By.CSS_SELECTOR,
+                                                               '#card > #main #content > div:first-child').text:
+                _id = item.get_property('id')
+                break
+
+    el = products_info_queue.get()
+    while el:
+        webdriver.get('https://amazon.com/dp/' + el)
+        # Checking if not login
+        root_ext_el = webdriver.get_element('productPageEmbed-' + el, By.ID)
+        checking_button = root_ext_el.find_element(
+            By.CSS_SELECTOR,
+            'div > div[class*="ExpandContent"] > div[class*="Flex-sc-"] '
+            '> div[class*="Flex-sc-"] > div[class*="Flex-sc-"] button:first-child',
+        )
+        if 'Log in' in checking_button.text:
+            checking_button.click()
+            # Auth
+            webdriver.send_keys('#jsExtensionBaseModalId input[placeholder="Enter your email"]',
+                                'ilgar.talibov@gmail.com')
+            webdriver.send_keys('#jsExtensionBaseModalId input[placeholder="Enter your password"]', '02081991')
+            webdriver.submit('#jsExtensionBaseModalId input[placeholder="Enter your password"]')
+            # Close new window
+            webdriver.get_element('#jsExtensionBaseModalId > div:first-child > div:last-child').click()
+
+        # get info
+        monthly_revenue = root_ext_el.find_element(
+            By.CSS_SELECTOR,
+            'div > div[class*="CardsGrid-sc"] > div:nth-child(4) > label',
+        ).text.strip()
+        net_profit_sale = root_ext_el.find_element(
+            By.CSS_SELECTOR,
+            'div > div[class*="CardsGrid-sc"] > div:nth-child(5) > label',
+        ).text.strip()
+        total_fees_sale = root_ext_el.find_element(
+            By.CSS_SELECTOR,
+            'div > div[class*="CardsGrid-sc"] > div:nth-child(6) > label',
+        ).text.strip()
+        title = webdriver.get_element('#titleSection, #title, #productTitle').text.strip()
+        features = {}
+        try:
+            features_els = webdriver.get_element(
+                '[data-hook="cr-widget-SummaryAttribute"] #cr-summarization-attributes-list > div'
+            )
+            for feat in features_els:
+                features[feat.find_element(By.CSS_SELECTOR, 'div > div > div:first-child span').text.strip()] = \
+                    feat.find_element(By.CSS_SELECTOR, 'div > div > div:last-child > span:last-child').text.strip()
+        except:
+            pass
+        lighthums = []
+        try:
+            lighthums_els = webdriver.find_elements('[data-hook="lighthut-terms-list"] > div')
+            for lighthum in lighthums_els:
+                lighthums.append(lighthum.find_element(By.TAG_NAME, 'span').text.strip())
+        except:
+            pass
+
+        writer_queue.put((1, [el, title, [monthly_revenue, net_profit_sale, total_fees_sale], features, lighthums]))
+        el = products_info_queue.get()
 
 
 def collect_reviews(reviews_queue):
@@ -129,7 +222,7 @@ def writer(writer_queue):
         writer_funcs[item](*data)
 
 
-def asin_write(data, reviews_queue):
+def asin_write(data, reviews_queue, products_queue):
     decoder = JSONDecoder()
     raw_data = list(map(lambda s: decoder.decode(s.strip()), filter(lambda x: x, data.strip().split('&&&'))))
     rows = []
@@ -140,13 +233,27 @@ def asin_write(data, reviews_queue):
             if len(item) > 1 and 'data-main-slot:search-result-' in item[1] and 'asin' in item[2]:
                 rows.append(item[2]['asin'] + '\n')
                 asins.append(item[2]['asin'])
+                products_queue.put(item[2]['asin'])
         f.writelines(rows)
     # load reviews collecting for a page of products
     reviews_queue.put(asins)
 
 
-def product_info_write(data):
-    pass
+def product_info_write(asin, title, money, feats, lighthums):
+    if not os.path.exists('products_list.csv'):
+        f = open('products_list.csv', 'w', encoding='utf-8')
+        f.write('asin,title,monthly_revenue,net_profit,total_fees,features,lighthums\n')
+        f.close()
+    df = DataFrame([asin, title, money[0], money[1], money[2], feats, lighthums], columns=[
+        'asin',
+        'title',
+        'monthly_revenue',
+        'net_profit',
+        'total_fees',
+        'features',
+        'lighthums',
+    ])
+    df.to_csv('products_list.csv', index=False, header=False, mode='a', encoding='utf-8')
 
 
 def reviews_write(data):

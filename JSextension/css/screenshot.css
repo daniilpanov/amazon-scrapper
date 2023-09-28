@@ -1,0 +1,17 @@
+@font-face {
+    font-family: Work Sans;
+    src: url(../fonts/WorkSans-VariableFont_wght.ttf);
+    font-weight: 100 1000;
+    font-stretch: 25% 151%;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+    font-family: Work Sans, sans-serif;
+    background-color: #F5F5F5;
+}
+
+* {
+    box-sizing: border-box;
+}

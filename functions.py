@@ -196,7 +196,7 @@ class RetryException(Exception):
     pass
 
 
-def modern_chrome_init(headless=True, user_path=None, user_settings=None):
+def modern_chrome_init(headless=True, user_path=None, user_settings=None, extension=None):
     global sb_config
     sb_config._do_sb_post_mortem = False
     sb_config.proxy_driver = False
@@ -228,7 +228,7 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None):
     sb_config.mobile_emulator = False
     sb_config.device_metrics = None
     sb_config.extension_zip = None
-    sb_config.extension_dir = None
+    sb_config.extension_dir = extension
     sb_config.database_env = "test"
     sb_config.log_path = constants.Logs.LATEST
     sb_config.archive_logs = False
@@ -405,12 +405,13 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None):
     return sb
 
 
-def chrome_init(modern=False, headless=True, goto='https://www.amazon.com/product-reviews/B08JPS4554'):
+def chrome_init(modern=False, headless=True, goto='https://www.amazon.com/product-reviews/B08JPS4554', extension=None):
     if modern:
-        webdriver = modern_chrome_init(headless=headless)
+        webdriver = modern_chrome_init(headless=headless, extension=extension)
         if goto:
             webdriver.get(goto)
-            captcha_solve_modern(webdriver)
+            if not extension:
+                captcha_solve_modern(webdriver)
         return webdriver
     else:
         options = ChromeOptions()

@@ -1,0 +1,103 @@
+{
+"update_url": "https://clients2.google.com/service/update2/crx",
+
+  "name": "Jungle Scout",
+  "version": "7.4.5",
+  "description": "Amazon and FBA product research made easy. Extract rank, sales volume, estimated revenue and more without entering the product page.",
+  "icons": {
+    "16": "images/active.png",
+    "48": "images/48.png",
+    "128": "images/128.png"
+  },
+  "homepage_url": "https://www.junglescout.com",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.amazon.com/*",
+        "*://smile.amazon.com/*",
+        "*://www.amazon.co.uk/*",
+        "*://smile.amazon.co.uk/*",
+        "*://www.amazon.ca/*",
+        "*://www.amazon.fr/*",
+        "*://www.amazon.de/*",
+        "*://smile.amazon.de/*",
+        "*://www.amazon.in/*",
+        "*://www.amazon.com.mx/*",
+        "*://www.amazon.it/*",
+        "*://www.amazon.es/*",
+        "*://www.amazon.co.jp/*",
+        "*://sellercentral.amazon.com/*",
+        "*://sellercentral.amazon.co.uk/*",
+        "*://sellercentral.amazon.fr/*",
+        "*://sellercentral.amazon.de/*",
+        "*://sellercentral.amazon.ca/*",
+        "*://sellercentral.amazon.in/*",
+        "*://sellercentral.amazon.com.mx/*",
+        "*://sellercentral.amazon.it/*",
+        "*://sellercentral.amazon.es/*",
+        "*://sellercentral.amazon.co.jp/*",
+        "*://advertising.amazon.com/*",
+        "*://advertising.amazon.co.uk/*",
+        "*://advertising.amazon.fr/*",
+        "*://advertising.amazon.de/*",
+        "*://advertising.amazon.ca/*",
+        "*://advertising.amazon.in/*",
+        "*://advertising.amazon.com.mx/*",
+        "*://advertising.amazon.it/*",
+        "*://advertising.amazon.es/*",
+        "*://advertising.amazon.co.jp/*",
+        "*://www.walmart.com/*"
+      ],
+      "js": [
+        "js/extension.js",
+        "js/content_scripts.js",
+        "js/chunks/_35fc5148.js",
+        "js/chunks/_53027715.js",
+        "js/chunks/_536eaa00.js",
+        "js/chunks/_cdd60c62.js",
+        "js/chunks/_e96e9bea.js"
+      ]
+    }
+  ],
+  "permissions": [
+    "tabs",
+    "storage",
+    "scripting",
+    "unlimitedStorage",
+    "alarms"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "extension_ids": []
+    }
+  ],
+  "manifest_version": 3,
+  "action": {
+    "default_icon": "images/active.png",
+    "default_popup": "dropdown.html"
+  },
+  "host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "js/background.js",
+    "type": "module"
+  },
+  "externally_connectable": {
+    "ids": [
+      "*"
+    ],
+    "matches": [
+      "*://*.junglescout.com/*",
+      "*://*.junglescout.cn/*",
+      "*://*.dev-junglescout.com/*",
+      "*://localhost/*"
+    ]
+  }
+}
