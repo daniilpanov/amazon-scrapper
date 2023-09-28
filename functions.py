@@ -5,7 +5,7 @@ from time import sleep
 import requests
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
-from selenium.common import WebDriverException, NoSuchElementException
+from selenium.common import WebDriverException, NoSuchElementException, JavascriptException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -16,6 +16,12 @@ from seleniumbase.fixtures import constants
 from undetected_chromedriver import Chrome, ChromeOptions
 
 sb_config = sbc
+
+
+class WebDriver (BaseCase):
+    def activate_jquery(self):
+        return insert_jquery(self)
+
 
 try:
     import tensorflow
@@ -111,7 +117,7 @@ def captcha_solve(webdriver, retry=10):
 def captcha_solve_modern(webdriver, retry=10):
     if captcha_check_modern(webdriver):
         if not captchaAI:
-            sleep(15)
+            sleep(10)
             return captcha_check_modern(webdriver, True)
         sleep(1)
         captcha = webdriver.get_element('img[src]')
@@ -157,8 +163,8 @@ def wait_for_loading(webdriver, p=None, by=By.CSS_SELECTOR):
 
 def insert_jquery(webdriver):
     try:
-        webdriver.find_element(value='JQUERY_ELEMENT_SCRIPT')
-    except NoSuchElementException:
+        webdriver.execute_script('jQuery("html")')
+    except JavascriptException:
         webdriver.execute_script("""
         var jq = document.createElement('script');
         jq.id = 'JQUERY_ELEMENT_SCRIPT';
@@ -181,14 +187,16 @@ def user_emulate(webdriver, ev):
             sleep(random.randint(5, 15))
     except Exception as ex:
         print('User emulation is stopped because of this error:', ex)
-        return
+        print('Reloading...')
+        sleep(20)
+        return user_emulate(webdriver, ev)
 
 
 class RetryException(Exception):
     pass
 
 
-def modern_chrome_init(headless=True, user_path=None, user_settings=None):
+def modern_chrome_init(headless=True, user_path=None, user_settings=None, extension=None):
     global sb_config
     sb_config._do_sb_post_mortem = False
     sb_config.proxy_driver = False
@@ -220,7 +228,7 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None):
     sb_config.mobile_emulator = False
     sb_config.device_metrics = None
     sb_config.extension_zip = None
-    sb_config.extension_dir = None
+    sb_config.extension_dir = extension
     sb_config.database_env = "test"
     sb_config.log_path = constants.Logs.LATEST
     sb_config.archive_logs = False
@@ -288,7 +296,7 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None):
     sb_config.cap_file = None
     sb_config.cap_string = None
 
-    sb = BaseCase()
+    sb = WebDriver()
     sb.with_testing_base = sb_config.with_testing_base
     sb.browser = sb_config.browser
     sb.is_behave = False
@@ -397,12 +405,12 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None):
     return sb
 
 
-def chrome_init(modern=False, headless=True, goto='https://www.amazon.com/product-reviews/B08JPS4554'):
+def chrome_init(modern=False, headless=True, goto='https://www.amazon.com/', extension=None):
     if modern:
-        webdriver = modern_chrome_init(headless=headless)
+        webdriver = modern_chrome_init(headless=headless, extension=extension)
         if goto:
             webdriver.get(goto)
-            captcha_solve_modern(webdriver)
+            print('Result of solving captcha:', captcha_solve_modern(webdriver))
         return webdriver
     else:
         options = ChromeOptions()

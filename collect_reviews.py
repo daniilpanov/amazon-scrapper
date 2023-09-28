@@ -6,13 +6,16 @@ from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from queue import Queue
 from threading import Thread, Event
 from time import sleep
+from typing import Union
+
 from alive_progress import alive_bar
 
 from pandas import DataFrame
 from bs4 import BeautifulSoup
-from selenium.common import JavascriptException, InvalidSessionIdException
+from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
+from seleniumbase import BaseCase
 
-from functions import RetryException, wait_for_loading, insert_jquery, user_emulate, chrome_init
+from functions import RetryException, user_emulate, chrome_init, captcha_solve_modern
 
 params = {
     'sortBy': ['helpful', 'recent'],
@@ -30,7 +33,7 @@ write_queue = Queue()
 state_queue = Queue()
 ev = Event()
 
-webdriver = None
+webdriver: Union[None, BaseCase] = None
 url = 'https://www.amazon.com/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt'
 
 jsd = JSONDecoder()
@@ -268,20 +271,26 @@ def send_request(asin, seed):
             res = webdriver.execute_script("return " + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
                 raise RetryException()
-        except (JavascriptException, RetryException):
+        except (JavascriptException, RetryException, TimeoutException):
             print('something went wrong. retry... ')
+            sleep(1)
             try:
+                webdriver.reload()
+                if not captcha_solve_modern(webdriver):
+                    raise Exception()
+                webdriver.reload()
                 webdriver.activate_jquery()
                 res = webdriver.execute_script("return " + ajax)
                 if not res or 'BAAAAAAD ASIN!' in res:
-                    print('error')
                     raise Exception()
                 print('success. continue')
             except Exception as e:
+                print('error')
                 print(e)
                 try:
                     webdriver.driver.close()
                 finally:
+                    data_queue.put(None)
                     return False
 
         data_queue.put([asin, seed, res])
@@ -299,7 +308,7 @@ def main(ASINs, folder='.'):
     file_exists = os.path.exists(os.path.join(folder, 'reviews_list.csv'))
 
     ev = Event()
-    webdriver = chrome_init(modern=True)
+    webdriver = chrome_init(modern=True, goto='https://amazon.com/product-reviews/B08JPS4554')
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
