@@ -308,7 +308,7 @@ def main(ASINs, folder='.'):
     file_exists = os.path.exists(os.path.join(folder, 'reviews_list.csv'))
 
     ev = Event()
-    webdriver = chrome_init(modern=True)
+    webdriver = chrome_init(modern=True, goto='https://amazon.com/product-reviews/B08JPS4554')
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)

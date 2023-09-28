@@ -117,7 +117,7 @@ def captcha_solve(webdriver, retry=10):
 def captcha_solve_modern(webdriver, retry=10):
     if captcha_check_modern(webdriver):
         if not captchaAI:
-            sleep(15)
+            sleep(10)
             return captcha_check_modern(webdriver, True)
         sleep(1)
         captcha = webdriver.get_element('img[src]')
@@ -405,13 +405,12 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
     return sb
 
 
-def chrome_init(modern=False, headless=True, goto='https://www.amazon.com/product-reviews/B08JPS4554', extension=None):
+def chrome_init(modern=False, headless=True, goto='https://www.amazon.com/', extension=None):
     if modern:
         webdriver = modern_chrome_init(headless=headless, extension=extension)
         if goto:
             webdriver.get(goto)
-            if not extension:
-                captcha_solve_modern(webdriver)
+            print('Result of solving captcha:', captcha_solve_modern(webdriver))
         return webdriver
     else:
         options = ChromeOptions()

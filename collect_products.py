@@ -28,6 +28,29 @@ def collect_asins(query, market_niche=None, page=1):
     reviews_thr = Thread(target=collect_reviews, args=(reviews_queue,))
     try:
         webdriver = chrome_init(modern=True, headless=False, goto='https://amazon.com')
+        # переход к необходимой локации - US (UM)
+        webdriver.sleep(.5)
+        webdriver.activate_jquery()
+        webdriver.execute_script(
+            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
+            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
+        )
+        webdriver.execute_script(
+            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+            '{actionSource: "glow",'
+            'countryCode: "UM",'
+            'deviceType: "web",'
+            'distinct: "UM",'
+            'locationType: "COUNTRY",'
+            'pageType: "Detail",'
+            'storeContext: "hpc"}'
+            ')'
+        )
+        webdriver.execute_script(
+            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
+        )
+        webdriver.refresh()
         webdriver.activate_jquery()
         # переход к необходимой локации - US (UM)
         webdriver.execute_script(
@@ -49,6 +72,7 @@ def collect_asins(query, market_niche=None, page=1):
             '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
             '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
         )
+        webdriver.refresh()
     except:
         if webdriver:
             try:
@@ -124,64 +148,101 @@ def collect_asins(query, market_niche=None, page=1):
 
 def collect_products_info(products_info_queue, writer_queue):
     # Initializing webdriver with extension
-    webdriver = chrome_init(True, headless=False, extension=os.path.abspath('JSextension'), goto='chrome://extensions')
+    webdriver = chrome_init(True, headless=False, extension=os.path.abspath('keepa-extension'))
+    webdriver.get('chrome://extensions')
     # find ID of the extension
     webdriver.sleep(3)
     items = None
-    for i in range(2):
-        try:
-            webdriver.switch_to_tab(i)
-            # click to devmode
-            webdriver.sleep(1)
-            root_el = webdriver.get_element('extensions-manager', timeout=1).shadow_root
-            items = root_el.find_element(By.CSS_SELECTOR, '#container extensions-item-list').shadow_root.find_elements(
-                By.CSS_SELECTOR,
-                '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
-            )
-            break
-        except:
-            pass
+    try:
+        # click to devmode
+        webdriver.sleep(1)
+        root_el = webdriver.get_element('extensions-manager', timeout=1).shadow_root
+        items = root_el.find_element(By.CSS_SELECTOR, '#container extensions-item-list').shadow_root.find_elements(
+            By.CSS_SELECTOR,
+            '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
+        )
+    except:
+        pass
     _id = None
     if items:
         for item in items:
-            if 'Jungle Scout' in item.shadow_root.find_element(By.CSS_SELECTOR,
-                                                               '#card > #main #content > div:first-child').text:
+            if 'Keepa - Amazon Price Tracker' \
+                    in item.shadow_root.find_element(By.CSS_SELECTOR, '#card > #main #content > div:first-child').text:
                 _id = item.get_property('id')
                 break
 
+    try:
+        webdriver.get('https://amazon.com')
+        webdriver.sleep(.5)
+        webdriver.activate_jquery()
+        # переход к необходимой локации - US (UM)
+        webdriver.execute_script(
+            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
+            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
+        )
+        webdriver.execute_script(
+            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+            '{actionSource: "glow",'
+            'countryCode: "UM",'
+            'deviceType: "web",'
+            'distinct: "UM",'
+            'locationType: "COUNTRY",'
+            'pageType: "Detail",'
+            'storeContext: "hpc"}'
+            ')'
+        )
+        webdriver.execute_script(
+            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
+        )
+        webdriver.refresh()
+        webdriver.activate_jquery()
+        # переход к необходимой локации - US (UM)
+        webdriver.execute_script(
+            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
+            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
+        )
+        webdriver.execute_script(
+            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+            '{actionSource: "glow",'
+            'countryCode: "UM",'
+            'deviceType: "web",'
+            'distinct: "UM",'
+            'locationType: "COUNTRY",'
+            'pageType: "Detail",'
+            'storeContext: "hpc"}'
+            ')'
+        )
+        webdriver.execute_script(
+            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
+        )
+        webdriver.refresh()
+    except:
+        if webdriver:
+            try:
+                webdriver.driver.close()
+            except:
+                pass
+
     el = products_info_queue.get()
     while el:
+        print(el)
         webdriver.get('https://amazon.com/dp/' + el)
         # Checking if not login
-        root_ext_el = webdriver.get_element('productPageEmbed-' + el, By.ID)
-        checking_button = root_ext_el.find_element(
-            By.CSS_SELECTOR,
-            'div > div[class*="ExpandContent"] > div[class*="Flex-sc-"] '
-            '> div[class*="Flex-sc-"] > div[class*="Flex-sc-"] button:first-child',
-        )
-        if 'Log in' in checking_button.text:
-            checking_button.click()
-            # Auth
-            webdriver.send_keys('#jsExtensionBaseModalId input[placeholder="Enter your email"]',
-                                'ilgar.talibov@gmail.com')
-            webdriver.send_keys('#jsExtensionBaseModalId input[placeholder="Enter your password"]', '02081991')
-            webdriver.submit('#jsExtensionBaseModalId input[placeholder="Enter your password"]')
-            # Close new window
-            webdriver.get_element('#jsExtensionBaseModalId > div:first-child > div:last-child').click()
-
-        # get info
-        monthly_revenue = root_ext_el.find_element(
-            By.CSS_SELECTOR,
-            'div > div[class*="CardsGrid-sc"] > div:nth-child(4) > label',
-        ).text.strip()
-        net_profit_sale = root_ext_el.find_element(
-            By.CSS_SELECTOR,
-            'div > div[class*="CardsGrid-sc"] > div:nth-child(5) > label',
-        ).text.strip()
-        total_fees_sale = root_ext_el.find_element(
-            By.CSS_SELECTOR,
-            'div > div[class*="CardsGrid-sc"] > div:nth-child(6) > label',
-        ).text.strip()
+        try:
+            webdriver.switch_to_frame('#keepa')
+            webdriver.get_element('#keepaBoxLogin').click()
+            webdriver.sleep(.1)
+            webdriver.type('#username', 'keepa@brandlogic.ai')
+            webdriver.sleep(.1)
+            webdriver.type('#password', '5kJuNc6EU1itFh0Y')
+            webdriver.sleep(.1)
+            webdriver.submit('#password')
+            webdriver.switch_to_default_content()
+        except:
+            pass
+        # INFO
         title = webdriver.get_element('#titleSection, #title, #productTitle').text.strip()
         features = {}
         try:
@@ -200,9 +261,51 @@ def collect_products_info(products_info_queue, writer_queue):
                 lighthums.append(lighthum.find_element(By.TAG_NAME, 'span').text.strip())
         except:
             pass
+        cost = None
+        try:
+            cost = webdriver.get_element('.a-price.a-text-price').text.strip()
+        except:
+            webdriver.switch_to_frame('#keepa')
+            webdriver.sleep(.6)
+            webdriver.click('#compareChart')
+            webdriver.sleep(.6)
+            try:
+                rows = webdriver.find_elements('div[ref="eCenterViewport"] div[role="row"]')
+            except:
+                webdriver.click('#compareChart')
+                webdriver.sleep(.6)
+                rows = webdriver.find_elements('div[ref="eCenterViewport"] div[role="row"]')
+            for row in rows:
+                els = row.find_elements('div[role="gridcell"]')
+                if 'America' in els[0]:
+                    cost = els[2].text.strip() or els[4].text.strip()
+                    break
+            webdriver.switch_to_default_content()
+        webdriver.switch_to_frame('#keepa')
+        categories = []
+        try:
+            webdriver.click('#tabMore')
+            webdriver.wait_for_element_visible('#MoreTab1')
+            for row in webdriver.find_elements('div[ref="eCenterViewport"] div[role="row"]'):
+                items = row.find_elements('div[role="cell"]')
+                if 'Categories - Tree' in items[0].text:
+                    cat = items[1].find_elements('.cell-wrap div span a:first-child')
+                    if len(categories) > 2:
+                        categories = [cat[0], cat[1], cat[-1]]
+                    elif len(categories) > 1:
+                        categories = [cat[0], cat[1], None]
+                    elif len(categories) > 2:
+                        categories = [cat[-1], None, None]
+                    else:
+                        categories = [None, None, None]
+                    break
+        except:
+            pass
 
-        writer_queue.put((1, [el, title, [monthly_revenue, net_profit_sale, total_fees_sale], features, lighthums]))
+        writer_queue.put((1, [el, title, cost, features, lighthums, categories]))
         el = products_info_queue.get()
+
+    webdriver.driver.quit()
 
 
 def collect_reviews(reviews_queue):
@@ -239,19 +342,20 @@ def asin_write(data, reviews_queue, products_queue):
     reviews_queue.put(asins)
 
 
-def product_info_write(asin, title, money, feats, lighthums):
+def product_info_write(asin, title, cost, features, lighthums, categories):
     if not os.path.exists('products_list.csv'):
         f = open('products_list.csv', 'w', encoding='utf-8')
-        f.write('asin,title,monthly_revenue,net_profit,total_fees,features,lighthums\n')
+        f.write('asin,title,cost,features,lighthums,department,category,subcategory\n')
         f.close()
-    df = DataFrame([asin, title, money[0], money[1], money[2], feats, lighthums], columns=[
+    df = DataFrame([[asin, title, cost, features, lighthums, *categories]], columns=[
         'asin',
         'title',
-        'monthly_revenue',
-        'net_profit',
-        'total_fees',
+        'cost',
         'features',
         'lighthums',
+        'department',
+        'category',
+        'subcategory',
     ])
     df.to_csv('products_list.csv', index=False, header=False, mode='a', encoding='utf-8')
 
