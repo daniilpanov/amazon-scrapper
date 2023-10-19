@@ -243,24 +243,8 @@ def collect_products_info(products_info_queue, writer_queue):
         except:
             pass
         # INFO
+        webdriver.switch_to_default_content()
         title = webdriver.get_element('#titleSection, #title, #productTitle').text.strip()
-        features = {}
-        try:
-            features_els = webdriver.get_element(
-                '[data-hook="cr-widget-SummaryAttribute"] #cr-summarization-attributes-list > div'
-            )
-            for feat in features_els:
-                features[feat.find_element(By.CSS_SELECTOR, 'div > div > div:first-child span').text.strip()] = \
-                    feat.find_element(By.CSS_SELECTOR, 'div > div > div:last-child > span:last-child').text.strip()
-        except:
-            pass
-        lighthums = []
-        try:
-            lighthums_els = webdriver.find_elements('[data-hook="lighthut-terms-list"] > div')
-            for lighthum in lighthums_els:
-                lighthums.append(lighthum.find_element(By.TAG_NAME, 'span').text.strip())
-        except:
-            pass
         cost = None
         try:
             cost = webdriver.get_element('.a-price.a-text-price').text.strip()
@@ -276,18 +260,24 @@ def collect_products_info(products_info_queue, writer_queue):
                 webdriver.sleep(.6)
                 rows = webdriver.find_elements('div[ref="eCenterViewport"] div[role="row"]')
             for row in rows:
-                els = row.find_elements('div[role="gridcell"]')
+                els = row.find_elements(By.CSS_SELECTOR, 'div[role="gridcell"]')
+                if len(els) <= 0:
+                    continue
                 if 'America' in els[0]:
                     cost = els[2].text.strip() or els[4].text.strip()
                     break
+            webdriver.click('#comparePricesOverlay-close')
             webdriver.switch_to_default_content()
         webdriver.switch_to_frame('#keepa')
-        categories = []
+        categories = [None, None, None]
         try:
             webdriver.click('#tabMore')
             webdriver.wait_for_element_visible('#MoreTab1')
+            webdriver.sleep(.6)
             for row in webdriver.find_elements('div[ref="eCenterViewport"] div[role="row"]'):
-                items = row.find_elements('div[role="cell"]')
+                items = row.find_elements(By.CSS_SELECTOR, 'div[role="cell"]')
+                if len(items) <= 0:
+                    continue
                 if 'Categories - Tree' in items[0].text:
                     cat = items[1].find_elements('.cell-wrap div span a:first-child')
                     if len(categories) > 2:
@@ -296,9 +286,32 @@ def collect_products_info(products_info_queue, writer_queue):
                         categories = [cat[0], cat[1], None]
                     elif len(categories) > 2:
                         categories = [cat[-1], None, None]
-                    else:
-                        categories = [None, None, None]
                     break
+        except Exception as e:
+            raise e
+            pass
+
+        features = {}
+        lighthums = []
+        try:
+            webdriver.switch_to_default_content()
+            webdriver.click('#acrCustomerReviewText')
+            webdriver.sleep(.6)
+            try:
+                features_els = webdriver.get_element(
+                    '[data-hook="cr-widget-SummaryAttribute"] #cr-summarization-attributes-list > div'
+                )
+                for feat in features_els:
+                    features[feat.find_element(By.CSS_SELECTOR, 'div > div > div:first-child span').text.strip()] = \
+                        feat.find_element(By.CSS_SELECTOR, 'div > div > div:last-child > span:last-child').text.strip()
+            except:
+                pass
+            try:
+                lighthums_els = webdriver.find_elements('[data-hook="lighthut-terms-list"] > div')
+                for lighthum in lighthums_els:
+                    lighthums.append(lighthum.find_element(By.TAG_NAME, 'span').text.strip())
+            except:
+                pass
         except:
             pass
 
