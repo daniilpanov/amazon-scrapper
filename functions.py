@@ -2,10 +2,11 @@ import os
 import random
 from time import sleep
 
+import colorama
 import requests
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
-from selenium.common import WebDriverException, NoSuchElementException, JavascriptException
+from selenium.common import WebDriverException, JavascriptException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -13,15 +14,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from seleniumbase import BaseCase
 from seleniumbase import config as sbc
 from seleniumbase.fixtures import constants
-from undetected_chromedriver import Chrome, ChromeOptions
 
 sb_config = sbc
-
-
-class WebDriver (BaseCase):
-    def activate_jquery(self):
-        return insert_jquery(self)
-
 
 try:
     import tensorflow
@@ -29,136 +23,110 @@ try:
 
     captchaAI = True
 except ImportError as e:
+    print(colorama.Fore.RED, e, colorama.Fore.RESET)
     CaptchaSolver = None
     captchaAI = False
 
 
-def captcha_check(webdriver, just_check=False):
-    wait_for_loading(webdriver)
-    insert_jquery(webdriver)
-    try:
-        captcha = webdriver.find_element(
-            By.CSS_SELECTOR,
-            'div.a-box.a-alert.a-alert-info.a-spacing-base > div.a-box-inner > h4',
+class WebDriver(BaseCase):
+    def activate_jquery(self):
+        return insert_jquery(self)
+
+    def get_extension_id(self, name_contains):
+        self.get('chrome://extensions')
+        # find ID of the extension
+        self.sleep(3)
+        items = None
+        try:
+            # click to devmode
+            root_el = self.get_element('extensions-manager', timeout=1).shadow_root
+            items = root_el.find_element(By.CSS_SELECTOR, '#container extensions-item-list').shadow_root.find_elements(
+                By.CSS_SELECTOR,
+                '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
+            )
+        except:
+            pass
+        _id = None
+        if items:
+            for item in items:
+                if name_contains in item.shadow_root.find_element(
+                        By.CSS_SELECTOR,
+                        '#card > #main #content > div:first-child'
+                ).text:
+                    _id = item.get_property('id')
+                    break
+        return _id
+
+    def change_loc(self):
+        self.sleep(.5)
+        url = self.get_current_url()
+        self.activate_jquery()
+        # переход к необходимой локации - US (UM)
+        self.execute_script(
+            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
+            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
         )
-        if just_check:
-            return captcha.text == 'Enter the characters you see below'
-        if captcha and captcha.text == 'Enter the characters you see below':
-            buttons = webdriver.find_elements(By.CSS_SELECTOR, 'a[onclick="window.location.reload()"]')
-            for button in buttons:
-                if button.text == 'Try different image':
-                    button.click()
-                    sleep(1)
-                    return captcha_check(webdriver, True)
-        return True
+        self.execute_script(
+            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+            '{actionSource: "glow",'
+            'countryCode: "UM",'
+            'deviceType: "web",'
+            'distinct: "UM",'
+            'locationType: "COUNTRY",'
+            'pageType: "Detail",'
+            'storeContext: "hpc"}'
+            ')'
+        )
+        self.execute_script(
+            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
+        )
+        self.refresh()
+        self.sleep(1)
+        self.get(url)
+        self.activate_jquery()
+
+
+def captcha_check(webdriver: WebDriver):
+    try:
+        return (webdriver.find_text('Enter the characters you see below', timeout=.5)
+                and webdriver.find_text('Type the characters you see in this image:', timeout=.5))
     except:
         return False
 
 
-def captcha_check_modern(webdriver, just_check=False):
-    webdriver.activate_jquery()
-    try:
-        captcha = webdriver.get_element('div.a-box.a-alert.a-alert-info.a-spacing-base > div.a-box-inner > h4')
-        if just_check:
-            return captcha.text == 'Enter the characters you see below'
-        if captcha and captcha.text == 'Enter the characters you see below':
-            buttons = webdriver.get_elements('a[onclick="window.location.reload()"]')
-            for button in buttons:
-                if button.text == 'Try different image':
-                    button.click()
-                    sleep(1)
-                    return captcha_check_modern(webdriver, True)
+def captcha_solve(webdriver: WebDriver):
+    if not captcha_check(webdriver):
         return True
-    except:
-        return False
 
-
-def captcha_solve(webdriver, retry=10):
-    if captcha_check(webdriver):
-        if not captchaAI:
-            sleep(15)
-            return captcha_check(webdriver, True)
-        wait_for_loading(webdriver)
-        sleep(1)
-        captcha = webdriver.find_element(By.CSS_SELECTOR, 'img[src]')
-        img_source = requests.get(captcha.get_attribute('src'))
-        if not img_source:
-            return False
-        if not os.path.exists(os.path.join('.', 'tmp')):
-            os.makedirs('tmp')
-        filepath = os.path.join('tmp', 'captcha.jpg')
-        counter = 0
-        while os.path.exists(filepath):
-            filepath = os.path.join('tmp', f'captcha{counter}.jpg')
-            counter += 1
-        file = open(filepath, 'wb')
-        file.write(img_source.content)
-        file.close()
-        solver = CaptchaSolver('captcha_solver')
-        text = solver.solve(filepath)
-        os.remove(filepath)
-        if not text:
-            return False
-        input_element = webdriver.find_element(value='captchacharacters')
-        for symbol in text:
-            input_element.send_keys(symbol)
-            sleep(random.randint(0, 2))
-        input_element.send_keys(Keys.ENTER)
-        sleep(1)
-        wait_for_loading(webdriver)
-        insert_jquery(webdriver)
-        if captcha_check(webdriver):
-            if retry:
-                return captcha_solve(webdriver, retry - 1)
-            return False
-    return True
-
-
-def captcha_solve_modern(webdriver, retry=10):
-    if captcha_check_modern(webdriver):
-        if not captchaAI:
-            sleep(10)
-            return captcha_check_modern(webdriver, True)
-        sleep(1)
-        captcha = webdriver.get_element('img[src]')
-        img_source = requests.get(captcha.get_attribute('src'))
-        if not img_source:
-            return False
-        if not os.path.exists(os.path.join('.', 'tmp')):
-            os.makedirs('tmp')
-        filepath = os.path.join('tmp', 'captcha.jpg')
-        counter = 0
-        while os.path.exists(filepath):
-            filepath = os.path.join('tmp', f'captcha{counter}.jpg')
-            counter += 1
-        file = open(filepath, 'wb')
-        file.write(img_source.content)
-        file.close()
-        solver = CaptchaSolver('captcha_solver')
-        text = solver.solve(filepath)
-        os.remove(filepath)
-        if not text:
-            return False
-        webdriver.type('#captchacharacters', text)
-        webdriver.submit('#captchacharacters')
-        webdriver.sleep(2)
-        webdriver.activate_jquery()
-        if captcha_check_modern(webdriver):
-            if retry:
-                return captcha_solve(webdriver, retry - 1)
-            return False
-    return True
-
-
-def wait_for_loading(webdriver, p=None, by=By.CSS_SELECTOR):
-    if not p:
-        p = 'html'
-        by = By.TAG_NAME
-    try:
-        WebDriverWait(webdriver, 10000).until(EC.presence_of_element_located((by, p)))
+    webdriver.click_link_text('Try different image')
+    webdriver.sleep(.25)
+    if not captcha_check(webdriver):
         return True
-    except WebDriverException:
+
+    captcha = webdriver.get_element('img[src]')
+    img_source = requests.get(captcha.get_attribute('src'))
+    if not img_source:
         return False
+    if not os.path.exists(os.path.join('.', 'tmp')):
+        os.makedirs('tmp')
+    filepath = os.path.join('tmp', 'captcha.jpg')
+    counter = 0
+    while os.path.exists(filepath):
+        filepath = os.path.join('tmp', f'captcha{counter}.jpg')
+        counter += 1
+    file = open(filepath, 'wb')
+    file.write(img_source.content)
+    file.close()
+    solver = f.CaptchaSolver('captcha_solver')
+    text = solver.solve(filepath)
+    os.remove(filepath)
+    if not text:
+        return False
+    webdriver.type('#captchacharacters', text)
+    webdriver.submit('#captchacharacters')
+    webdriver.sleep(2)
+    return not captcha_check(webdriver)
 
 
 def insert_jquery(webdriver):
@@ -171,7 +139,7 @@ def insert_jquery(webdriver):
         jq.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js";
         document.getElementsByTagName('head')[0].appendChild(jq);
         """)
-        sleep(3)
+        webdriver.sleep(3)
 
 
 def user_emulate(webdriver, ev):
@@ -405,29 +373,19 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
     return sb
 
 
-def chrome_init(modern=False, headless=True, goto='https://www.amazon.com/', extension=None):
-    if modern:
-        webdriver = modern_chrome_init(headless=headless, extension=extension)
-        if goto:
-            webdriver.get(goto)
-            print('Result of solving captcha:', captcha_solve_modern(webdriver))
-        return webdriver
-    else:
-        options = ChromeOptions()
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument(
-            f'user-agent={UserAgent(software_names=(SoftwareName.CHROME.value,), operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value), limit=120).get_random_user_agent()}'
-        )
-        options.add_argument('--headless')
-        options.add_argument('--start-maximized')
-        options.add_argument('--ignore-certificate-errors-spki-list')
-        options.add_argument('--ignore-ssl-errors')
-        options.add_argument('--log-level=3')
-        webdriver = Chrome(options=options)
-        if goto:
-            webdriver.get(goto)
-            wait_for_loading(webdriver)
-            captcha_solve(webdriver)
-        return webdriver
+def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False):
+    webdriver = modern_chrome_init(headless=headless, extension=extension)
+    if get_ext_id:
+        webdriver.get_extension_id('Keepa')
+    if goto:
+        webdriver.get(goto)
+        print('Result of solving captcha:', captcha_solve(webdriver))
+    return webdriver
+
+
+def chrome_close(webdriver: WebDriver):
+    try:
+        webdriver.driver.close()
+        return True
+    except:
+        return False

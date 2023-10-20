@@ -11,7 +11,8 @@ from selenium.common import JavascriptException
 from selenium.webdriver.common.by import By
 from seleniumbase import BaseCase
 
-from functions import chrome_init, user_emulate
+from functions import chrome_init, user_emulate, captcha_solve
+import keepa_functions as kf
 
 
 def collect_asins(query, market_niche=None, page=1):
@@ -26,60 +27,9 @@ def collect_asins(query, market_niche=None, page=1):
     writer_thr = Thread(target=writer, args=(writer_queue,))
     products_info_thr = Thread(target=collect_products_info, args=(products_info_queue, writer_queue))
     reviews_thr = Thread(target=collect_reviews, args=(reviews_queue,))
-    try:
-        webdriver = chrome_init(modern=True, headless=False, goto='https://amazon.com')
-        # переход к необходимой локации - US (UM)
-        webdriver.sleep(.5)
-        webdriver.activate_jquery()
-        webdriver.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
-            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
-        )
-        webdriver.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
-            '{actionSource: "glow",'
-            'countryCode: "UM",'
-            'deviceType: "web",'
-            'distinct: "UM",'
-            'locationType: "COUNTRY",'
-            'pageType: "Detail",'
-            'storeContext: "hpc"}'
-            ')'
-        )
-        webdriver.execute_script(
-            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
-            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
-        )
-        webdriver.refresh()
-        webdriver.activate_jquery()
-        # переход к необходимой локации - US (UM)
-        webdriver.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
-            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
-        )
-        webdriver.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
-            '{actionSource: "glow",'
-            'countryCode: "UM",'
-            'deviceType: "web",'
-            'distinct: "UM",'
-            'locationType: "COUNTRY",'
-            'pageType: "Detail",'
-            'storeContext: "hpc"}'
-            ')'
-        )
-        webdriver.execute_script(
-            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
-            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
-        )
-        webdriver.refresh()
-    except:
-        if webdriver:
-            try:
-                webdriver.driver.close()
-            except:
-                pass
-        return False
+
+    webdriver = chrome_init(goto='https://amazon.com')
+    webdriver.change_loc()
 
     webdriver.sleep(1)
     webdriver.refresh()
@@ -117,8 +67,7 @@ def collect_asins(query, market_niche=None, page=1):
             p = p.items()
             try:
                 result = webdriver.execute_script(f"return $.post(\"https://www.amazon.com/s/query?{q}\", "
-                                                  "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in p]) + ""
-                                                                                                                   "\"}, null, 'text');")
+                                                  "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in p]) + "\"}, null, 'text');")
             except JavascriptException:
                 # if error - reload webdriver
                 writer_queue.put((-1, None))
@@ -147,101 +96,18 @@ def collect_asins(query, market_niche=None, page=1):
 
 
 def collect_products_info(products_info_queue, writer_queue):
-    # Initializing webdriver with extension
-    webdriver = chrome_init(True, headless=False, extension=os.path.abspath('keepa-extension'))
-    webdriver.get('chrome://extensions')
-    # find ID of the extension
-    webdriver.sleep(3)
-    items = None
-    try:
-        # click to devmode
-        webdriver.sleep(1)
-        root_el = webdriver.get_element('extensions-manager', timeout=1).shadow_root
-        items = root_el.find_element(By.CSS_SELECTOR, '#container extensions-item-list').shadow_root.find_elements(
-            By.CSS_SELECTOR,
-            '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
-        )
-    except:
-        pass
-    _id = None
-    if items:
-        for item in items:
-            if 'Keepa - Amazon Price Tracker' \
-                    in item.shadow_root.find_element(By.CSS_SELECTOR, '#card > #main #content > div:first-child').text:
-                _id = item.get_property('id')
-                break
-
-    try:
-        webdriver.get('https://amazon.com')
-        webdriver.sleep(.5)
-        webdriver.activate_jquery()
-        # переход к необходимой локации - US (UM)
-        webdriver.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
-            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
-        )
-        webdriver.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
-            '{actionSource: "glow",'
-            'countryCode: "UM",'
-            'deviceType: "web",'
-            'distinct: "UM",'
-            'locationType: "COUNTRY",'
-            'pageType: "Detail",'
-            'storeContext: "hpc"}'
-            ')'
-        )
-        webdriver.execute_script(
-            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
-            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
-        )
-        webdriver.refresh()
-        webdriver.activate_jquery()
-        # переход к необходимой локации - US (UM)
-        webdriver.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
-            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
-        )
-        webdriver.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
-            '{actionSource: "glow",'
-            'countryCode: "UM",'
-            'deviceType: "web",'
-            'distinct: "UM",'
-            'locationType: "COUNTRY",'
-            'pageType: "Detail",'
-            'storeContext: "hpc"}'
-            ')'
-        )
-        webdriver.execute_script(
-            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
-            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
-        )
-        webdriver.refresh()
-    except:
-        if webdriver:
-            try:
-                webdriver.driver.close()
-            except:
-                pass
+    # Initializing webdriver with extension 'Keepa - Amazon Price Tracker'
+    webdriver = chrome_init(goto='https://amazon.com', extension='./keepa-extension')
+    webdriver.change_loc()
 
     el = products_info_queue.get()
     while el:
         print(el)
         webdriver.get('https://amazon.com/dp/' + el)
+        captcha_solve(webdriver)
+        webdriver.activate_jquery()
         # Checking if not login
-        try:
-            webdriver.switch_to_frame('#keepa')
-            webdriver.get_element('#keepaBoxLogin').click()
-            webdriver.sleep(.1)
-            webdriver.type('#username', 'keepa@brandlogic.ai')
-            webdriver.sleep(.1)
-            webdriver.type('#password', '5kJuNc6EU1itFh0Y')
-            webdriver.sleep(.1)
-            webdriver.submit('#password')
-            webdriver.switch_to_default_content()
-        except:
-            pass
+
         # INFO
         webdriver.switch_to_default_content()
         title = webdriver.get_element('#titleSection, #title, #productTitle').text.strip()
