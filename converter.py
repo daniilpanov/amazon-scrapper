@@ -36,6 +36,7 @@ def convert(f_input, f_output='output_reviews_list_converted.csv'):
 
 
 if __name__ == '__main__':
-    for i in ['ABSA - Pressure-cookers', 'ABSA - recovery-drink', 'ABSA - Rice-cookers', 'ABSA - wine-coolers']:
-        print(convert('WRPR/' + i + '.csv', 'WRPR/' + i + '_converted.csv'))
-        print(convert('WRPR/' + i + '.csv', 'WRPR/all_converted.csv'))
+    # for i in ['ABSA - Pressure-cookers', 'ABSA - recovery-drink', 'ABSA - Rice-cookers', 'ABSA - wine-coolers']:
+    #     print(convert('WRPR/' + i + '.csv', 'WRPR/' + i + '_converted.csv'))
+    #     print(convert('WRPR/' + i + '.csv', 'WRPR/all_converted.csv'))
+    print(convert('reviews_list_old.csv', 'reviews_list.csv'))

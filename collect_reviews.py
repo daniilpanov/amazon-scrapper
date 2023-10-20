@@ -6,16 +6,16 @@ from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from queue import Queue
 from threading import Thread, Event
 from time import sleep
+from typing import Union
+
 from alive_progress import alive_bar
 
 from pandas import DataFrame
-from random_user_agent.user_agent import UserAgent
-from random_user_agent.params import OperatingSystem, SoftwareName
 from bs4 import BeautifulSoup
-from selenium.common import JavascriptException, InvalidSessionIdException
-from undetected_chromedriver import ChromeOptions, Chrome
+from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
+from seleniumbase import BaseCase
 
-from functions import captcha_solve, RetryException, wait_for_loading, insert_jquery, user_emulate
+from functions import RetryException, user_emulate, chrome_init, captcha_solve_modern
 
 params = {
     'sortBy': ['helpful', 'recent'],
@@ -33,7 +33,7 @@ write_queue = Queue()
 state_queue = Queue()
 ev = Event()
 
-webdriver = None
+webdriver: Union[None, BaseCase] = None
 url = 'https://www.amazon.com/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt'
 
 jsd = JSONDecoder()
@@ -83,7 +83,7 @@ def write_state(folder='.'):
 def write_data(folder='.'):
     if not file_exists:
         f = open(os.path.join(folder, 'reviews_list.csv'), 'w', encoding='utf-8')
-        f.write('product_url,asin,date_info,name,title,content,rating,helpful,options\n')
+        f.write('product_url,asin,date,country,name,title,content,rating,helpful,options\n')
         f.close()
     while True:
         # Wait for a data from the queue
@@ -95,15 +95,26 @@ def write_data(folder='.'):
             return
 
         asin, seed, write_data_res = write_data_res
-        df = DataFrame(
-            write_data_res,
-            columns=['product_url', 'asin', 'date_info', 'name', 'title', 'content', 'rating', 'helpful', 'options'],
-        )
+        df = DataFrame(write_data_res, columns=[
+            'product_url',
+            'asin',
+            'date',
+            'country',
+            'name',
+            'title',
+            'content',
+            'rating',
+            'helpful',
+            'options',
+        ])
         df.to_csv(os.path.join(folder, 'reviews_list.csv'), index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])
 
 
 def process_data():
+    months = ['January', 'February', 'March', 'April', 'May',
+              'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
     while True:
         # Wait for a data from the queue
         process_data_res = data_queue.get()
@@ -159,12 +170,15 @@ def process_data():
                 # Country & Date
                 review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
                 if review_date_raw:
-                    review_date_raw = review_date_raw.text.strip()
-                    review_date = review_date_raw.replace("\n", " ") \
-                        .replace('Reviewed in the ', '').replace(',', '').replace('"', '')
-                    rdc = review_date.split(' on ')
-                    review_date = rdc[-1]
-                    review_country = ' on '.join(rdc[:-1])
+                    review_date_raw = review_date_raw.text.replace("\n", " ").strip()
+                    review_date_data, year = \
+                        (review_date_raw[16:] if review_date_raw[12] == 't' else review_date_raw[12:]).split(', ')
+                    year = int(year)
+                    review_country, review_date = review_date_data.split(' on ')
+                    month, day = review_date.split(' ')
+                    month = months.index(month) + 1
+                    day = int(day)
+                    review_date = f'{year}-{month:02}-{day:02}'
                 else:
                     review_date = ''
                     review_country = ''
@@ -221,7 +235,8 @@ def process_data():
                 res.append({
                     'product_url': 'https://www.amazon.com/dp/' + asin,
                     'asin': asin,
-                    'date_info': review_date_raw,
+                    'date': review_date,
+                    'country': review_country,
                     'name': customer_name,
                     'title': review_title,
                     'content': review_body,
@@ -256,23 +271,27 @@ def send_request(asin, seed):
             res = webdriver.execute_script("return " + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
                 raise RetryException()
-        except (JavascriptException, RetryException):
+        except (JavascriptException, RetryException, TimeoutException):
             print('something went wrong. retry... ')
+            sleep(1)
             try:
-                wait_for_loading(webdriver)
-                insert_jquery(webdriver)
+                webdriver.reload()
+                if not captcha_solve_modern(webdriver):
+                    raise Exception()
+                webdriver.reload()
+                webdriver.activate_jquery()
                 res = webdriver.execute_script("return " + ajax)
                 if not res or 'BAAAAAAD ASIN!' in res:
-                    print('error')
                     raise Exception()
                 print('success. continue')
             except Exception as e:
+                print('error')
                 print(e)
                 try:
-                    webdriver.close()
-                except:
-                    pass
-                return False
+                    webdriver.driver.close()
+                finally:
+                    data_queue.put(None)
+                    return False
 
         data_queue.put([asin, seed, res])
     else:
@@ -289,22 +308,7 @@ def main(ASINs, folder='.'):
     file_exists = os.path.exists(os.path.join(folder, 'reviews_list.csv'))
 
     ev = Event()
-    options = ChromeOptions()
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument(
-        f'user-agent={UserAgent(software_names=(SoftwareName.CHROME.value,), operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value), limit=120).get_random_user_agent()}'
-    )
-    options.add_argument('--headless')
-    options.add_argument('--start-maximized')
-    options.add_argument('--ignore-certificate-errors-spki-list')
-    options.add_argument('--ignore-ssl-errors')
-    options.add_argument('--log-level=3')
-    webdriver = Chrome(options=options)
-    webdriver.get('https://www.amazon.com/product-reviews/B08JPS4554')
-    wait_for_loading(webdriver)
-    captcha_solve(webdriver)
+    webdriver = chrome_init(modern=True, goto='https://amazon.com/product-reviews/B08JPS4554')
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
@@ -368,4 +372,9 @@ def main(ASINs, folder='.'):
         print('Script stopped')
         data_queue.put(None)
         return start_time, datetime.datetime.now()
+    finally:
+        try:
+            webdriver.driver.close()
+        except:
+            pass
 

@@ -8,7 +8,7 @@ from collect_reviews import main
 # Mainloop
 if __name__ == '__main__':
     print('PROGRAM STARTED')
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 1 and (os.path.exists(sys.argv[-1]) or os.path.exists(os.path.abspath(sys.argv[-1]))):
         directory = sys.argv[-1]
     else:
         directory = input('Please type the directory: ') or '.'
@@ -37,6 +37,6 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('Script stopped')
     except Exception as e:
-        print('Something went wrong... reloading all script after 20 seconds')
-        sleep(20)
+        print('Something went wrong... reloading all script after 30 seconds')
+        sleep(30)
         os.execv(sys.executable, [sys.executable] + sys.argv + ([directory] if directory not in sys.argv else []))
