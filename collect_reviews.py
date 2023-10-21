@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
 from seleniumbase import BaseCase
 
-from functions import RetryException, user_emulate, chrome_init, captcha_solve_modern
+from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
 
 params = {
     'sortBy': ['helpful', 'recent'],
@@ -33,7 +33,7 @@ write_queue = Queue()
 state_queue = Queue()
 ev = Event()
 
-webdriver: Union[None, BaseCase] = None
+webdriver: Union[None, WebDriver] = None
 url = 'https://www.amazon.com/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt'
 
 jsd = JSONDecoder()
@@ -83,7 +83,7 @@ def write_state(folder='.'):
 def write_data(folder='.'):
     if not file_exists:
         f = open(os.path.join(folder, 'reviews_list.csv'), 'w', encoding='utf-8')
-        f.write('product_url,asin,date,country,name,title,content,rating,helpful,options\n')
+        f.write('asin,html\n')
         f.close()
     while True:
         # Wait for a data from the queue
@@ -96,25 +96,14 @@ def write_data(folder='.'):
 
         asin, seed, write_data_res = write_data_res
         df = DataFrame(write_data_res, columns=[
-            'product_url',
             'asin',
-            'date',
-            'country',
-            'name',
-            'title',
-            'content',
-            'rating',
-            'helpful',
-            'options',
+            'html',
         ])
         df.to_csv(os.path.join(folder, 'reviews_list.csv'), index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])
 
 
 def process_data():
-    months = ['January', 'February', 'March', 'April', 'May',
-              'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
     while True:
         # Wait for a data from the queue
         process_data_res = data_queue.get()
@@ -142,20 +131,6 @@ def process_data():
                     break
             if not data_with_quantity:
                 continue
-            parser = BeautifulSoup(data_with_quantity.replace('\"', '"'), features='html.parser')
-            reviews_count_el = parser.find('div', attrs={'data-hook': 'cr-filter-info-review-rating-count'})
-            if not reviews_count_el:
-                continue
-            reviews_count_raw = reviews_count_el.text.split('total ratings, ')
-            if len(reviews_count_raw) == 1:
-                reviews_count_raw = reviews_count_el.text.split('total rating, ')
-            if len(reviews_count_raw) > 1:
-                reviews_count = reviews_count_raw[1].replace(' with reviews', '').replace(',', '').strip()
-                if 'with review' in reviews_count:
-                    reviews_count = reviews_count.replace(' with review', '')
-                reviews_count = int(reviews_count)
-            else:
-                reviews_count = 0
 
             res = []
 
@@ -167,82 +142,10 @@ def process_data():
                         or item_parser.find('div', class_='a-divider-section') \
                         or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
                     continue
-                # Country & Date
-                review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
-                if review_date_raw:
-                    review_date_raw = review_date_raw.text.replace("\n", " ").strip()
-                    review_date_data, year = \
-                        (review_date_raw[16:] if review_date_raw[12] == 't' else review_date_raw[12:]).split(', ')
-                    year = int(year)
-                    review_country, review_date = review_date_data.split(' on ')
-                    month, day = review_date.split(' ')
-                    month = months.index(month) + 1
-                    day = int(day)
-                    review_date = f'{year}-{month:02}-{day:02}'
-                else:
-                    review_date = ''
-                    review_country = ''
-                # Customer name
-                customer_name = item_parser.find('span', attrs={'class': 'a-profile-name'})
-                customer_name = customer_name.text.strip().replace("\n", " ") if customer_name else ''
-                # Title
-                review_title = item_parser.find('a', attrs={'data-hook': 'review-title'})
-                if review_title:
-                    review_title = review_title.text.strip().replace("\n", " ").split('.0 out of 5 stars ')
-                    review_title = review_title[1] if len(review_title) > 1 else ''
-                else:
-                    review_title = ''
-                # Content
-                review_body = item_parser.find('span', attrs={'data-hook': 'review-body'})
-                review_body = review_body.text.strip().replace("\n", " ") if review_body else ''
-                # Rating
-                review_star_rating = item_parser.find('i', {'data-hook': 'review-star-rating'})
-                if not review_star_rating:
-                    review_star_rating = item_parser.find('i', {'data-hook': 'cmps-review-star-rating'})
-                if not review_star_rating:
-                    review_star_rating = item_parser.find('i', class_='cr-lightbox-review-rating')
-                review_rating = review_star_rating.find('span').text.split(' ')[0].strip()
-                # Helpful votes
-                helpful_votes = item_parser.find('span', {'data-hook': 'helpful-vote-statement'})
-                if helpful_votes:
-                    helpful_votes = helpful_votes.text.split(' ')[0]
-                    if helpful_votes == 'One':
-                        helpful_votes = 1
-                    else:
-                        helpful_votes = int(helpful_votes.replace(',', ''))
-                else:
-                    helpful_votes = 0
-                # Options
-                review_options = item_parser.find_all('a', {'data-hook': 'format-strip'})
-                if review_options:
-                    review_options = '|'.join(map(lambda x: x.text, review_options)).replace("\n", " ")
-                else:
-                    review_options = ''
 
-                # data.append({
-                #     'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
-                #     'ASIN': self.params['asin'],
-                #     'Review Created Date': review_date,
-                #     'Country': review_country,
-                #     'Review User Name': customer_name,
-                #     'Review Title': review_title,
-                #     'Review Body': review_body,
-                #     'Review Rating': review_rating,
-                #     'Review Helpful Votes': helpful_votes,
-                #     'Product Options': review_options,
-                # })
-                # product_url,asin,date_info,name,title,content,rating,helpful,options
                 res.append({
-                    'product_url': 'https://www.amazon.com/dp/' + asin,
                     'asin': asin,
-                    'date': review_date,
-                    'country': review_country,
-                    'name': customer_name,
-                    'title': review_title,
-                    'content': review_body,
-                    'rating': review_rating,
-                    'helpful': helpful_votes,
-                    'options': review_options,
+                    'html': item[2].strip(),
                 })
             write_queue.put([asin, seed, res])
         except Exception as ex:
@@ -271,12 +174,13 @@ def send_request(asin, seed):
             res = webdriver.execute_script("return " + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
                 raise RetryException()
-        except (JavascriptException, RetryException, TimeoutException):
+        except (JavascriptException, RetryException, TimeoutException) as e:
+            print(e)
             print('something went wrong. retry... ')
             sleep(1)
             try:
                 webdriver.reload()
-                if not captcha_solve_modern(webdriver):
+                if not captcha_solve(webdriver):
                     raise Exception()
                 webdriver.reload()
                 webdriver.activate_jquery()
@@ -308,7 +212,7 @@ def main(ASINs, folder='.'):
     file_exists = os.path.exists(os.path.join(folder, 'reviews_list.csv'))
 
     ev = Event()
-    webdriver = chrome_init(modern=True, goto='https://amazon.com/product-reviews/B08JPS4554')
+    webdriver = chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)

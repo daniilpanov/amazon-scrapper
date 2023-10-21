@@ -6,11 +6,9 @@ import colorama
 import requests
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
-from selenium.common import WebDriverException, JavascriptException
+from selenium.common import JavascriptException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from seleniumbase import BaseCase
 from seleniumbase import config as sbc
 from seleniumbase.fixtures import constants
@@ -118,7 +116,7 @@ def captcha_solve(webdriver: WebDriver):
     file = open(filepath, 'wb')
     file.write(img_source.content)
     file.close()
-    solver = f.CaptchaSolver('captcha_solver')
+    solver = CaptchaSolver('captcha_solver')
     text = solver.solve(filepath)
     os.remove(filepath)
     if not text:
@@ -164,7 +162,7 @@ class RetryException(Exception):
     pass
 
 
-def modern_chrome_init(headless=True, user_path=None, user_settings=None, extension=None):
+def modern_chrome_init(headless=True, user_path=None, user_settings=None, extension=None, tor=True):
     global sb_config
     sb_config._do_sb_post_mortem = False
     sb_config.proxy_driver = False
@@ -252,7 +250,7 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
     sb_config.chromium_arg = None
     sb_config.firefox_arg = None
     sb_config.firefox_pref = None
-    sb_config.proxy_string = None
+    sb_config.proxy_string = 'socks5://104.154.150.173:9050' if tor else None
     sb_config.proxy_bypass_list = None
     sb_config.proxy_pac_url = None
     sb_config.multi_proxy = False
@@ -373,8 +371,8 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
     return sb
 
 
-def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False):
-    webdriver = modern_chrome_init(headless=headless, extension=extension)
+def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False):
+    webdriver = modern_chrome_init(headless=headless, extension=extension, tor=tor)
     if get_ext_id:
         webdriver.get_extension_id('Keepa')
     if goto:
