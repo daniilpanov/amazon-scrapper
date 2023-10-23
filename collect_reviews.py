@@ -13,7 +13,6 @@ from alive_progress import alive_bar
 from pandas import DataFrame
 from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
-from seleniumbase import BaseCase
 
 from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
 
@@ -39,7 +38,7 @@ url = 'https://www.amazon.com/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d
 jsd = JSONDecoder()
 jse = JSONEncoder()
 
-file_exists = os.path.exists('reviews_list.csv')
+file_exists = os.path.exists('reviews-list.csv')
 if file_exists:
     try:
         data = jsd.decode('\n'.join(list(open('state.json')))) if os.path.exists('state.json') else {}
@@ -80,9 +79,9 @@ def write_state(folder='.'):
             f.close()
 
 
-def write_data(folder='.'):
+def write_data(new_filename='reviews-list.csv'):
     if not file_exists:
-        f = open(os.path.join(folder, 'reviews_list.csv'), 'w', encoding='utf-8')
+        f = open(new_filename, 'w', encoding='utf-8')
         f.write('asin,html\n')
         f.close()
     while True:
@@ -99,7 +98,7 @@ def write_data(folder='.'):
             'asin',
             'html',
         ])
-        df.to_csv(os.path.join(folder, 'reviews_list.csv'), index=False, header=False, mode='a', encoding='utf-8')
+        df.to_csv(new_filename, index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])
 
 
@@ -203,21 +202,21 @@ def send_request(asin, seed):
     return True
 
 
-def main(ASINs, folder='.'):
+def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
     # timestamp
     start_time = datetime.datetime.now()
     print('loading webdriver')
     global webdriver, ev, file_exists
 
-    file_exists = os.path.exists(os.path.join(folder, 'reviews_list.csv'))
+    file_exists = os.path.exists(new_filename)
 
     ev = Event()
     webdriver = chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
-    writer_thread = Thread(target=write_data, args=(folder,))
-    state_writer_thread = Thread(target=write_state, args=(folder,))
+    writer_thread = Thread(target=write_data, args=(new_filename,))
+    state_writer_thread = Thread(target=write_state)
     user_emulate_thread.start()
     process_thread.start()
     writer_thread.start()
@@ -271,7 +270,7 @@ def main(ASINs, folder='.'):
         state_writer_thread.join()
         print('done. reloading...')
         sleep(10)
-        return main(ASINs, folder)
+        return main(ASINs, filename, new_filename)
     except KeyboardInterrupt:
         print('Script stopped')
         data_queue.put(None)

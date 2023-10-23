@@ -8,19 +8,23 @@ from collect_reviews import main
 # Mainloop
 if __name__ == '__main__':
     print('PROGRAM STARTED')
-    if len(sys.argv) > 1 and (os.path.exists(sys.argv[-1]) or os.path.exists(os.path.abspath(sys.argv[-1]))):
-        directory = sys.argv[-1]
+    if len(sys.argv) > 1 and (os.path.exists(sys.argv[-2]) or os.path.exists(os.path.abspath(sys.argv[-2]))):
+        filename = sys.argv[-2]
     else:
-        directory = input('Please type the directory: ') or '.'
+        filename = input('Please enter the filename[products-list.txt]: ') or 'products-list.txt'
+    if len(sys.argv) > 2 and (os.path.exists(sys.argv[-1]) or os.path.exists(os.path.abspath(sys.argv[-1]))):
+        new_filename = sys.argv[-1]
+    else:
+        new_filename = input('Please enter the result filename[reviews-list.csv]: ') or 'reviews-list.csv'
     try:
-        with open(os.path.join(directory, 'products.list')) as f:
+        with open(filename) as f:
             asins = []
             p = re.compile(r'([A-Z0-9]{10})')
             for line in f.readlines():
                 res = p.findall(line)
                 if res:
                     asins.append(res[0])
-        start_time, end_time = main(asins, directory)
+        start_time, end_time = main(asins, filename, new_filename)
         delta = end_time - start_time
         print(
             'The time of the collecting:',
@@ -29,14 +33,10 @@ if __name__ == '__main__':
             delta.microseconds, 'microseconds.'
         )
         from uniqulizer import uniqulize_by_df
-        uniqulize_by_df(
-            os.path.join(directory, 'reviews_list.csv'),
-            os.path.join(directory, 'output_reviews_list.csv'),
-            0
-        )
+        uniqulize_by_df(new_filename, new_filename, 0)
     except KeyboardInterrupt:
         print('Script stopped')
     except Exception as e:
         print('Something went wrong... reloading all script after 30 seconds')
-        sleep(30)
-        os.execv(sys.executable, [sys.executable] + sys.argv + ([directory] if directory not in sys.argv else []))
+        sleep(10)
+        os.execv(sys.executable, [sys.executable] + sys.argv + ([filename] if filename not in sys.argv else []) + ([new_filename] if new_filename not in sys.argv else []))

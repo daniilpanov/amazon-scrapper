@@ -19,9 +19,9 @@ if __name__ == '__main__':
             delta.microseconds, 'microseconds.'
         )
         from uniqulizer import uniqulize_by_df
-        uniqulize_by_df('reviews_list.csv', 'output_reviews_list.csv', 0)
+        uniqulize_by_df('reviews-list.csv', 'reviews-list.csv', 0)
         from pandas import read_csv
-        p = 'output_reviews_list.csv'
+        p = 'reviews-list.csv'
         while not os.path.exists(p):
             p = input('Default file can not be found. Please type the path of the CSV file with collected reviews: ')
         write_reviews_data(read_csv(p, encoding='utf-8'))
