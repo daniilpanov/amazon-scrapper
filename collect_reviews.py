@@ -88,9 +88,9 @@ def write_data(new_filename='reviews-list.csv', file_exists=False):
 
         asin, seed, write_data_res = write_data_res
         df = DataFrame(write_data_res, columns=[
-            'product_url', 'asin', 'date', 'country',
-            'name', 'title', 'content', 'rating',
-            'helpful', 'options',
+            'review_id', 'product_url', 'asin',
+            'date', 'country', 'name', 'title',
+            'content', 'rating', 'helpful', 'options',
         ])
         df.to_csv(new_filename, index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])

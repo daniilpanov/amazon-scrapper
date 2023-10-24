@@ -74,7 +74,7 @@ def parse(asin, html):
     # product_url,asin,date_info,name,title,content,rating,helpful,options
     return {
         'review_id': review_id,
-        'product_url': 'https://www.amazon.com/dp/' + item['asin'],
+        'product_url': 'https://www.amazon.com/dp/' + asin,
         'asin': asin,
         'date': review_date,
         'country': review_country,
@@ -87,23 +87,25 @@ def parse(asin, html):
     }
 
 
-fn = input() or 'reviews-list.csv'
-data = pd.read_csv(fn)
-res = DataFrame(columns=[
-    'product_url',
-    'asin',
-    'date_info',
-    'name',
-    'title',
-    'content',
-    'rating',
-    'helpful',
-    'options',
-])
+if __name__ == '__main__':
+    fn = input() or 'reviews-list.csv'
+    data = pd.read_csv(fn)
+    res = DataFrame(columns=[
+        'review_id',
+        'product_url',
+        'asin',
+        'date_info',
+        'name',
+        'title',
+        'content',
+        'rating',
+        'helpful',
+        'options',
+    ])
 
-for index, item in data.iterrows():
-    d = parse(item['asin'], item['html'])
-    if d:
-        res.loc[len(res.index)] = d
+    for index, item in data.iterrows():
+        d = parse(item['asin'], item['html'])
+        if d:
+            res.loc[len(res.index)] = d
 
-res.to_csv('output_' + fn)
+    res.to_csv('output_' + fn)
