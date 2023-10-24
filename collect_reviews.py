@@ -14,6 +14,7 @@ from pandas import DataFrame
 from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
 
+import parser_reviews
 from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
 
 params = {
@@ -74,7 +75,7 @@ def write_state(folder='.', file_exists=False, data=None):
 def write_data(new_filename='reviews-list.csv', file_exists=False):
     if not file_exists:
         f = open(new_filename, 'w', encoding='utf-8')
-        f.write('asin,html\n')
+        f.write('review_id,product_url,asin,date,country,name,title,content,rating,helpful,options\n')
         f.close()
     while True:
         # Wait for a data from the queue
@@ -87,8 +88,9 @@ def write_data(new_filename='reviews-list.csv', file_exists=False):
 
         asin, seed, write_data_res = write_data_res
         df = DataFrame(write_data_res, columns=[
-            'asin',
-            'html',
+            'product_url', 'asin', 'date', 'country',
+            'name', 'title', 'content', 'rating',
+            'helpful', 'options',
         ])
         df.to_csv(new_filename, index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])
@@ -133,61 +135,6 @@ def process_data():
                         or item_parser.find('div', class_='a-divider-section') \
                         or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
                     continue
-
-                item_parser = BeautifulSoup(item['html'], features='html.parser')
-                if not item_parser or not item_parser.find(attrs={'data-hook': 'review'}) \
-                        or item_parser.find('div', class_='a-divider-section') \
-                        or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
-                    continue
-                # Country & Date
-                review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
-                if review_date_raw:
-                    review_date_raw = review_date_raw.text.strip()
-                    review_date = review_date_raw.replace("\n", " ") \
-                        .replace('Reviewed in the ', '').replace(',', '').replace('"', '')
-                    rdc = review_date.split(' on ')
-                    review_date = rdc[-1]
-                    review_country = ' on '.join(rdc[:-1])
-                else:
-                    review_date = ''
-                    review_country = ''
-                # Customer name
-                customer_name = item_parser.find('span', attrs={'class': 'a-profile-name'})
-                customer_name = customer_name.text.strip().replace("\n", " ") if customer_name else ''
-                # Title
-                review_title = item_parser.find('a', attrs={'data-hook': 'review-title'})
-                if review_title:
-                    review_title = review_title.text.strip().replace("\n", " ").split('.0 out of 5 stars ')
-                    review_title = review_title[1] if len(review_title) > 1 else ''
-                else:
-                    review_title = ''
-                # Content
-                review_body = item_parser.find('span', attrs={'data-hook': 'review-body'})
-                review_body = review_body.text.strip().replace("\n", " ") if review_body else ''
-                # Rating
-                review_star_rating = item_parser.find('i', {'data-hook': 'review-star-rating'})
-                if not review_star_rating:
-                    review_star_rating = item_parser.find('i', {'data-hook': 'cmps-review-star-rating'})
-                if not review_star_rating:
-                    review_star_rating = item_parser.find('i', class_='cr-lightbox-review-rating')
-                review_rating = review_star_rating.find('span').text.split(' ')[0].strip()
-                # Helpful votes
-                helpful_votes = item_parser.find('span', {'data-hook': 'helpful-vote-statement'})
-                if helpful_votes:
-                    helpful_votes = helpful_votes.text.split(' ')[0]
-                    if helpful_votes == 'One':
-                        helpful_votes = 1
-                    else:
-                        helpful_votes = int(helpful_votes.replace(',', ''))
-                else:
-                    helpful_votes = 0
-                # Options
-                review_options = item_parser.find_all('a', {'data-hook': 'format-strip'})
-                if review_options:
-                    review_options = '|'.join(map(lambda x: x.text, review_options)).replace("\n", " ")
-                else:
-                    review_options = ''
-
                 # data.append({
                 #     'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
                 #     'ASIN': self.params['asin'],
@@ -201,22 +148,7 @@ def process_data():
                 #     'Product Options': review_options,
                 # })
                 # product_url,asin,date_info,name,title,content,rating,helpful,options
-                res.loc[len(res.index)] = {
-                    'product_url': 'https://www.amazon.com/dp/' + item['asin'],
-                    'asin': item['asin'],
-                    'date_info': review_date_raw,
-                    'name': customer_name,
-                    'title': review_title,
-                    'content': review_body,
-                    'rating': review_rating,
-                    'helpful': helpful_votes,
-                    'options': review_options,
-                }
-
-                res.append({
-                    'asin': asin,
-                    'html': item[2].strip(),
-                })
+                res.append(parser_reviews.parse(asin, item[2].strip()))
             write_queue.put([asin, seed, res])
         except Exception as ex:
             print(ex)

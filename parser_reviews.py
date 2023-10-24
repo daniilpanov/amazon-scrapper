@@ -2,26 +2,14 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 
-fn = input() or 'reviews-list.csv'
-data = pd.read_csv(fn)
-res = DataFrame(columns=[
-    'product_url',
-    'asin',
-    'date_info',
-    'name',
-    'title',
-    'content',
-    'rating',
-    'helpful',
-    'options',
-])
 
-for index, item in data.iterrows():
-    item_parser = BeautifulSoup(item['html'], features='html.parser')
+def parse(asin, html):
+    item_parser = BeautifulSoup(html, features='html.parser')
     if not item_parser or not item_parser.find(attrs={'data-hook': 'review'}) \
             or item_parser.find('div', class_='a-divider-section') \
             or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
-        continue
+        return False
+    review_id = item_parser.find('div', attrs={'data-hook': 'review'})['id']
     # Country & Date
     review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
     if review_date_raw:
@@ -84,10 +72,12 @@ for index, item in data.iterrows():
     #     'Product Options': review_options,
     # })
     # product_url,asin,date_info,name,title,content,rating,helpful,options
-    res.loc[len(res.index)] = {
+    return {
+        'review_id': review_id,
         'product_url': 'https://www.amazon.com/dp/' + item['asin'],
-        'asin': item['asin'],
-        'date_info': review_date_raw,
+        'asin': asin,
+        'date': review_date,
+        'country': review_country,
         'name': customer_name,
         'title': review_title,
         'content': review_body,
@@ -95,5 +85,25 @@ for index, item in data.iterrows():
         'helpful': helpful_votes,
         'options': review_options,
     }
+
+
+fn = input() or 'reviews-list.csv'
+data = pd.read_csv(fn)
+res = DataFrame(columns=[
+    'product_url',
+    'asin',
+    'date_info',
+    'name',
+    'title',
+    'content',
+    'rating',
+    'helpful',
+    'options',
+])
+
+for index, item in data.iterrows():
+    d = parse(item['asin'], item['html'])
+    if d:
+        res.loc[len(res.index)] = d
 
 res.to_csv('output_' + fn)
