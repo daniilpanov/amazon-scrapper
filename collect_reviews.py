@@ -38,23 +38,15 @@ url = 'https://www.amazon.com/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d
 jsd = JSONDecoder()
 jse = JSONEncoder()
 
-file_exists = os.path.exists('reviews-list.csv')
-if file_exists:
-    try:
-        data = jsd.decode('\n'.join(list(open('state.json')))) if os.path.exists('state.json') else {}
-    except JSONDecodeError:
-        data = {}
-else:
-    data = {}
 
-
-def state(asin, seed):
-    global data
+def state(asin, seed, data):
     data[asin] = seed
     return jse.encode(data)
 
 
-def write_state(folder='.'):
+def write_state(folder='.', file_exists=False, data=None):
+    if data is None:
+        data = {}
     if not file_exists:
         f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
         f.write('{}')
@@ -70,16 +62,16 @@ def write_state(folder='.'):
         asin, seed = state_data
         try:
             f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
-            f.write(state(asin, seed))
+            f.write(state(asin, seed, data))
             f.close()
         except IOError:
             sleep(10)
             f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
-            f.write(state(asin, seed))
+            f.write(state(asin, seed, data))
             f.close()
 
 
-def write_data(new_filename='reviews-list.csv'):
+def write_data(new_filename='reviews-list.csv', file_exists=False):
     if not file_exists:
         f = open(new_filename, 'w', encoding='utf-8')
         f.write('asin,html\n')
@@ -206,17 +198,24 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
     # timestamp
     start_time = datetime.datetime.now()
     print('loading webdriver')
-    global webdriver, ev, file_exists
+    global webdriver, ev
 
-    file_exists = os.path.exists(new_filename)
+    file_exists = os.path.exists(new_filename or 'reviews-list.csv')
+    if file_exists:
+        try:
+            data = jsd.decode('\n'.join(list(open('state.json')))) if os.path.exists('state.json') else {}
+        except JSONDecodeError:
+            data = {}
+    else:
+        data = {}
 
     ev = Event()
     webdriver = chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
-    writer_thread = Thread(target=write_data, args=(new_filename,))
-    state_writer_thread = Thread(target=write_state)
+    writer_thread = Thread(target=write_data, args=(new_filename, file_exists))
+    state_writer_thread = Thread(target=write_state, args=('.', file_exists, data))
     user_emulate_thread.start()
     process_thread.start()
     writer_thread.start()
