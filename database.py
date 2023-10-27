@@ -50,11 +50,11 @@ def db() -> Database:
 
 
 def write_reviews(reviews):
-    return db().insert_many(reviews)
+    return db()['customer_reviews'].insert_many(reviews)
 
 
 def write_product_html(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
-    return db().insert_one({
+    return db()['raw_product_card_htmls'].insert_one({
         'asin': asin, 'html': html,
         'keepa price history': keepa_ph,
         'keepa statistics': keepa_stats,
@@ -65,4 +65,4 @@ def write_product_html(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa
 
 if __name__ == '__main__':
     print(db().list_collection_names())
-    print(type(db().insert_many))
+    print(db()['customer_reviews'].find().next())

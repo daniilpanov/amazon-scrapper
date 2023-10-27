@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
 
 import parser_reviews
+from database import write_reviews
 from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
 
 params = {
@@ -150,6 +151,8 @@ def process_data():
                 # product_url,asin,date_info,name,title,content,rating,helpful,options
                 res.append(parser_reviews.parse(asin, item[2].strip()))
             write_queue.put([asin, seed, res])
+            if res:
+                write_reviews(res)
         except Exception as ex:
             print(ex)
 
