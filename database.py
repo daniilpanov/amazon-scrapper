@@ -23,7 +23,7 @@ def set_config(**kwargs):
         config[i] = kwargs[i]
 
 
-def inst() -> Union[MongoClient, False]:
+def inst() -> Union[MongoClient, bool]:
     global client
     if client:
         return client
