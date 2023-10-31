@@ -10,13 +10,12 @@ from typing import Union
 
 from alive_progress import alive_bar
 
-from pandas import DataFrame, read_csv
+from pandas import DataFrame
 from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
 
 import database
 import parser_reviews
-from database import write_reviews
 from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
 
 params = {

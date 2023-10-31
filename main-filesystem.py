@@ -37,7 +37,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('Script stopped')
     except Exception as e:
-        print(e)
+        raise e
         print('Something went wrong... reloading all script after 10 seconds')
         sleep(10)
         os.execv(sys.executable, [sys.executable] + sys.argv + ([filename] if filename not in sys.argv else []) + ([new_filename] if new_filename not in sys.argv else []))
