@@ -77,7 +77,7 @@ def write_state(folder='.', file_exists=False, data=None):
 def write_data(new_filename='reviews-list.csv', file_exists=False):
     if not file_exists:
         f = open(new_filename, 'w', encoding='utf-8')
-        f.write('review_id,product_url,asin,date,country,name,title,content,rating,helpful,options\n')
+        f.write('review_id,product_url,asin,date,country,name,title,content,rating,helpful,options,scrap_datetime\n')
         f.close()
     while True:
         # Wait for a data from the queue
@@ -89,11 +89,11 @@ def write_data(new_filename='reviews-list.csv', file_exists=False):
             return
 
         asin, seed, write_data_res = write_data_res
-        write_data_res['options'] = ' | '.join(write_data_res['options'])
         df = DataFrame(write_data_res, columns=[
             'review_id', 'product_url', 'asin',
             'date', 'country', 'name', 'title',
             'content', 'rating', 'helpful', 'options',
+            'scrap_datetime',
         ])
         df.to_csv(new_filename, index=False, header=False, mode='a', encoding='utf-8')
         state_queue.put([asin, seed])

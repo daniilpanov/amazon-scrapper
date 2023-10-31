@@ -1,6 +1,7 @@
 import datetime
 
 import pandas as pd
+import pytz
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 
@@ -21,7 +22,6 @@ def parse(asin, html):
         rdc = review_date.split(' on ')
         review_date = rdc[-1]
         review_country = ' on '.join(rdc[:-1])
-        review_date = datetime.datetime.strptime(review_date, '%B %d %Y')
     else:
         review_date = None
         review_country = None
@@ -62,11 +62,12 @@ def parse(asin, html):
         review_options = review_options[0]
         divider = review_options.find('i')
         if divider:
-            review_options = BeautifulSoup(str(review_options).replace(str(divider), ' | '), features='html.parser').text.split(' | ')
+            review_options = BeautifulSoup(str(review_options).replace(str(divider), ' | '), features='html.parser').text
         else:
-            review_options = [review_options.text]
+            review_options = review_options.text
     else:
         review_options = []
+    parse_datetime = str(datetime.datetime.now(pytz.UTC))
 
     # data.append({
     #     'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
@@ -93,6 +94,7 @@ def parse(asin, html):
         'rating': review_rating,
         'helpful': helpful_votes,
         'options': review_options,
+        'scrap_datetime': parse_datetime,
     }
 
 

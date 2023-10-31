@@ -52,6 +52,25 @@ def db() -> Database:
 
 
 def write_reviews(reviews):
+    revs = []
+    for i, row in reviews:
+        revs.append({
+            'asin': row['asin'],
+            'product_url': row['product_url'],
+            'date': datetime.datetime.strptime(row['date'], '%B %d %Y'),
+            'country': row['country'],
+            'name': row['name'],
+            'title': row['title'],
+            'description': row['review_body'],
+            'rating': row['rating'],
+            'helpful': row['helpful'],
+            'options': row['options'],
+            'review_id': row['review_id'],
+            'scrap_datetime': datetime.datetime.fromisoformat(row['scrap_datetime']),
+        })
+        # write_data_res[i]['options'] = write_data_res[i]['options'].split(' | ')
+        # write_data_res[i]['date'] = datetime.datetime.strptime(write_data_res[i]['date'], '%B %d %Y')
+        # write_data_res[i]['parse_datetime'] = datetime.datetime.fromisoformat(write_data_res[i]['parse_datetime'])
     return db()['customer_reviews'].insert_many(reviews)
 
 
