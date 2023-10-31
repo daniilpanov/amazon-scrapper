@@ -10,10 +10,11 @@ from typing import Union
 
 from alive_progress import alive_bar
 
-from pandas import DataFrame
+from pandas import DataFrame, read_csv
 from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
 
+import database
 import parser_reviews
 from database import write_reviews
 from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
@@ -88,6 +89,7 @@ def write_data(new_filename='reviews-list.csv', file_exists=False):
             return
 
         asin, seed, write_data_res = write_data_res
+        write_data_res['options'] = ' | '.join(write_data_res['options'])
         df = DataFrame(write_data_res, columns=[
             'review_id', 'product_url', 'asin',
             'date', 'country', 'name', 'title',
@@ -151,8 +153,6 @@ def process_data():
                 # product_url,asin,date_info,name,title,content,rating,helpful,options
                 res.append(parser_reviews.parse(asin, item[2].strip()))
             write_queue.put([asin, seed, res])
-            if res:
-                write_reviews(res)
         except Exception as ex:
             print(ex)
 
@@ -270,6 +270,7 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
         process_thread.join()
         writer_thread.join()
         state_writer_thread.join()
+        database.write_reviews(read_csv(new_filename))
         print('DONE.')
         return start_time, datetime.datetime.now()
     except (InvalidSessionIdException, RetryException) as e:

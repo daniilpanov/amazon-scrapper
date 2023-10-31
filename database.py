@@ -1,5 +1,7 @@
 from typing import Union
+import datetime
 
+import pytz
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
 
@@ -54,9 +56,13 @@ def write_reviews(reviews):
 
 
 def write_product_html(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
-    return db()['raw_product_card_htmls'].insert_one({
-        'asin': asin, 'html': html,
-        'keepa price history': keepa_ph,
+    res1 = db()['raw_product_card_htmls'].insert_one({
+        'asin': asin, 'product_url': f'https://amazon.com/dp/{asin}',
+        'HTML_text': html,
+        'scrap_datetime': datetime.datetime.now(pytz.UTC),
+    })
+    res2 = db()['raw_product_card_htmls'].insert_one({
+        'asin': asin, 'keepa price history': keepa_ph,
         'keepa statistics': keepa_stats,
         'keepa comparing': keepa_comparing,
         'keepa data': keepa_data,

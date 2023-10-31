@@ -1,3 +1,5 @@
+import datetime
+
 import pandas as pd
 from bs4 import BeautifulSoup
 from pandas import DataFrame
@@ -19,9 +21,10 @@ def parse(asin, html):
         rdc = review_date.split(' on ')
         review_date = rdc[-1]
         review_country = ' on '.join(rdc[:-1])
+        review_date = datetime.datetime.strptime(review_date, '%B %d %Y')
     else:
-        review_date = ''
-        review_country = ''
+        review_date = None
+        review_country = None
     # Customer name
     customer_name = item_parser.find('span', attrs={'class': 'a-profile-name'})
     customer_name = customer_name.text.strip().replace("\n", " ") if customer_name else ''
@@ -41,7 +44,7 @@ def parse(asin, html):
         review_star_rating = item_parser.find('i', {'data-hook': 'cmps-review-star-rating'})
     if not review_star_rating:
         review_star_rating = item_parser.find('i', class_='cr-lightbox-review-rating')
-    review_rating = review_star_rating.find('span').text.split(' ')[0].strip()
+    review_rating = float(review_star_rating.find('span').text.split(' ')[0].strip())
     # Helpful votes
     helpful_votes = item_parser.find('span', {'data-hook': 'helpful-vote-statement'})
     if helpful_votes:
@@ -53,11 +56,17 @@ def parse(asin, html):
     else:
         helpful_votes = 0
     # Options
-    review_options = item_parser.find_all('a', {'data-hook': 'format-strip'})
+    review_options = (item_parser.find_all('a', {'data-hook': 'format-strip'})
+                      or item_parser.find_all('span', {'data-hook': 'format-strip-linkless'}))
     if review_options:
-        review_options = '|'.join(map(lambda x: x.text, review_options)).replace("\n", " ")
+        review_options = review_options[0]
+        divider = review_options.find('i')
+        if divider:
+            review_options = BeautifulSoup(str(review_options).replace(str(divider), ' | '), features='html.parser').text.split(' | ')
+        else:
+            review_options = [review_options.text]
     else:
-        review_options = ''
+        review_options = []
 
     # data.append({
     #     'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
