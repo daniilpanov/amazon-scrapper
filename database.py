@@ -73,10 +73,12 @@ def write_reviews(reviews):
         # write_data_res[i]['options'] = write_data_res[i]['options'].split(' | ')
         # write_data_res[i]['date'] = datetime.datetime.strptime(write_data_res[i]['date'], '%B %d %Y')
         # write_data_res[i]['parse_datetime'] = datetime.datetime.fromisoformat(write_data_res[i]['parse_datetime'])
+    if not revs:
+        return False
     try:
         return db()['customer_reviews'].insert_many(revs, ordered=False)
     except BulkWriteError as e:
-        pass
+        return True
 
 
 def write_product_html(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data):

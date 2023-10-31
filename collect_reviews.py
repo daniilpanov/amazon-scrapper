@@ -226,6 +226,7 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
 
     ev = Event()
     webdriver = chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
+    webdriver.activate_jquery()
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
