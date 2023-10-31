@@ -96,6 +96,7 @@ def write_data(new_filename='reviews-list.csv', file_exists=False):
             'scrap_datetime',
         ])
         df.to_csv(new_filename, index=False, header=False, mode='a', encoding='utf-8')
+        database.write_reviews(df)
         state_queue.put([asin, seed])
 
 
@@ -270,7 +271,6 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
         process_thread.join()
         writer_thread.join()
         state_writer_thread.join()
-        database.write_reviews(read_csv(new_filename))
         print('DONE.')
         return start_time, datetime.datetime.now()
     except (InvalidSessionIdException, RetryException) as e:

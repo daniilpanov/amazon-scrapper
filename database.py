@@ -2,7 +2,9 @@ from typing import Union
 import datetime
 
 import pytz
+from pandas import read_csv
 from pymongo.database import Database
+from pymongo.errors import BulkWriteError
 from pymongo.mongo_client import MongoClient
 
 client: Union[MongoClient, None] = None
@@ -53,7 +55,7 @@ def db() -> Database:
 
 def write_reviews(reviews):
     revs = []
-    for i, row in reviews:
+    for i, row in reviews.iterrows():
         revs.append({
             'asin': row['asin'],
             'product_url': row['product_url'],
@@ -61,7 +63,7 @@ def write_reviews(reviews):
             'country': row['country'],
             'name': row['name'],
             'title': row['title'],
-            'description': row['review_body'],
+            'description': row['content'],
             'rating': row['rating'],
             'helpful': row['helpful'],
             'options': row['options'],
@@ -71,7 +73,10 @@ def write_reviews(reviews):
         # write_data_res[i]['options'] = write_data_res[i]['options'].split(' | ')
         # write_data_res[i]['date'] = datetime.datetime.strptime(write_data_res[i]['date'], '%B %d %Y')
         # write_data_res[i]['parse_datetime'] = datetime.datetime.fromisoformat(write_data_res[i]['parse_datetime'])
-    return db()['customer_reviews'].insert_many(reviews)
+    try:
+        return db()['customer_reviews'].insert_many(revs, ordered=False)
+    except BulkWriteError as e:
+        pass
 
 
 def write_product_html(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
