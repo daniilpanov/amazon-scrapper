@@ -2,7 +2,6 @@ from typing import Union
 import datetime
 
 import pytz
-from pandas import read_csv
 from pymongo.database import Database
 from pymongo.errors import BulkWriteError
 from pymongo.mongo_client import MongoClient
@@ -13,6 +12,7 @@ config = {
     'url': 'cluster0.tcwqk03.mongodb.net/?retryWrites=true&w=majority',
     'username': 'scrape_processing',
     'database': 'amazon_data',
+    'keepa_database': 'keepa',
     'password': 'gxYSEvBIDTgy6RIg',
     'proxy': 'http://Daniel:OsdKey0909@46.19.33.214:3128',
     'url_prefix': 'mongodb+srv',
@@ -53,6 +53,10 @@ def db() -> Database:
     return inst()[config['database']]
 
 
+def keepa_db() -> Database:
+    return inst()[config['keepa_database']]
+
+
 def write_reviews(reviews):
     revs = []
     for i, row in reviews.iterrows():
@@ -82,17 +86,41 @@ def write_reviews(reviews):
 
 
 def write_product_html(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
-    res1 = db()['raw_product_card_htmls'].insert_one({
-        'asin': asin, 'product_url': f'https://amazon.com/dp/{asin}',
-        'HTML_text': html,
-        'scrap_datetime': datetime.datetime.now(pytz.UTC),
-    })
-    res2 = db()['raw_product_card_htmls'].insert_one({
-        'asin': asin, 'keepa price history': keepa_ph,
-        'keepa statistics': keepa_stats,
-        'keepa comparing': keepa_comparing,
-        'keepa data': keepa_data,
-    })
+    try:
+        res1 = db()['raw_product_card_htmls'].insert_one({
+            'asin': asin, 'product_url': f'https://amazon.com/dp/{asin}',
+            'HTML_text': html,
+            'scrap_datetime': datetime.datetime.now(pytz.UTC),
+        })
+    except BulkWriteError as e:
+        res1 = True
+    try:
+        res2 = keepa_db()['raw_product_card_htmls'].insert_one({
+            'asin': asin, 'keepa price history': keepa_ph,
+            'keepa statistics': keepa_stats,
+            'keepa comparing': keepa_comparing,
+            'keepa data': keepa_data,
+        })
+        return res1 and res2
+    except BulkWriteError as e:
+        return res1
+
+
+def write_product_parsed(asin, title, descr, picture_url, features, top5phr, price):
+    try:
+        return db()['raw_product_card_htmls'].insert_one({
+            'asin': asin,
+            'product_url': f'https://amazon.com/dp/{asin}',
+            'product_title': title,
+            'product_descr': descr,
+            'picture_url': picture_url,
+            'parse_datetime': datetime.datetime.now(pytz.UTC),
+            'features': features,
+            'top_5_phrases': top5phr,
+            'product_price': price,
+        })
+    except BulkWriteError as e:
+        return True
 
 
 if __name__ == '__main__':
