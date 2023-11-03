@@ -1,3 +1,4 @@
+import datetime
 import os.path
 import urllib
 from json import JSONDecoder
@@ -5,12 +6,14 @@ from queue import Queue
 from threading import Thread, Event
 from time import sleep
 
+import pytz
+from bs4 import BeautifulSoup
 from pandas import DataFrame
 from selenium.common import JavascriptException
 
+from database import write_product_parsed, write_product_html
 from functions import chrome_init, user_emulate, captcha_solve, WebDriver
 import keepa_functions as kf
-import collect_reviews as cr
 
 
 def collect_asins(query, writer_queue, products_info_queue, reviews_queue, market_niche=None, page=1):
@@ -80,14 +83,12 @@ def collect_asins(query, writer_queue, products_info_queue, reviews_queue, marke
         webdriver.driver.close()
 
 
-def collect_products_info(products_info_queue, writer_queue):
+def collect_products_info(products_info_list, writer_queue):
     # Initializing webdriver with extension 'Keepa - Amazon Price Tracker'
     webdriver = chrome_init(False, goto='https://amazon.com', extension='./keepa-extension')
     webdriver.change_loc()
 
-    el = products_info_queue.get()
-    while el:
-        print(el)
+    for el in products_info_list:
         webdriver.get('https://amazon.com/dp/' + el)
         captcha_solve(webdriver)
         webdriver.activate_jquery()
@@ -96,14 +97,11 @@ def collect_products_info(products_info_queue, writer_queue):
         # saving html + keepa data
         writer_queue.put((1, [
             el, webdriver.get_page_source(),
-            kf.keepa__price_history(webdriver),
-            kf.keepa__statistics(webdriver),
-            kf.keepa__comparing(webdriver),
-            kf.keepa__data(webdriver),
+            # kf.keepa__price_history(webdriver),
+            # kf.keepa__statistics(webdriver),
+            # kf.keepa__comparing(webdriver),
+            # kf.keepa__data(webdriver),
         ]))
-
-        products_info_queue.task_done()
-        el = products_info_queue.get()
 
     webdriver.driver.quit()
 
@@ -116,13 +114,47 @@ def collect_reviews(reviews_queue):
         el = reviews_queue.get()
 
 
+def parse_product(asin, html):
+    bs = BeautifulSoup(html, features='html.parser')
+    title = bs.select_one('#titleSection, #title, #productTitle').text.strip()
+    descr = bs.find(id='feature-bullets').text.strip()
+    pic = bs.find(id='landingImage')['src']
+    features = {}
+    top5 = []
+    try:
+        features_els = bs.select(
+            '[data-hook="cr-widget-SummaryAttribute"] #cr-summarization-attributes-list > div'
+        )
+        for feat in features_els:
+            features[feat.find('div > div > div:first-child span').text.strip()] = \
+                feat.select_one('div > div > div:last-child > span:last-child').text.strip()
+    except:
+        pass
+    try:
+        top5_els = bs.select('[data-hook="lighthut-terms-list"] > div')[:5]
+        for lighthum in top5_els:
+            top5.append(lighthum.find('span').text.strip())
+    except:
+        pass
+    price = bs.select_one('.a-price.a-text-price')
+    if price:
+        price = price.text.strip()
+    else:
+        price = None
+    return [
+        asin, f'https://amazon.com/dp/{asin}',
+        title, descr, pic, datetime.datetime.now(pytz.UTC),
+        features, top5, price
+    ]
+
+
 # 0 - asin, 1 - product info, 2 - review(s)
-def writer(writer_queue):
+def writer(writer_queue, filenames):
     while True:
         item, data = writer_queue.get()
         if item == -1:
             break
-        writer_funcs[item](*data)
+        writer_funcs[item](*data, filename=filenames[item])
         writer_queue.task_done()
 
 
@@ -132,7 +164,7 @@ def asin_write(data, reviews_queue, products_queue):
     rows = []
     asins = []
 
-    with open('products.list', 'a') as f:
+    with open('products-list.txt', 'a') as f:
         for item in raw_data:
             if len(item) > 1 and 'data-main-slot:search-result-' in item[1] and 'asin' in item[2]:
                 rows.append(item[2]['asin'] + '\n')
@@ -143,21 +175,29 @@ def asin_write(data, reviews_queue, products_queue):
     reviews_queue.put(asins)
 
 
-def product_info_write(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
-    if not os.path.exists('products_list.csv'):
-        f = open('products_list.csv', 'w', encoding='utf-8')
-        f.write('asin,html,keepa price history,keepa statistics,keepa comparing,keepa data\n')
+def product_info_write(asin, html, keepa_ph=None, keepa_stats=None, keepa_comparing=None, keepa_data=None, filename='products-list.csv'):
+    # columns = 'asin,html,keepa_price_history,keepa_statistics,keepa_comparing,keepa_data'
+    columns = 'asin,html'
+    if not os.path.exists(filename + '--raw.csv'):
+        f = open(filename + '--raw.csv', 'w', encoding='utf-8')
+        f.write(columns + '\n')
         f.close()
-    df = DataFrame([[asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data]],
-                   columns=[
-                       'asin',
-                       'html',
-                       'keepa price history',
-                       'keepa statistics',
-                       'keepa comparing',
-                       'keepa data',
-                   ])
-    df.to_csv('products_list.csv', index=False, header=False, mode='a', encoding='utf-8')
+    # data = [asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data]
+    data = [asin, html]
+    df = DataFrame([data], columns=columns.split(','))
+    write_product_html(*data)
+    df.to_csv(filename + '--raw.csv', index=False, header=False, mode='a', encoding='utf-8')
+    columns = ('asin,product_url,product_title,product_descr,'
+               'picture_url,parse_datetime,features,top_5_phrases,product_price')
+    if not os.path.exists(filename):
+        f = open(filename, 'w', encoding='utf-8')
+        f.write(columns + '\n')
+        f.close()
+
+    data = parse_product(asin, html)
+    df = DataFrame([data], columns=columns.split(','))
+    write_product_parsed(*data)
+    df.to_csv(filename, index=False, header=False, mode='a', encoding='utf-8')
 
 
 writer_funcs = (asin_write, product_info_write)

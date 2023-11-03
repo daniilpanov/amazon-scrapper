@@ -55,34 +55,39 @@ class WebDriver(BaseCase):
                     break
         return _id
 
-    def change_loc(self):
+    def change_loc(self, retry=True):
         self.sleep(.5)
         url = self.get_current_url()
         self.activate_jquery()
-        # переход к необходимой локации - US (UM)
-        self.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
-            '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
-        )
-        self.execute_script(
-            '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
-            '{actionSource: "glow",'
-            'countryCode: "UM",'
-            'deviceType: "web",'
-            'distinct: "UM",'
-            'locationType: "COUNTRY",'
-            'pageType: "Detail",'
-            'storeContext: "hpc"}'
-            ')'
-        )
-        self.execute_script(
-            '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
-            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
-        )
-        self.refresh()
-        self.sleep(1)
-        self.get(url)
-        self.activate_jquery()
+        try:
+            # переход к необходимой локации - US (UM)
+            self.execute_script(
+                '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
+                '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
+            )
+            self.execute_script(
+                '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+                '{actionSource: "glow",'
+                'countryCode: "UM",'
+                'deviceType: "web",'
+                'distinct: "UM",'
+                'locationType: "COUNTRY",'
+                'pageType: "Detail",'
+                'storeContext: "hpc"}'
+                ')'
+            )
+            self.execute_script(
+                '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+                '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
+            )
+            self.refresh()
+            self.sleep(1)
+            self.get(url)
+            self.activate_jquery()
+        except JavascriptException as e:
+            if retry and '$ is not defined' in e.msg:
+                self.sleep(1)
+                self.change_loc(False)
 
 
 def captcha_check(webdriver: WebDriver):

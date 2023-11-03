@@ -11,8 +11,12 @@ def keepa_wait(webdriver: WebDriver):
 def keepa_space(func):
     def wrapper(webdriver: WebDriver, *args, wrap=True, **kwargs):
         if wrap:
+            webdriver.switch_to_default_content()
+            webdriver.sleep(.5)
             webdriver.switch_to_frame('#keepa')
+            webdriver.sleep(.5)
             res = func(*((webdriver, ) + args), **kwargs)
+            webdriver.sleep(.5)
             webdriver.switch_to_default_content()
             return res
         return func(*args, **kwargs)

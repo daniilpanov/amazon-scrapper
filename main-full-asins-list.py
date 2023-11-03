@@ -1,38 +1,58 @@
-import os.path
+import re
+import sys
+import os
 from queue import Queue
 from threading import Thread
+from time import sleep
 
-from collect_products import writer, collect_products_info, collect_reviews
+from collect_products import collect_products_info, writer
+from collect_reviews import main
 
+# Mainloop
 if __name__ == '__main__':
-    # Queues init
-    wq = Queue()
-    piq = Queue()
-    rq = Queue()
-    # Threads init
-    writer_thr = Thread(target=writer, args=(wq,))
-    products_info_thr = Thread(target=collect_products_info, args=(piq, wq))
-    reviews_thr = Thread(target=collect_reviews, args=(rq,))
-    # Threads start
-    writer_thr.start()
-    products_info_thr.start()
-    reviews_thr.start()
-    # Getting ASINs
-    p = input('Please enter the filepath of products-list.txt [./products-list.txt]: ') or 'products-list.txt'
-    while p.endswith('products-list.txt') and not os.path.exists(p) or not p.endswith('products-list.txt') and not os.path.exists(os.path.join(p)):
-        p = input('Please enter the filepath of products-list.txt [./products-list.txt]: ') or 'products-list.txt'
-    if not p.endswith('products-list.txt'):
-        p = os.path.join(p, 'products-list.txt')
-    with open(p) as f:
-        asins = list(i.strip() for i in f)
-    # Collecting
-    rq.put(asins)
-    for asin in asins:
-        piq.put(asin)
-    # Waiting
-    piq.join()
-    rq.join()
-    # Finishing
-    wq.put((-1, None))
-    piq.put(None)
-    rq.put(None)
+    print('PROGRAM STARTED')
+    if len(sys.argv) > 1 and (os.path.exists(sys.argv[-3]) or os.path.exists(os.path.abspath(sys.argv[-3]))):
+        filename = sys.argv[-3]
+    else:
+        filename = input('Please enter the filename[products-list.txt]: ') or 'products-list.txt'
+    if len(sys.argv) > 2 and (os.path.exists(sys.argv[-2]) or os.path.exists(os.path.abspath(sys.argv[-2]))):
+        new_filename = sys.argv[-2]
+    else:
+        new_filename = input('Please enter the result reviews filename[reviews-list.csv]: ') or 'reviews-list.csv'
+    if len(sys.argv) > 3 and (os.path.exists(sys.argv[-1]) or os.path.exists(os.path.abspath(sys.argv[-1]))):
+        prod_filename = sys.argv[-1]
+    else:
+        prod_filename = input('Please enter the result products filename[products-list.csv]: ') or 'products-list.csv'
+    try:
+        wq = Queue()
+        with open(filename) as f:
+            asins = []
+            p = re.compile(r'([A-Z0-9]{10})')
+            for line in f.readlines():
+                res = p.findall(line)
+                if res:
+                    asins.append(res[0])
+        products_info_thr = Thread(target=collect_products_info, args=(asins, wq))
+        write_products_thr = Thread(target=writer, args=(wq, (None, prod_filename)))
+        products_info_thr.start()
+        write_products_thr.start()
+        start_time, end_time = main(asins, filename, new_filename)
+        delta = end_time - start_time
+        print(
+            'The time of the collecting:',
+            delta.days, 'days,', delta.seconds // 3600, 'hours,',
+            delta.seconds % 3600 // 60, 'minutes,', delta.seconds % 60, 'seconds,',
+            delta.microseconds, 'microseconds.'
+        )
+        from uniqulizer import uniqulize_by_df
+        uniqulize_by_df(new_filename, new_filename, 0)
+        products_info_thr.join()
+        write_products_thr.join()
+    except KeyboardInterrupt:
+        print('Script stopped')
+    except Exception as e:
+        # raise e
+        print('Something went wrong... reloading all script after 10 seconds')
+        print('ERROR:', e)
+        sleep(10)
+        os.execv(sys.executable, [sys.executable] + sys.argv + ([filename] if filename not in sys.argv else []) + ([new_filename] if new_filename not in sys.argv else []) + ([prod_filename] if prod_filename not in sys.argv else []))

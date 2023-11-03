@@ -85,7 +85,7 @@ def write_reviews(reviews):
         return True
 
 
-def write_product_html(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
+def write_product_html(asin, html, keepa_ph=None, keepa_stats=None, keepa_comparing=None, keepa_data=None):
     try:
         res1 = db()['raw_product_card_htmls'].insert_one({
             'asin': asin, 'product_url': f'https://amazon.com/dp/{asin}',
@@ -95,26 +95,30 @@ def write_product_html(asin, html, keepa_ph, keepa_stats, keepa_comparing, keepa
     except BulkWriteError as e:
         res1 = True
     try:
-        res2 = keepa_db()['raw_product_card_htmls'].insert_one({
-            'asin': asin, 'keepa price history': keepa_ph,
-            'keepa statistics': keepa_stats,
-            'keepa comparing': keepa_comparing,
-            'keepa data': keepa_data,
+        if not all((keepa_ph, keepa_stats, keepa_comparing, keepa_data)):
+            return res1
+        res2 = keepa_db()['raw_htmls'].insert_one({
+            'asin': asin,
+            'keepa_price_history': keepa_ph,
+            'keepa_statistics': keepa_stats,
+            'keepa_comparing': keepa_comparing,
+            'keepa_data': keepa_data,
+            'scrap_datetime': datetime.datetime.now(pytz.UTC),
         })
         return res1 and res2
     except BulkWriteError as e:
         return res1
 
 
-def write_product_parsed(asin, title, descr, picture_url, features, top5phr, price):
+def write_product_parsed(asin, product_url, title, descr, picture_url, parse_datetime, features, top5phr, price):
     try:
-        return db()['raw_product_card_htmls'].insert_one({
+        return db()['product_card'].insert_one({
             'asin': asin,
-            'product_url': f'https://amazon.com/dp/{asin}',
+            'product_url': product_url,
             'product_title': title,
             'product_descr': descr,
             'picture_url': picture_url,
-            'parse_datetime': datetime.datetime.now(pytz.UTC),
+            'parse_datetime': parse_datetime,
             'features': features,
             'top_5_phrases': top5phr,
             'product_price': price,
@@ -126,3 +130,6 @@ def write_product_parsed(asin, title, descr, picture_url, features, top5phr, pri
 if __name__ == '__main__':
     print(db().list_collection_names())
     print(db()['customer_reviews'].find().next())
+    print(db()['raw_product_card_htmls'].find().next())
+    print(db()['product_card'].find().next())
+    print(keepa_db()['raw_htmls'].find().next())
