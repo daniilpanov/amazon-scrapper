@@ -1,0 +1,21 @@
+{
+    "isEnabled": true,
+    "clientKey": "",
+    "captchaList": ["ReCaptcha2", "ReCaptcha3", "ReCaptchaEnterprise", "FunCaptcha", "HCaptcha", "GeeTest", "ImageToText", "Turnstile"],
+    "captchaExtra": {
+        "ReCaptcha2": 1,
+        "HCaptcha": 1
+    },
+    "repeatsCount": 0,
+    "isEnabledIgnoreList": false,
+    "ignoreList": [],
+    "proxy": {
+        "isEnabled": false,
+        "type": "http",
+        "address": "",
+        "port": 3128,
+        "login": "",
+        "password": ""
+    },
+    "manualResolving": false
+}

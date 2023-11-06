@@ -72,11 +72,8 @@ def write_reviews(reviews):
             'helpful': row['helpful'],
             'options': row['options'],
             'review_id': row['review_id'],
-            'scrap_datetime': datetime.datetime.fromisoformat(row['scrap_datetime']),
+            'scrap_datetime': row['scrap_datetime'],
         })
-        # write_data_res[i]['options'] = write_data_res[i]['options'].split(' | ')
-        # write_data_res[i]['date'] = datetime.datetime.strptime(write_data_res[i]['date'], '%B %d %Y')
-        # write_data_res[i]['parse_datetime'] = datetime.datetime.fromisoformat(write_data_res[i]['parse_datetime'])
     if not revs:
         return False
     try:
@@ -85,29 +82,15 @@ def write_reviews(reviews):
         return True
 
 
-def write_product_html(asin, html, keepa_ph=None, keepa_stats=None, keepa_comparing=None, keepa_data=None):
+def write_product_html(asin, html):
     try:
-        res1 = db()['raw_product_card_htmls'].insert_one({
+        return db()['raw_product_card_htmls'].insert_one({
             'asin': asin, 'product_url': f'https://amazon.com/dp/{asin}',
             'HTML_text': html,
             'scrap_datetime': datetime.datetime.now(pytz.UTC),
         })
     except BulkWriteError as e:
-        res1 = True
-    try:
-        if not all((keepa_ph, keepa_stats, keepa_comparing, keepa_data)):
-            return res1
-        res2 = keepa_db()['raw_htmls'].insert_one({
-            'asin': asin,
-            'keepa_price_history': keepa_ph,
-            'keepa_statistics': keepa_stats,
-            'keepa_comparing': keepa_comparing,
-            'keepa_data': keepa_data,
-            'scrap_datetime': datetime.datetime.now(pytz.UTC),
-        })
-        return res1 and res2
-    except BulkWriteError as e:
-        return res1
+        return True
 
 
 def write_product_parsed(asin, product_url, title, descr, picture_url, parse_datetime, features, top5phr, price):
@@ -127,9 +110,26 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
         return True
 
 
+def write_keepa_html(asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
+    try:
+        return keepa_db()['raw_htmls'].insert_one({
+            'asin': asin,
+            'keepa_price_history': keepa_ph,
+            'keepa_statistics': keepa_stats,
+            'keepa_comparing': keepa_comparing,
+            'keepa_data': keepa_data,
+            'scrap_datetime': datetime.datetime.now(pytz.UTC),
+        })
+    except BulkWriteError as e:
+        return True
+
+
 if __name__ == '__main__':
     print(db().list_collection_names())
-    print(db()['customer_reviews'].find().next())
-    print(db()['raw_product_card_htmls'].find().next())
+    # print(db()['customer_reviews'].find().next())
+    # print(db()['product_card'].delete_many({}))
+    # print(db()['raw_product_card_htmls'].delete_many({}))
     print(db()['product_card'].find().next())
-    print(keepa_db()['raw_htmls'].find().next())
+    print(db()['raw_product_card_htmls'].find().next()['asin'])
+    # print(keepa_db()['raw_htmls'].find().next())
+

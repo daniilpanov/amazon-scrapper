@@ -31,6 +31,7 @@ class WebDriver(BaseCase):
         return insert_jquery(self)
 
     def get_extension_id(self, name_contains):
+        self.sleep(1)
         self.get('chrome://extensions')
         # find ID of the extension
         self.sleep(3)
@@ -42,7 +43,8 @@ class WebDriver(BaseCase):
                 By.CSS_SELECTOR,
                 '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
             )
-        except:
+        except Exception as e:
+            raise e
             pass
         _id = None
         if items:
@@ -157,7 +159,7 @@ def user_emulate(webdriver, ev):
                 action.send_keys(Keys.ARROW_LEFT).perform()
             sleep(random.randint(5, 15))
     except Exception as ex:
-        print('User emulation is stopped because of this error:', ex)
+        print('User emulation is stopped due to an error:', ex)
         print('Reloading...')
         sleep(20)
         return user_emulate(webdriver, ev)
@@ -378,11 +380,12 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
 
 def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False):
     webdriver = modern_chrome_init(headless=headless, extension=extension, tor=tor)
-    if get_ext_id:
-        webdriver.get_extension_id('Keepa')
+    ext_id = webdriver.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         webdriver.get(goto)
         print('Result of solving captcha:', captcha_solve(webdriver))
+    if get_ext_id:
+        return webdriver, ext_id
     return webdriver
 
 

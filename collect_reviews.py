@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
 
 import database
-import parser_reviews
+import parser
 from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
 
 params = {
@@ -46,13 +46,9 @@ def state(asin, seed, data):
     return jse.encode(data)
 
 
-def write_state(folder='.', file_exists=False, data=None):
+def write_state(folder='.', data=None):
     if data is None:
         data = {}
-    if not file_exists:
-        f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
-        f.write('{}')
-        f.close()
     while True:
         # Wait for a data from the queue
         state_data = state_queue.get()
@@ -151,7 +147,7 @@ def process_data():
                 #     'Product Options': review_options,
                 # })
                 # product_url,asin,date_info,name,title,content,rating,helpful,options
-                res.append(parser_reviews.parse(asin, item[2].strip()))
+                res.append(parser.parse_reviews(asin, item[2].strip()))
             write_queue.put([asin, seed, res])
         except Exception as ex:
             print(ex)
@@ -178,7 +174,7 @@ def send_request(asin, seed):
         try:
             res = webdriver.execute_script("return " + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
-                raise RetryException()
+                raise RetryException('Broken result')
         except (JavascriptException, RetryException, TimeoutException) as e:
             print(e)
             print('something went wrong. retry... ')
@@ -191,16 +187,15 @@ def send_request(asin, seed):
                 webdriver.activate_jquery()
                 res = webdriver.execute_script("return " + ajax)
                 if not res or 'BAAAAAAD ASIN!' in res:
-                    raise Exception()
+                    raise Exception('Bad ASIN')
                 print('success. continue')
             except Exception as e:
-                print('error')
-                print(e)
+                print('ERROR:', e)
                 try:
                     webdriver.driver.close()
+                    return False
                 finally:
                     data_queue.put(None)
-                    return False
 
         data_queue.put([asin, seed, res])
     else:
@@ -230,7 +225,7 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
     writer_thread = Thread(target=write_data, args=(new_filename, file_exists))
-    state_writer_thread = Thread(target=write_state, args=('.', file_exists, data))
+    state_writer_thread = Thread(target=write_state, args=('.', data))
     user_emulate_thread.start()
     process_thread.start()
     writer_thread.start()
@@ -267,10 +262,6 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
                         bar()
                 index = 0
         print('wait for writing the data...')
-        data_queue.put(None)
-        process_thread.join()
-        writer_thread.join()
-        state_writer_thread.join()
         print('DONE.')
         return start_time, datetime.datetime.now()
     except (InvalidSessionIdException, RetryException) as e:
@@ -278,18 +269,26 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
         print('wait for writing the data...')
         data_queue.put(None)
         ev.set()
-        user_emulate_thread.join()
         process_thread.join()
         writer_thread.join()
         state_writer_thread.join()
+        user_emulate_thread.join()
         print('done. reloading...')
         sleep(10)
         return main(ASINs, filename, new_filename)
     except KeyboardInterrupt:
         print('Script stopped')
-        data_queue.put(None)
         return start_time, datetime.datetime.now()
     finally:
+        try:
+            ev.set()
+            data_queue.put(None)
+            process_thread.join()
+            writer_thread.join()
+            state_writer_thread.join()
+            user_emulate_thread.join()
+        except:
+            pass
         try:
             webdriver.driver.close()
         except:

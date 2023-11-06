@@ -1,0 +1,57 @@
+/* roboto-regular */
+@font-face {
+    font-family: 'Roboto';
+    font-style: normal;
+    font-weight: 400;
+    src: local(''), url('../../fonts/roboto/Roboto-Regular.ttf') format('truetype');
+}
+/* roboto-500 */
+@font-face {
+    font-family: 'Roboto';
+    font-style: normal;
+    font-weight: 500;
+    src: local(''), url('../../fonts/roboto/Roboto-Medium.ttf') format('truetype');
+}
+/* roboto-700 */
+@font-face {
+    font-family: 'Roboto';
+    font-style: normal;
+    font-weight: 700;
+    src: local(''), url('../../fonts/roboto/Roboto-Bold.ttf') format('truetype');
+}
+/* ubuntu-700 */
+@font-face {
+    font-family: 'Ubuntu';
+    font-style: normal;
+    font-weight: 700;
+    src: local(''), url('../../fonts/ubuntu/Ubuntu-B.ttf') format('truetype');
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    height: auto;
+}
+
+body {
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: #141e28;
+}
+
+.ant-select-single:not(.ant-select-customize-input) .ant-select-selector {
+    height: 30px;
+}
+
+.ant-select-single:not(.ant-select-customize-input) .ant-select-selector .ant-select-selection-search-input {
+    height: 28px;
+}
+
+.ant-tooltip-inner,
+.ant-tooltip-arrow-content {
+    background-color: #fafafa;
+}

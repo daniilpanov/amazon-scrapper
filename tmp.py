@@ -1,11 +1,10 @@
 import random
-from time import sleep
 
 from selenium.webdriver import Keys, ActionChains
 
 from functions import chrome_init
 # TODO: check jquery
-wd = chrome_init(modern=True, headless=False, goto=None)
+wd = chrome_init(headless=False, goto=None)
 try:
     wd.get("https://seleniumbase.io/coffee/")
     wd.assert_title("Coffee Cart")

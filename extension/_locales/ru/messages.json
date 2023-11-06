@@ -1,0 +1,122 @@
+{
+    "extName": {
+        "message": "CapMonster Cloud — автоматическое разгадывание капч",
+        "description": "The title of the application, displayed in the web store."
+    },
+    "extDesc": {
+        "message": "Облачный сервис для автоматического распознавания капч",
+        "description": "The description of the application, displayed in the web store."
+    },
+    "extShortName": {
+        "message": "CapMonster Cloud",
+        "description": ""
+    },
+    "on": {
+        "message": "Вкл",
+        "description": ""
+    },
+    "off": {
+        "message": "Выкл",
+        "description": ""
+    },
+    "support": {
+        "message": "Поддержка",
+        "description": ""
+    },
+    "apiKeyPlaceholder": {
+        "message": "Введите API-ключ",
+        "description": ""
+    },
+    "getKey": {
+        "message": "Получить ключ",
+        "description": ""
+    },
+    "balance": {
+        "message": "Баланс",
+        "description": ""
+    },
+    "topUp": {
+        "message": "Пополнить",
+        "description": ""
+    },
+    "wrongKey": {
+        "message": "Неверный ключ",
+        "description": ""
+    },
+    "emptyKey": {
+        "message": "Пустой ключ",
+        "description": ""
+    },
+    "automaticCaptchaSolving": {
+        "message": "Автоматическое решение капч",
+        "description": ""
+    },
+    "settings": {
+        "message": "Настройки",
+        "description": ""
+    },
+    "repeatSolveAttempts": {
+        "message": "Повторно решать капчи в случае ошибки, раз",
+        "description": ""
+    },
+    "proxy": {
+        "message": "Прокси",
+        "description": ""
+    },
+    "proxyType": {
+        "message": "Тип прокси",
+        "description": ""
+    },
+    "port": {
+        "message": "Порт",
+        "description": ""
+    },
+    "login": {
+        "message": "Логин",
+        "description": ""
+    },
+    "password": {
+        "message": "Пароль",
+        "description": ""
+    },
+    "blacklistControl": {
+        "message": "Управление черным списком",
+        "description": ""
+    },
+    "blacklistDescription": {
+        "message": "Распознавание капч на добавленных сайтах будет отключено",
+        "description": ""
+    },
+    "add": {
+        "message": "Добавить",
+        "description": ""
+    },
+    "manualRecognition": {
+        "message": "Ручное распознавание",
+        "description": ""
+    },
+    "textCaptcha": {
+        "message": "Текстовая капча",
+        "description": ""
+    },
+    "textCaptchaHelpLink": {
+        "message": "https://zennolab.atlassian.net/wiki/spaces/APIS/pages/2259091457",
+        "description": ""
+    },
+    "markImageAsCaptcha": {
+        "message": "Отметить изображение как капчу",
+        "description": ""
+    },
+    "selectInputForCaptchaResult": {
+        "message": "Выбрать поле для результата капчи",
+        "description": ""
+    },
+    "help": {
+        "message": "Справка",
+        "description": ""
+    },
+    "rcInfoText": {
+        "message": "Только click",
+        "description": ""
+    }
+}
