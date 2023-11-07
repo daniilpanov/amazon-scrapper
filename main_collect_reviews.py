@@ -18,13 +18,14 @@ if __name__ == '__main__':
         new_filename = input('Please enter the result filename[reviews-list.csv]: ') or 'reviews-list.csv'
     try:
         with open(filename) as f:
-            asins = []
+            asins = set()
             p = re.compile(r'([A-Z0-9]{10})')
             for line in f.readlines():
-                res = p.findall(line)
-                if res:
-                    asins.append(res[0])
-        start_time, end_time = main(asins, filename, new_filename)
+                for item in line.split():
+                    res = p.findall(item)
+                    if res:
+                        asins.add(res[0])
+        start_time, end_time = main(list(asins), filename, new_filename)
         delta = end_time - start_time
         print(
             'The time of the collecting:',
