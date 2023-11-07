@@ -87,7 +87,6 @@ def get_all_asins_from_text(text: str):
 
 # Mainloop
 if __name__ == '__main__':
-    print('PROGRAM STARTED')
     # FILES PATHS
     datetime_now = datetime.datetime.now(pytz.UTC).strftime('%m-%d-%Y')
     print('TIMEDELTA:', start(['kjjkjkjjk']))

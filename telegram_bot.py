@@ -24,7 +24,7 @@ def send_msg(user_id, message, *args, **kwargs):
 
 
 def receive_msg(msg: types.Message):
-    print(f'Receive message from {msg.from_user.id}', msg.text)
+    print(f'Receive message from {msg.from_user.id}:', msg.text)
 
 
 def check_login(msg: types.Message):
@@ -86,4 +86,6 @@ def make_process(asins_list_raw, user_id):
 
 
 if __name__ == '__main__':
+    print('PROGRAM STARTED')
     bot.infinity_polling()
+    print('PROGRAM ENDED')
