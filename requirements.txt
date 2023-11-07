@@ -118,3 +118,4 @@ wrapt==1.15.0
 wsproto==1.2.0
 
 pymongo~=4.6.0.dev0
+telebot~=0.0.5
