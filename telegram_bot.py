@@ -72,12 +72,16 @@ def non_verification_user_msg(msg: types.Message):
     send_msg(msg.from_user.id, 'Verification failed. Please enter the master password')
 
 
+def callback(uid, asins_list_raw, timedelta_text):
+    send_msg(uid, 'List of this ASINs is ready in {}!\n'.format(timedelta_text) + asins_list_raw)
+
+
 def make_process(asins_list_raw, user_id):
     # Create new process
     send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
     process = Process(target=main_collect_all.start, args=(
         main_collect_all.get_all_asins_from_text(asins_list_raw),
-    ), kwargs={'callback': lambda: send_msg(user_id, f'List of this ASINs is ready!\n{asins_list_raw}')})
+    ), kwargs={'callback': callback, 'callback_args': (user_id, asins_list_raw)})
     process.start()
 
 

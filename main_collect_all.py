@@ -10,7 +10,9 @@ from collect_products import collect_products_info
 from collect_reviews import main
 
 
-def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader=None, writer=None, callback=None, conf=None):
+def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader=None, writer=None, callback=None, callback_args=None, conf=None):
+    if not callback_args:
+        callback_args = []
     # PROCESSES
     # check config, then check need
     if (not conf or conf['products']) and (not products_info_thr or not reader or not writer):
@@ -36,12 +38,10 @@ def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader
             stime = datetime.datetime.now()
         etime = datetime.datetime.now()
         dtime = etime - stime
-        print(
-            'The time of the collecting all data:',
-            dtime.days, 'days,', dtime.seconds // 3600, 'hours,',
-                                 dtime.seconds % 3600 // 60, 'minutes,', dtime.seconds % 60, 'seconds,',
-            dtime.microseconds, 'microseconds.'
-        )
+        timedelta_text = (f'''{dtime.days} days, {dtime.seconds // 3600} hours, {dtime.seconds % 3600 // 60} minutes, '''
+                          f'''{dtime.seconds % 60} seconds, {dtime.microseconds} microseconds''')
+        print('The time of the collecting all data:', timedelta_text)
+        callback(*callback_args, timedelta_text)
         return dtime
 
     # REVIEWS - in main process
@@ -70,7 +70,7 @@ def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader
         print('Something went wrong... reloading all script after 10 seconds')
         print('ERROR:', e)
         sleep(10)
-        return start(asins, start_time, products_info_thr, keepa_thr, reader, writer, callback, conf)
+        return start(asins, start_time, products_info_thr, keepa_thr, reader, writer, callback, callback_args, conf)
 
 
 # Parse raw asins list from TG message or file or other
@@ -90,5 +90,5 @@ if __name__ == '__main__':
     print('PROGRAM STARTED')
     # FILES PATHS
     datetime_now = datetime.datetime.now(pytz.UTC).strftime('%m-%d-%Y')
-    print('TIMEDELTA:', start(['B08ZYX6PSR']))
+    print('TIMEDELTA:', start(['kjjkjkjjk']))
 

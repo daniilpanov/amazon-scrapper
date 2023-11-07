@@ -177,7 +177,7 @@ def send_request(asin, seed):
             try:
                 webdriver.reload()
                 if not captcha_solve(webdriver):
-                    raise Exception()
+                    raise Exception('Captcha error')
                 webdriver.reload()
                 webdriver.activate_jquery()
                 res = webdriver.execute_script("return " + ajax)
@@ -236,8 +236,15 @@ def main(ASINs):
                     with alive_bar(params_len, bar='classic') as bar:
                         bar(index, skipped=True)
                         for params_seed in range(index, params_len):
-                            send_request(asin, params_seed)
-                            bar()
+                            try:
+                                send_request(asin, params_seed)
+                            except Exception as e:
+                                if 'Bad ASIN' not in str(e):
+                                    raise e
+                                print(f'Skip {asin}')
+                                continue
+                            finally:
+                                bar()
                     index = 0
         elif type(ASINs) is list:
             for asin in ASINs:
@@ -249,8 +256,15 @@ def main(ASINs):
                 with alive_bar(params_len, bar='classic') as bar:
                     bar(index, skipped=True)
                     for params_seed in range(index, params_len):
-                        send_request(asin, params_seed)
-                        bar()
+                        try:
+                            send_request(asin, params_seed)
+                        except Exception as e:
+                            if 'Bad ASIN' not in str(e):
+                                raise e
+                            print(f'Skip {asin}')
+                            continue
+                        finally:
+                            bar()
                 index = 0
         print('wait for writing the data...')
         print('DONE.')

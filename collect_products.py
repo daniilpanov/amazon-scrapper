@@ -98,13 +98,13 @@ def callback_wait(callback, queue):
 
 
 def collect_products_info(products_info_list, conn_reader=None):
-    if conn_reader and conn_reader.poll() and not conn_reader.recv():
+    if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
         return
     webdriver = chrome_init(goto='https://amazon.com')
     webdriver.change_loc()
 
     for el in products_info_list:
-        if conn_reader and conn_reader.poll() and not conn_reader.recv():
+        if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
             return webdriver.driver.quit()
         webdriver.get('https://amazon.com/dp/' + el)
         captcha_solve(webdriver)
