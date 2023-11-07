@@ -19,7 +19,7 @@ def start(
         p = re.compile(r'([A-Z0-9]{10})')
         for line in f.readlines():
             for item in line.split():
-                res = p.findall(line)
+                res = p.findall(item)
                 if res:
                     asins.add(res[0])
     # PROCESSES
