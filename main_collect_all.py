@@ -15,17 +15,18 @@ def start(
         products_info_thr=None, keepa_thr=None, reader=None, writer=None,
 ):
     with open(asins_list_file) as f:
-        asins = []
+        asins = set()
         p = re.compile(r'([A-Z0-9]{10})')
         for line in f.readlines():
-            res = p.findall(line)
-            if res:
-                asins.append(res[0])
+            for item in line.split():
+                res = p.findall(line)
+                if res:
+                    asins.add(res[0])
     # PROCESSES
     if not products_info_thr or not keepa_thr or not reader or not writer:
         reader, writer = Pipe(False)
-        products_info_thr = Process(target=collect_products_info, args=(asins, products_info_file, reader))
-        keepa_thr = Process(target=keepa_start, args=(asins, reader, keepa_file))
+        products_info_thr = Process(target=collect_products_info, args=(list(asins), products_info_file, reader))
+        keepa_thr = Process(target=keepa_start, args=(list(asins), reader, keepa_file))
         products_info_thr.start()
         keepa_thr.start()
 
@@ -33,7 +34,7 @@ def start(
         # Keep start time
         if not start_time:
             start_time = datetime.datetime.now()
-        main(asins, asins_list_file, reviews_file)
+        main(list(asins), asins_list_file, reviews_file)
         end_time = datetime.datetime.now()
         delta = end_time - start_time
         print(
