@@ -2,69 +2,84 @@
 
 import telebot
 from telebot import types
+from multiprocessing import Process
 
-auth_users = [320753905]
+import main_collect_all
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
 
-GET_ASINS = '/get_asins_data'
-BTN_CMD_IDs = ((GET_ASINS, 'Get and process list of ASINs'),)
+GET_ASINS = 'get_asins_data'
+GET_ASINS_CMD = '/' + GET_ASINS
+BTN_CMD_IDs = ((GET_ASINS_CMD, 'Get and process list of ASINs'),)
+PASSWORD = '12345'
+
+auth_users = {320753905}
+users_active_commands = {}
+
+
+# Log helpers
+def send_msg(user_id, message, *args, **kwargs):
+    print(f'Message to {user_id}: "{message}"')
+    bot.send_message(user_id, message, *args, **kwargs)
+
+
+def receive_msg(msg: types.Message):
+    print(f'Receive message from {msg.from_user.id}', msg.text)
+
+
+def check_login(msg: types.Message):
+    return msg.from_user.id in auth_users
+
 
 def buttons():
     keyboard = types.InlineKeyboardMarkup()
     for cmd_id, descr in BTN_CMD_IDs:
         key = types.InlineKeyboardButton(text=descr, callback_data=cmd_id)
         keyboard.add(key)
-    
+
     return keyboard
 
 
-def process_asins(user_id, str_asin_list):
-    asins = str_asin_list.strip('\n ').split('\n')
-    
-    msg = f'Started ASINs {asins} processing'
-    print(msg)
-    bot.send_message(user_id, msg)
+# BOT INTERFACE
+@bot.message_handler(commands=[GET_ASINS], func=check_login)
+def get_asins_data(msg: types.Message):
+    receive_msg(msg)
+    content = msg.text.replace(GET_ASINS_CMD, '').strip()
+    if content:
+        return make_process(content, msg.from_user.id)
+    users_active_commands[msg.from_user.id] = GET_ASINS
+    send_msg(msg.from_user.id, 'Please enter the ASINs list:')
 
-    # Processing code
-    
-    bot.send_message(user_id, f'Finished ASINs {asins} processing')
 
-@bot.message_handler(content_types=['text'])
-def get_text_messages(message):
-    print(f'Received message: {message.text}')
-    
-    key = 'password'
-    if message.text == key:
-       auth_users.append(message.from_user.id)
-       bot.send_message(message.from_user.id, f'{message.from_user.id} authenticated. {len(auth_users)}')
-       return
-    
-    if not message.from_user.id in auth_users:
-        msg = f'Unauthorized user id {message.from_user.id} message'
-        print(msg)
-        bot.send_message(message.from_user.id, msg)
+@bot.message_handler(content_types=['text'], func=check_login)
+def get_text_messages(msg: types.Message):
+    receive_msg(msg)
+    if users_active_commands.get(msg.from_user.id) == GET_ASINS:
+        make_process(msg.text.strip(), msg.from_user.id)
+        users_active_commands[msg.from_user.id] = None
         return
-    
-    res = 'unknown command'
 
-    key = GET_ASINS
-    if message.text.startswith(key):
-        kl = len(key)
-        return process_asins(message.from_user.id, message.text[kl:])
-        
-    send_msg_with_buttons(message.from_user.id, res)
+    send_msg(msg.from_user.id, 'Unknown command')
 
-    
-def send_msg_with_buttons(uid, message):
-    print(f'Sending message {message}')
-    bot.send_message(uid, message, parse_mode='HTML', reply_markup=buttons()) 
-    
-@bot.callback_query_handler(func=lambda call: True)
-def callback_worker(call):
-    
-    res = 'unknown command'
-    if call.data.startswith(GET_ASINS): #call.data это callback_data, которую мы указали при объявлении кнопки
-        process_asins(call.message.chat.id, call.message.text)
 
-bot.infinity_polling()
+@bot.message_handler(func=lambda _: True)
+def non_verification_user_msg(msg: types.Message):
+    receive_msg(msg)
+    if msg.text.strip() == PASSWORD:
+        auth_users.add(msg.from_user.id)
+        send_msg(msg.from_user.id, 'Login success! You can use all bot functions!')
+        return
+    send_msg(msg.from_user.id, 'Verification failed. Please enter the master password')
+
+
+def make_process(asins_list_raw, user_id):
+    # Create new process
+    send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
+    process = Process(target=main_collect_all.start, args=(
+        main_collect_all.get_all_asins_from_text(asins_list_raw),
+    ), kwargs={'callback': lambda: send_msg(user_id, f'List of this ASINs is ready!\n{asins_list_raw}')})
+    process.start()
+
+
+if __name__ == '__main__':
+    bot.infinity_polling()
