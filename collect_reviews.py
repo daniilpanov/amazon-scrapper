@@ -69,11 +69,7 @@ def write_state(folder='.', data=None):
             f.close()
 
 
-def write_data(new_filename='reviews-list.csv', file_exists=False):
-    if not file_exists:
-        f = open(new_filename, 'w', encoding='utf-8')
-        f.write('review_id,product_url,asin,date,country,name,title,content,rating,helpful,options,scrap_datetime\n')
-        f.close()
+def write_data():
     while True:
         # Wait for a data from the queue
         write_data_res = write_queue.get()
@@ -90,7 +86,6 @@ def write_data(new_filename='reviews-list.csv', file_exists=False):
             'content', 'rating', 'helpful', 'options',
             'scrap_datetime',
         ])
-        df.to_csv(new_filename, index=False, header=False, mode='a', encoding='utf-8')
         database.write_reviews(df)
         state_queue.put([asin, seed])
 
@@ -203,19 +198,15 @@ def send_request(asin, seed):
     return True
 
 
-def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
+def main(ASINs):
     # timestamp
     start_time = datetime.datetime.now()
     print('loading webdriver')
     global webdriver, ev
 
-    file_exists = os.path.exists(new_filename or 'reviews-list.csv')
-    if file_exists:
-        try:
-            data = jsd.decode('\n'.join(list(open('state.json')))) if os.path.exists('state.json') else {}
-        except JSONDecodeError:
-            data = {}
-    else:
+    try:
+        data = jsd.decode('\n'.join(list(open('state.json')))) if os.path.exists('state.json') else {}
+    except JSONDecodeError:
         data = {}
 
     ev = Event()
@@ -224,7 +215,7 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
-    writer_thread = Thread(target=write_data, args=(new_filename, file_exists))
+    writer_thread = Thread(target=write_data)
     state_writer_thread = Thread(target=write_state, args=('.', data))
     user_emulate_thread.start()
     process_thread.start()
@@ -275,7 +266,7 @@ def main(ASINs, filename='products-list.txt', new_filename='reviews-list.csv'):
         user_emulate_thread.join()
         print('done. reloading...')
         sleep(10)
-        return main(ASINs, filename, new_filename)
+        return main(ASINs)
     except KeyboardInterrupt:
         print('Script stopped')
         return start_time, datetime.datetime.now()

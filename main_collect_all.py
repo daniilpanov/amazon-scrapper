@@ -10,66 +10,79 @@ from collect_products import collect_products_info
 from collect_reviews import main
 
 
-def start(
-        asins_list_file, products_info_file, reviews_file, keepa_file, start_time=None,
-        products_info_thr=None, keepa_thr=None, reader=None, writer=None,
-):
-    with open(asins_list_file) as f:
-        asins = set()
-        p = re.compile(r'([A-Z0-9]{10})')
-        for line in f.readlines():
-            for item in line.split():
-                res = p.findall(item)
-                if res:
-                    asins.add(res[0])
+def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader=None, writer=None, callback=None, conf=None):
     # PROCESSES
-    if not products_info_thr or not keepa_thr or not reader or not writer:
+    # check config, then check need
+    if (not conf or conf['products']) and (not products_info_thr or not reader or not writer):
         reader, writer = Pipe(False)
-        products_info_thr = Process(target=collect_products_info, args=(list(asins), products_info_file, reader))
-        keepa_thr = Process(target=keepa_start, args=(list(asins), reader, keepa_file))
+        products_info_thr = Process(target=collect_products_info, args=(list(asins), reader))
         products_info_thr.start()
+    # check config, then check need
+    if (not conf or conf['keepa']) and (not keepa_thr or not reader or not writer):
+        if not reader or not writer:
+            reader, writer = Pipe(False)
+        keepa_thr = Process(target=keepa_start, args=(list(asins), reader))
         keepa_thr.start()
 
+    # FAST EXIT FROM FUNCTION
+    def close_all(stime):
+        writer.send(False)
+        writer.send(False)
+        products_info_thr.join()
+        keepa_thr.join()
+        writer.close()
+        reader.close()
+        if not stime:
+            stime = datetime.datetime.now()
+        etime = datetime.datetime.now()
+        dtime = etime - stime
+        print(
+            'The time of the collecting all data:',
+            dtime.days, 'days,', dtime.seconds // 3600, 'hours,',
+                                 dtime.seconds % 3600 // 60, 'minutes,', dtime.seconds % 60, 'seconds,',
+            dtime.microseconds, 'microseconds.'
+        )
+        return dtime
+
+    # REVIEWS - in main process
     try:
         # Keep start time
         if not start_time:
             start_time = datetime.datetime.now()
-        main(list(asins), asins_list_file, reviews_file)
-        end_time = datetime.datetime.now()
-        delta = end_time - start_time
-        print(
-            'The time of the collecting:',
-            delta.days, 'days,', delta.seconds // 3600, 'hours,',
-            delta.seconds % 3600 // 60, 'minutes,', delta.seconds % 60, 'seconds,',
-            delta.microseconds, 'microseconds.'
-        )
-        from uniqulizer import uniqulize_by_df
-        uniqulize_by_df(reviews_file, reviews_file, 0)
-        writer.send(False)
-        writer.send(False)
-        products_info_thr.join()
-        keepa_thr.join()
-        writer.close()
-        reader.close()
-        return delta
+        if not conf or conf.get('reviews', True):
+            # process
+            main(list(asins))
+            # end time
+            end_time = datetime.datetime.now()
+            delta = end_time - start_time
+            print(
+                'The time of the reviews collecting:',
+                delta.days, 'days,', delta.seconds // 3600, 'hours,',
+                delta.seconds % 3600 // 60, 'minutes,', delta.seconds % 60, 'seconds,',
+                delta.microseconds, 'microseconds.'
+            )
+        return close_all(start_time)
     except KeyboardInterrupt:
         print('Script stopped')
-        writer.send(False)
-        writer.send(False)
-        products_info_thr.join()
-        keepa_thr.join()
-        writer.close()
-        reader.close()
-        return None
+        return close_all(start_time)
     except Exception as e:
         # raise e
         print('Something went wrong... reloading all script after 10 seconds')
         print('ERROR:', e)
         sleep(10)
-        return start(
-            asins_list_file, products_info_file, reviews_file, keepa_file, start_time,
-            products_info_thr, keepa_thr, reader, writer,
-        )
+        return start(asins, start_time, products_info_thr, keepa_thr, reader, writer, callback, conf)
+
+
+# Parse raw asins list from TG message or file or other
+def get_all_asins_from_text(text: str):
+    pattern_find = re.compile('[A-Z0-9]{10}')
+    asins = set()
+    for line in text.strip().splitlines():
+        found = pattern_find.findall(line)
+        for item in found:
+            asins.add(item)
+    return list(asins)
+
 
 
 # Mainloop
@@ -77,10 +90,5 @@ if __name__ == '__main__':
     print('PROGRAM STARTED')
     # FILES PATHS
     datetime_now = datetime.datetime.now(pytz.UTC).strftime('%m-%d-%Y')
-    print('TIMEDELTA:', start(
-        f'p{datetime_now}.txt',
-        f'out/pr{datetime_now}.csv',
-        f'out/r{datetime_now}.csv',
-        f'out/k{datetime_now}.csv',
-    ))
+    print('TIMEDELTA:', start(['B08ZYX6PSR']))
 

@@ -1,16 +1,12 @@
-import datetime
-import os.path
 import urllib
 from json import JSONDecoder
 from queue import Queue
 from threading import Thread, Event
 from time import sleep
 
-import pytz
-from pandas import DataFrame
 from selenium.common import JavascriptException
 
-from database import write_product_parsed, write_product_html
+import database as db
 from functions import chrome_init, user_emulate, captcha_solve, WebDriver
 from parser import parse_product
 
@@ -101,7 +97,7 @@ def callback_wait(callback, queue):
         callback(data)
 
 
-def collect_products_info(products_info_list, filename, conn_reader=None):
+def collect_products_info(products_info_list, conn_reader=None):
     if conn_reader and conn_reader.poll() and not conn_reader.recv():
         return
     webdriver = chrome_init(goto='https://amazon.com')
@@ -114,7 +110,7 @@ def collect_products_info(products_info_list, filename, conn_reader=None):
         captcha_solve(webdriver)
         webdriver.activate_jquery()
 
-        product_info_write(el, webdriver.get_page_source(), filename)
+        product_info_write(el, webdriver.get_page_source())
 
     webdriver.driver.quit()
 
@@ -136,24 +132,7 @@ def asin_write(data, products_queue=None, filename='products-list.txt'):
         f.writelines(rows)
 
 
-def product_info_write(asin, html, filename='out/products-list.csv'):
-    columns = 'asin,html,parse_datetime'
-    if not os.path.exists(filename + '--raw.csv'):
-        f = open(filename + '--raw.csv', 'w', encoding='utf-8')
-        f.write(columns + '\n')
-        f.close()
-    data = [asin, html]
-    df = DataFrame([data + [datetime.datetime.now(pytz.UTC)]], columns=columns.split(','))
-    write_product_html(*data)
-    df.to_csv(filename + '--raw.csv', index=False, header=False, mode='a', encoding='utf-8')
-    columns = ('asin,product_url,product_title,product_descr,'
-               'picture_url,parse_datetime,features,top_5_phrases,product_price')
-    if not os.path.exists(filename):
-        f = open(filename, 'w', encoding='utf-8')
-        f.write(columns + '\n')
-        f.close()
-
+def product_info_write(asin, html):
+    db.write_product_html(asin, html)
     data = parse_product(asin, html)
-    df = DataFrame([data], columns=columns.split(','))
-    write_product_parsed(*data)
-    df.to_csv(filename, index=False, header=False, mode='a', encoding='utf-8')
+    db.write_product_parsed(*data)

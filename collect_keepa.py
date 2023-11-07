@@ -1,13 +1,8 @@
-import datetime
-import os
-
-import pytz
-from pandas import DataFrame
 from selenium.common.exceptions import StaleElementReferenceException, WebDriverException
 from seleniumbase.common.exceptions import NoSuchElementException
 
 import captcha_solve
-from database import write_keepa_html
+from database import write_keepa_html as write_keepa_html_to_db
 from functions import WebDriver, chrome_init
 
 
@@ -102,32 +97,19 @@ def keepa__comparing(webdriver: WebDriver):
     return container.get_attribute('innerHTML') if container else None
 
 
-def keepa_write(asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data, filename='out/keepa-list.csv'):
-    columns = 'asin,keepa_price_history,keepa_statistics,keepa_comparing,keepa_data,scrap_datetime'
-    if not os.path.exists(filename + '--raw.csv'):
-        f = open(filename + '--raw.csv', 'w', encoding='utf-8')
-        f.write(columns + '\n')
-        f.close()
-    data = [asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data]
-    df = DataFrame([data + [datetime.datetime.now(pytz.UTC)]], columns=columns.split(','))
-    write_keepa_html(*data)
-    df.to_csv(filename + '--raw.csv', index=False, header=False, mode='a', encoding='utf-8')
-
-
-def collect_one_asin(webdriver, asin, filename):
+def collect_one_asin(webdriver, asin):
     webdriver.get(f'https://keepa.com/#!product/1-{asin}')
     webdriver.sleep(.5)
-    keepa_write(
+    write_keepa_html_to_db(
         asin,
         keepa__price_history(webdriver),
         keepa__statistics(webdriver),
         keepa__comparing(webdriver),
         keepa__data(webdriver),
-        filename,
     )
 
 
-def keepa_start(asins=None, connection=None, filename='out/keepa-list.csv'):
+def keepa_start(asins=None, connection=None):
     if not asins and not connection:
         return
     if connection and connection.poll() and connection.recv() == False:
@@ -148,12 +130,12 @@ def keepa_start(asins=None, connection=None, filename='out/keepa-list.csv'):
             for asin in asins:
                 if connection and connection.poll() and connection.recv() == False:
                     return
-                collect_one_asin(webdriver, asin, filename)
+                collect_one_asin(webdriver, asin)
 
         if connection:
             asin = connection.recv()
             while asin:
-                collect_one_asin(webdriver, asin, filename)
+                collect_one_asin(webdriver, asin)
                 asin = connection.recv()
     finally:
         if webdriver:
