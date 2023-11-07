@@ -34,7 +34,7 @@ class WebDriver(BaseCase):
         self.sleep(1)
         self.get('chrome://extensions')
         # find ID of the extension
-        self.sleep(3)
+        self.sleep(10)
         items = None
         try:
             # click to devmode
@@ -44,7 +44,6 @@ class WebDriver(BaseCase):
                 '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
             )
         except Exception as e:
-            raise e
             pass
         _id = None
         if items:
