@@ -34,7 +34,12 @@ class WebDriver(BaseCase):
         self.sleep(1)
         self.get('chrome://extensions')
         # find ID of the extension
-        self.sleep(10)
+        self.sleep(5)
+        i = 0
+        while os.path.exists(f'screenshot ({i}).png'):
+            i += 1
+        self.save_screenshot(f'screenshot ({i})')
+        self.save_page_source(f'html ({i})')
         items = None
         try:
             # click to devmode
@@ -379,6 +384,7 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
 
 def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False):
     webdriver = modern_chrome_init(headless=headless, extension=extension, tor=tor)
+    webdriver.get('https://google.com/')
     ext_id = webdriver.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         webdriver.get(goto)
