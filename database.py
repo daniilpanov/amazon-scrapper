@@ -3,7 +3,7 @@ import datetime
 
 import pytz
 from pymongo.database import Database
-from pymongo.errors import BulkWriteError
+from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient
 
 client: Union[MongoClient, None] = None
@@ -78,7 +78,7 @@ def write_reviews(reviews):
         return False
     try:
         return db()['customer_reviews'].insert_many(revs, ordered=False)
-    except BulkWriteError as e:
+    except (BulkWriteError, DuplicateKeyError) as e:
         return True
 
 
@@ -89,7 +89,7 @@ def write_product_html(asin, html):
             'HTML_text': html,
             'scrap_datetime': datetime.datetime.now(pytz.UTC),
         })
-    except BulkWriteError as e:
+    except (BulkWriteError, DuplicateKeyError) as e:
         return True
 
 
@@ -106,7 +106,7 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
             'top_5_phrases': top5phr,
             'product_price': price,
         })
-    except BulkWriteError as e:
+    except (BulkWriteError, DuplicateKeyError) as e:
         return True
 
 
@@ -120,7 +120,7 @@ def write_keepa_html(asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
             'keepa_data': keepa_data,
             'scrap_datetime': datetime.datetime.now(pytz.UTC),
         })
-    except BulkWriteError as e:
+    except (BulkWriteError, DuplicateKeyError) as e:
         return True
 
 
