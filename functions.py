@@ -98,10 +98,14 @@ class WebDriver(BaseCase):
 
 def captcha_check(webdriver: WebDriver):
     try:
+        webdriver.get('https://amazon.com')
         return (webdriver.find_text('Enter the characters you see below', timeout=.5)
                 and webdriver.find_text('Type the characters you see in this image:', timeout=.5))
     except:
         return False
+    finally:
+        webdriver.sleep(3)
+        webdriver.get('https://amazon.com')
 
 
 def captcha_solve(webdriver: WebDriver):
