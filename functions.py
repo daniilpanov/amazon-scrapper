@@ -93,6 +93,7 @@ class WebDriver(BaseCase):
 
 
 def captcha_check(webdriver: WebDriver):
+    url = webdriver.get_current_url()
     try:
         webdriver.get('https://amazon.com')
         return (webdriver.find_text('Enter the characters you see below', timeout=.5)
@@ -102,6 +103,7 @@ def captcha_check(webdriver: WebDriver):
     finally:
         webdriver.sleep(3)
         webdriver.get('https://amazon.com')
+        webdriver.get(url)
 
 
 def captcha_solve(webdriver: WebDriver):

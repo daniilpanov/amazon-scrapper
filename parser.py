@@ -115,7 +115,7 @@ if __name__ == '__main__':
     ])
 
     for index, item in data.iterrows():
-        d = parse(item['asin'], item['html'])
+        d = parse_reviews(item['asin'], item['html'])
         if d:
             res.loc[len(res.index)] = d
 
@@ -124,6 +124,14 @@ if __name__ == '__main__':
 
 def parse_product(asin, html):
     bs = BeautifulSoup(html, features='html.parser')
+    if not bs:
+        print('NOT BS!')
+        return False
+    if not bs.select_one('#titleSection, #title, #productTitle'):
+        print('NOT TITLE!')
+        with open('html.html.html', 'w', encoding='utf-8') as f:
+            f.write(str(bs))
+        return False
     title = bs.select_one('#titleSection, #title, #productTitle').text.strip()
     descr = bs.find(id='feature-bullets').text.strip()
     pic = bs.find(id='landingImage')['src']
