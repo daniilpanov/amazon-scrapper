@@ -28,12 +28,15 @@ def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader
 
     # FAST EXIT FROM FUNCTION
     def close_all(stime):
-        writer.send(False)
-        writer.send(False)
-        products_info_thr.join()
-        keepa_thr.join()
-        writer.close()
-        reader.close()
+        if writer:
+            writer.send(False)
+            writer.send(False)
+            writer.close()
+            reader.close()
+        if products_info_thr:
+            products_info_thr.join()
+        if keepa_thr:
+            keepa_thr.join()
         if not stime:
             stime = datetime.datetime.now()
         etime = datetime.datetime.now()
@@ -41,7 +44,8 @@ def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader
         timedelta_text = (f'''{dtime.days} days, {dtime.seconds // 3600} hours, {dtime.seconds % 3600 // 60} minutes, '''
                           f'''{dtime.seconds % 60} seconds, {dtime.microseconds} microseconds''')
         print('The time of the collecting all data:', timedelta_text)
-        callback(*callback_args, timedelta_text)
+        if callback:
+            callback(*callback_args, timedelta_text)
         return dtime
 
     # REVIEWS - in main process
