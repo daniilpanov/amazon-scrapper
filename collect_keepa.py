@@ -2,6 +2,7 @@ from selenium.common.exceptions import StaleElementReferenceException, WebDriver
 from seleniumbase.common.exceptions import NoSuchElementException
 
 import captcha_solve
+import state
 from database import write_keepa_html as write_keepa_html_to_db
 from functions import WebDriver, chrome_init
 
@@ -98,6 +99,8 @@ def keepa__comparing(webdriver: WebDriver):
 
 
 def collect_one_asin(webdriver, asin):
+    if state.get_asin(asin, 'keepa') == -1:
+        return
     webdriver.get(f'https://keepa.com/#!product/1-{asin}')
     webdriver.sleep(.5)
     write_keepa_html_to_db(
@@ -107,12 +110,16 @@ def collect_one_asin(webdriver, asin):
         keepa__comparing(webdriver),
         keepa__data(webdriver),
     )
+    state.write_asin(asin, 960, 'keepa')
 
 
 def keepa_start(asins=None, connection=None):
     if not asins and not connection:
         return
     if connection and connection.poll() and connection.recv() == False:
+        return
+    asins = list([asin for asin in asins if state.get_asin(asin, 'keepa') != -1])
+    if not asins:
         return
     webdriver = None
     try:

@@ -1,8 +1,7 @@
 import datetime
-import os.path
 import re
 from builtins import Exception
-from json import JSONDecoder, JSONEncoder, JSONDecodeError
+from json import JSONDecoder, JSONEncoder
 from queue import Queue
 from threading import Thread, Event
 from time import sleep
@@ -16,7 +15,18 @@ from selenium.common import JavascriptException, InvalidSessionIdException, Time
 
 import database
 import parser
+import state
 from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
+
+import logging
+
+
+logger = logging.getLogger('reviews')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(f'reviews.log', 'a')
+formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 params = {
     'sortBy': ['helpful', 'recent'],
@@ -31,7 +41,6 @@ for key in params:
     params_len *= len(params[key])
 data_queue = Queue()
 write_queue = Queue()
-state_queue = Queue()
 ev = Event()
 
 webdriver: Union[None, WebDriver] = None
@@ -41,34 +50,6 @@ jsd = JSONDecoder()
 jse = JSONEncoder()
 
 
-def state(asin, seed, data):
-    data[asin] = seed
-    return jse.encode(data)
-
-
-def write_state(folder='.', data=None):
-    if data is None:
-        data = {}
-    while True:
-        # Wait for a data from the queue
-        state_data = state_queue.get()
-
-        # Stop flag!
-        if state_data is None:
-            return
-
-        asin, seed = state_data
-        try:
-            f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
-            f.write(state(asin, seed, data))
-            f.close()
-        except IOError:
-            sleep(10)
-            f = open(os.path.join(folder, 'state.json'), 'w', encoding='utf-8')
-            f.write(state(asin, seed, data))
-            f.close()
-
-
 def write_data():
     while True:
         # Wait for a data from the queue
@@ -76,7 +57,6 @@ def write_data():
 
         # Stop flag!
         if write_data_res is None:
-            state_queue.put(None)
             return
 
         asin, seed, write_data_res = write_data_res
@@ -87,7 +67,7 @@ def write_data():
             'scrap_datetime',
         ])
         database.write_reviews(df)
-        state_queue.put([asin, seed])
+        state.write_asin(asin, seed)
 
 
 def process_data():
@@ -98,6 +78,7 @@ def process_data():
         # Stop flag!
         if process_data_res is None:
             write_queue.put(None)
+            logger.info('Stop processing thread')
             return
 
         asin, seed, process_data_res = process_data_res
@@ -109,6 +90,7 @@ def process_data():
                     [i for i in process_data_res.splitlines() if i.strip() and '&&&' != i.strip()],
                 ))
             except Exception as e:
+                logger.error(f'Exception on div revs of [{asin}] [seed={seed}]', exc_info=True)
                 print(e)
                 continue
             data_with_quantity = None
@@ -117,6 +99,7 @@ def process_data():
                     data_with_quantity = item[2]
                     break
             if not data_with_quantity:
+                logger.warning(f'{asin} has noone review [params={seed}]')
                 continue
 
             res = []
@@ -169,22 +152,27 @@ def send_request(asin, seed):
         try:
             res = webdriver.execute_script("return " + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
+                logger.warning(f'Broken result! ASIN: {asin}, SEED: {seed}')
                 raise RetryException('Broken result')
         except (JavascriptException, RetryException, TimeoutException) as e:
+            logger.error('Exception', exc_info=True, stack_info=True)
             print(e)
             print('something went wrong. retry... ')
             sleep(1)
             try:
                 webdriver.reload()
                 if not captcha_solve(webdriver):
+                    logger.error('Captcha error')
                     raise Exception('Captcha error')
                 webdriver.reload()
                 webdriver.activate_jquery()
                 res = webdriver.execute_script("return " + ajax)
                 if not res or 'BAAAAAAD ASIN!' in res:
+                    logger.error(f'Bad ASIN={asin}, seed={seed}; params={current_params}')
                     raise Exception('Bad ASIN')
                 print('success. continue')
             except Exception as e:
+                logger.error(f'Exception: ASIN={asin}, seed={seed}; params={current_params}', exc_info=True, stack_info=True)
                 print('ERROR:', e)
                 try:
                     webdriver.driver.close()
@@ -204,11 +192,6 @@ def main(ASINs):
     print('loading webdriver')
     global webdriver, ev
 
-    try:
-        data = jsd.decode('\n'.join(list(open('state.json')))) if os.path.exists('state.json') else {}
-    except JSONDecodeError:
-        data = {}
-
     ev = Event()
     webdriver = chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
     webdriver.activate_jquery()
@@ -216,22 +199,18 @@ def main(ASINs):
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
     writer_thread = Thread(target=write_data)
-    state_writer_thread = Thread(target=write_state, args=('.', data))
     user_emulate_thread.start()
     process_thread.start()
     writer_thread.start()
-    state_writer_thread.start()
 
-    index = 0
     try:
         if type(ASINs) is dict:
             for brand in ASINs:
                 for asin in ASINs[brand]:
                     asin = asin[0]
-                    if asin in data:
-                        if data[asin] >= params_len - 1:
-                            continue
-                        index = data[asin]
+                    index = state.get_asin(asin)
+                    if index == -1:
+                        continue
                     print('COLLECTING REVIEWS FOR ASIN', asin + ':')
                     with alive_bar(params_len, bar='classic') as bar:
                         bar(index, skipped=True)
@@ -241,17 +220,16 @@ def main(ASINs):
                             except Exception as e:
                                 if 'Bad ASIN' not in str(e):
                                     raise e
+                                logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
                                 print(f'Skip {asin}')
                                 continue
                             finally:
                                 bar()
-                    index = 0
         elif type(ASINs) is list:
             for asin in ASINs:
-                if asin in data:
-                    if data[asin] >= params_len - 1:
-                        continue
-                    index = data[asin]
+                index = state.get_asin(asin)
+                if index == -1:
+                    continue
                 print('COLLECTING REVIEWS FOR ASIN', asin + ':')
                 with alive_bar(params_len, bar='classic') as bar:
                     bar(index, skipped=True)
@@ -261,22 +239,22 @@ def main(ASINs):
                         except Exception as e:
                             if 'Bad ASIN' not in str(e):
                                 raise e
+                            logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
                             print(f'Skip {asin}')
                             continue
                         finally:
                             bar()
-                index = 0
         print('wait for writing the data...')
         print('DONE.')
         return start_time, datetime.datetime.now()
     except (InvalidSessionIdException, RetryException) as e:
+        logger.error(f'Error!', exc_info=True, stack_info=True)
         print('ERROR: invalid session. Program will be restarted')
         print('wait for writing the data...')
         data_queue.put(None)
         ev.set()
         process_thread.join()
         writer_thread.join()
-        state_writer_thread.join()
         user_emulate_thread.join()
         print('done. reloading...')
         sleep(10)
@@ -290,7 +268,6 @@ def main(ASINs):
             data_queue.put(None)
             process_thread.join()
             writer_thread.join()
-            state_writer_thread.join()
             user_emulate_thread.join()
         except:
             pass

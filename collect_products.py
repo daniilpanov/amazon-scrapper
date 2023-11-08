@@ -7,8 +7,19 @@ from time import sleep
 from selenium.common import JavascriptException
 
 import database as db
+import state
 from functions import chrome_init, user_emulate, captcha_solve, WebDriver
 from parser import parse_product
+
+import logging
+
+
+logger = logging.getLogger('products')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(f'products.log', 'a')
+formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 def collect_asins(query, products_info_queue=None, market_niche=None, page=1, callback=None, filename='products-list.txt'):
@@ -100,10 +111,15 @@ def callback_wait(callback, queue):
 def collect_products_info(products_info_list, conn_reader=None):
     if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
         return
+    products_info_list = list([asin for asin in products_info_list if state.get_asin(asin, 'products') != -1])
+    if not products_info_list:
+        return
     webdriver = chrome_init(goto='https://amazon.com')
     webdriver.change_loc()
 
     for el in products_info_list:
+        if state.get_asin(el, 'products') == -1:
+            continue
         if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
             return webdriver.driver.quit()
         webdriver.get('https://amazon.com/dp/' + el)
@@ -111,6 +127,7 @@ def collect_products_info(products_info_list, conn_reader=None):
         webdriver.activate_jquery()
 
         webdriver.save_page_source('html')
+        state.write_asin(el, 960, 'products')
         product_info_write(el, webdriver.get_page_source())
 
     webdriver.driver.quit()
