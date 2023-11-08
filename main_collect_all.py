@@ -93,5 +93,5 @@ def get_all_asins_from_text(text: str):
 if __name__ == '__main__':
     # FILES PATHS
     datetime_now = datetime.datetime.now(pytz.UTC).strftime('%m-%d-%Y')
-    print('TIMEDELTA:', start(['kjjkjkjjk']))
+    print('TIMEDELTA:', start(['B0BGV79FHT']))
 
