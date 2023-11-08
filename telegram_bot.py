@@ -79,9 +79,10 @@ def callback(uid, asins_list_raw, timedelta_text):
 def make_process(asins_list_raw, user_id):
     # Create new process
     send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
-    process = Process(target=main_collect_all.start, args=(
-        main_collect_all.get_all_asins_from_text(asins_list_raw),
-    ), kwargs={'callback': callback, 'callback_args': (user_id, asins_list_raw)})
+    process = Process(target=main_collect_all.start, kwargs={
+        'asins': main_collect_all.get_all_asins_from_text(asins_list_raw),
+        'callback': callback, 'callback_args': (user_id, asins_list_raw),
+    })
     process.start()
 
 
