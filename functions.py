@@ -35,11 +35,7 @@ class WebDriver(BaseCase):
         self.get('chrome://extensions')
         # find ID of the extension
         self.sleep(5)
-        i = 0
-        while os.path.exists(f'screenshot ({i}).png'):
-            i += 1
-        self.save_screenshot(f'screenshot ({i})')
-        self.save_page_source(f'html ({i})')
+        self.get_page_source()  # it works! maybe due to waiting loading?
         items = None
         try:
             # click to devmode

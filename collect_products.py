@@ -110,6 +110,7 @@ def collect_products_info(products_info_list, conn_reader=None):
         captcha_solve(webdriver)
         webdriver.activate_jquery()
 
+        webdriver.save_page_source('html')
         product_info_write(el, webdriver.get_page_source())
 
     webdriver.driver.quit()
@@ -134,5 +135,9 @@ def asin_write(data, products_queue=None, filename='products-list.txt'):
 
 def product_info_write(asin, html):
     db.write_product_html(asin, html)
-    data = parse_product(asin, html)
+    try:
+        data = parse_product(asin, html)
+    except Exception as e:
+        print(asin)
+        raise e
     db.write_product_parsed(*data)
