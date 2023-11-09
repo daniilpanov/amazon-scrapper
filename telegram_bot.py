@@ -48,7 +48,7 @@ def get_asins_data(msg: types.Message):
     content = msg.text.replace(GET_ASINS_CMD, '').strip()
     if content:
         return make_process(content, msg.from_user.id)
-    bot.register_next_step_handler(msg, get_asins)
+    bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASINs list:'), get_asins)
 
 
 def get_asins(msg: types.Message):
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     print('PROGRAM STARTED')
     bot.infinity_polling()
     print('PROGRAM IS CLOSING ALL TASKS')
-    for process in processes:
+    for proc in processes:
         pipe_writer.send(False)
-        process.join()
+        proc.join()
     print('PROGRAM ENDED')
