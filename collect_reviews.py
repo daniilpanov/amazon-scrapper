@@ -251,7 +251,7 @@ def main(ASINs, conn_reader=None):
                             raise StopScript
                         try:
                             send_request(asin, params_seed)
-                            print('request was sent. params: ', asin, params_seed)
+                            # print('request was sent. params: ', asin, params_seed)
                         except Exception as e:
                             if 'Bad ASIN' not in str(e):
                                 raise e
