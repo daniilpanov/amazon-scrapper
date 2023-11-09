@@ -179,11 +179,7 @@ def send_request(asin, seed):
             except Exception as e:
                 logger.error(f'Exception: ASIN={asin}, seed={seed}; params={current_params}', exc_info=True, stack_info=True)
                 print('ERROR:', e)
-                try:
-                    webdriver.driver.close()
-                    return False
-                finally:
-                    data_queue.put(None)
+                return False
 
         data_queue.put([asin, seed, res])
     else:
