@@ -138,6 +138,7 @@ def process_data():
 
 def send_request(asin, seed):
     if seed < params_len:
+        print('ok1')
         current_params = {
             'scope': 'reviewsAjax3',
             'reftag': 'cm_cr_arp_d_viewopt_srt',
@@ -155,9 +156,12 @@ def send_request(asin, seed):
                + ", null, 'text');"
 
         try:
+            print('executing script')
             res = webdriver.execute_script("return " + ajax)
+            print('script executed')
             if not res or 'BAAAAAAD ASIN!' in res:
                 logger.warning(f'Broken result! ASIN: {asin}, SEED: {seed}')
+                print(f'broken result. asin: {asin}')
                 raise RetryException('Broken result')
         except (JavascriptException, RetryException, TimeoutException) as e:
             logger.error('Exception', exc_info=True, stack_info=True)
@@ -166,13 +170,17 @@ def send_request(asin, seed):
             sleep(1)
             try:
                 webdriver.reload()
+                print('reloaded')
                 if not captcha_solve(webdriver):
                     logger.error('Captcha error')
                     raise Exception('Captcha error')
+                print('captcha solved')
                 webdriver.reload()
                 webdriver.activate_jquery()
                 res = webdriver.execute_script("return " + ajax)
+                print('script executed!')
                 if not res or 'BAAAAAAD ASIN!' in res:
+                    print(f'bad asin :( {asin}, seed={seed}')
                     logger.error(f'Bad ASIN={asin}, seed={seed}; params={current_params}')
                     raise Exception('Bad ASIN')
                 print('success. continue')
@@ -209,57 +217,37 @@ def main(ASINs, conn_reader=None):
     user_emulate_thread.start()
     process_thread.start()
     writer_thread.start()
+    print('start all threads')
 
     try:
-        if type(ASINs) is dict:
-            for brand in ASINs:
-                for asin in ASINs[brand]:
+        for asin in ASINs:
+            print('current asin:', asin)
+            if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+                raise StopScript
+            index = state.get_asin(asin)
+            print('current index of asin:', index)
+            if index == -1:
+                continue
+            print('COLLECTING REVIEWS FOR ASIN', asin + ':')
+            with alive_bar(params_len, bar='classic') as bar:
+                bar(index, skipped=True)
+                for params_seed in range(index, params_len):
                     if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
                         raise StopScript
-                    asin = asin[0]
-                    index = state.get_asin(asin)
-                    if index == -1:
+                    print(f'current params seed: {params_seed} of asin {asin}')
+                    try:
+                        print('send request')
+                        send_request(asin, params_seed)
+                        print('request sent!')
+                        # print('request was sent. params: ', asin, params_seed)
+                    except Exception as e:
+                        if 'Bad ASIN' not in str(e):
+                            raise e
+                        logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
+                        print(f'Skip {asin}')
                         continue
-                    print('COLLECTING REVIEWS FOR ASIN', asin + ':')
-                    with alive_bar(params_len, bar='classic') as bar:
-                        bar(index, skipped=True)
-                        for params_seed in range(index, params_len):
-                            if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-                                raise StopScript
-                            try:
-                                send_request(asin, params_seed)
-                            except Exception as e:
-                                if 'Bad ASIN' not in str(e):
-                                    raise e
-                                logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
-                                print(f'Skip {asin}')
-                                continue
-                            finally:
-                                bar()
-        elif type(ASINs) is list:
-            for asin in ASINs:
-                if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-                    raise StopScript
-                index = state.get_asin(asin)
-                if index == -1:
-                    continue
-                print('COLLECTING REVIEWS FOR ASIN', asin + ':')
-                with alive_bar(params_len, bar='classic') as bar:
-                    bar(index, skipped=True)
-                    for params_seed in range(index, params_len):
-                        if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-                            raise StopScript
-                        try:
-                            send_request(asin, params_seed)
-                            # print('request was sent. params: ', asin, params_seed)
-                        except Exception as e:
-                            if 'Bad ASIN' not in str(e):
-                                raise e
-                            logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
-                            print(f'Skip {asin}')
-                            continue
-                        finally:
-                            bar()
+                    finally:
+                        bar()
         print('wait for writing the data...')
         print('DONE.')
         return start_time, datetime.datetime.now()
