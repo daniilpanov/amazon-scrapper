@@ -54,4 +54,4 @@ def write_asin(asin, value, _type='reviews'):
 
 
 if __name__ == '__main__':
-    print(get_asin('B09K4XHTWZ'))
+    convert()
