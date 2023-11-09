@@ -28,6 +28,11 @@ formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+
+class StopScript(Exception):
+    pass
+
+
 params = {
     'sortBy': ['helpful', 'recent'],
     'reviewerType': ['all_reviews', 'avp_only_reviews'],
@@ -186,7 +191,7 @@ def send_request(asin, seed):
     return True
 
 
-def main(ASINs):
+def main(ASINs, conn_reader=None):
     # timestamp
     start_time = datetime.datetime.now()
     print('loading webdriver')
@@ -195,6 +200,12 @@ def main(ASINs):
     ev = Event()
     webdriver = chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
     webdriver.activate_jquery()
+
+    if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+        try:
+            webdriver.driver.close()
+        except:
+            pass
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
     process_thread = Thread(target=process_data)
@@ -207,6 +218,8 @@ def main(ASINs):
         if type(ASINs) is dict:
             for brand in ASINs:
                 for asin in ASINs[brand]:
+                    if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+                        raise StopScript
                     asin = asin[0]
                     index = state.get_asin(asin)
                     if index == -1:
@@ -215,6 +228,8 @@ def main(ASINs):
                     with alive_bar(params_len, bar='classic') as bar:
                         bar(index, skipped=True)
                         for params_seed in range(index, params_len):
+                            if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+                                raise StopScript
                             try:
                                 send_request(asin, params_seed)
                             except Exception as e:
@@ -227,6 +242,8 @@ def main(ASINs):
                                 bar()
         elif type(ASINs) is list:
             for asin in ASINs:
+                if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+                    raise StopScript
                 index = state.get_asin(asin)
                 if index == -1:
                     continue
@@ -234,6 +251,8 @@ def main(ASINs):
                 with alive_bar(params_len, bar='classic') as bar:
                     bar(index, skipped=True)
                     for params_seed in range(index, params_len):
+                        if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+                            raise StopScript
                         try:
                             send_request(asin, params_seed)
                         except Exception as e:
@@ -251,11 +270,18 @@ def main(ASINs):
         logger.error(f'Error!', exc_info=True, stack_info=True)
         print('ERROR: invalid session. Program will be restarted')
         print('wait for writing the data...')
-        data_queue.put(None)
-        ev.set()
-        process_thread.join()
-        writer_thread.join()
-        user_emulate_thread.join()
+        try:
+            ev.set()
+            data_queue.put(None)
+            process_thread.join()
+            writer_thread.join()
+            user_emulate_thread.join()
+        except:
+            pass
+        try:
+            webdriver.driver.close()
+        except:
+            pass
         print('done. reloading...')
         sleep(10)
         return main(ASINs)

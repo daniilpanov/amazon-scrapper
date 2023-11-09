@@ -2,7 +2,7 @@
 
 import telebot
 from telebot import types
-from multiprocessing import Process
+from multiprocessing import Process, Pipe
 
 import main_collect_all
 
@@ -14,6 +14,8 @@ BTN_CMD_IDs = ((GET_ASINS_CMD, 'Get and process list of ASINs'),)
 PASSWORD = '12345'
 
 auth_users = {320753905}
+processes = []
+pipe_reader, pipe_writer = Pipe(False)
 
 
 # Log helpers
@@ -85,9 +87,14 @@ def make_process(asins_list_raw, user_id):
         'callback': callback, 'callback_args': (user_id, asins_list_raw),
     })
     process.start()
+    processes.append(process)
 
 
 if __name__ == '__main__':
     print('PROGRAM STARTED')
     bot.infinity_polling()
+    print('PROGRAM IS CLOSING ALL TASKS')
+    for process in processes:
+        pipe_writer.send(False)
+        process.join()
     print('PROGRAM ENDED')

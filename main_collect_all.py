@@ -4,15 +4,21 @@ from multiprocessing import Process, Pipe
 from time import sleep
 
 import pytz
+from numpy import datetime_data
 
 from collect_keepa import keepa_start
 from collect_products import collect_products_info
 from collect_reviews import main
 
 
-def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader=None, writer=None, callback=None, callback_args=None, conf=None):
+def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader=None, writer=None, callback=None, callback_args=None, conf=None, conn_reader=None):
     if not callback_args:
         callback_args = []
+    if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+        return
+    # Keep start time
+    if not start_time:
+        start_time = datetime.datetime.now()
     # PROCESSES
     # check config, then check need
     if (not conf or conf['products']) and (not products_info_thr or not reader or not writer):
@@ -31,6 +37,7 @@ def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader
         if writer:
             writer.send(False)
             writer.send(False)
+            writer.send(False)
             writer.close()
             reader.close()
         if products_info_thr:
@@ -47,15 +54,13 @@ def start(asins, start_time=None, products_info_thr=None, keepa_thr=None, reader
         if callback:
             callback(*callback_args, timedelta_text)
         return dtime
-
+    if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+        return close_all(start_time)
     # REVIEWS - in main process
     try:
-        # Keep start time
-        if not start_time:
-            start_time = datetime.datetime.now()
         if not conf or conf.get('reviews', True):
             # process
-            main(list(asins))
+            main(list(asins), conn_reader=reader)
             # end time
             end_time = datetime.datetime.now()
             delta = end_time - start_time
