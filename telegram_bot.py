@@ -14,13 +14,12 @@ BTN_CMD_IDs = ((GET_ASINS_CMD, 'Get and process list of ASINs'),)
 PASSWORD = '12345'
 
 auth_users = {320753905}
-users_active_commands = {}
 
 
 # Log helpers
 def send_msg(user_id, message, *args, **kwargs):
     print(f'Message to {user_id}: "{message}"')
-    bot.send_message(user_id, message, *args, **kwargs)
+    return bot.send_message(user_id, message, *args, **kwargs)
 
 
 def receive_msg(msg: types.Message):
@@ -47,17 +46,19 @@ def get_asins_data(msg: types.Message):
     content = msg.text.replace(GET_ASINS_CMD, '').strip()
     if content:
         return make_process(content, msg.from_user.id)
-    users_active_commands[msg.from_user.id] = GET_ASINS
-    send_msg(msg.from_user.id, 'Please enter the ASINs list:')
+    bot.register_next_step_handler(msg, get_asins)
+
+
+def get_asins(msg: types.Message):
+    receive_msg(msg)
+    if not check_login(msg):
+        return
+    make_process(msg.text.strip(), msg.from_user.id)
 
 
 @bot.message_handler(content_types=['text'], func=check_login)
 def get_text_messages(msg: types.Message):
     receive_msg(msg)
-    if users_active_commands.get(msg.from_user.id) == GET_ASINS:
-        make_process(msg.text.strip(), msg.from_user.id)
-        users_active_commands[msg.from_user.id] = None
-        return
 
     send_msg(msg.from_user.id, 'Unknown command')
 
