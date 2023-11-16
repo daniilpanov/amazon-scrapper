@@ -94,20 +94,16 @@ class WebDriver(BaseCase):
 
 def captcha_check(webdriver: WebDriver):
     url = webdriver.get_current_url()
-    print('captcha1')
     try:
         webdriver.get('https://amazon.com')
-        print('captcha2')
         return (webdriver.find_text('Enter the characters you see below', timeout=.5)
                 and webdriver.find_text('Type the characters you see in this image:', timeout=.5))
     except:
         return False
     finally:
-        print('captcha3')
         webdriver.sleep(3)
         webdriver.get('https://amazon.com')
         webdriver.get(url)
-        print('captcha4')
 
 
 def captcha_solve(webdriver: WebDriver):
@@ -119,7 +115,6 @@ def captcha_solve(webdriver: WebDriver):
     if not captcha_check(webdriver):
         return True
 
-    print('solving')
     captcha = webdriver.get_element('img[src]')
     img_source = requests.get(captcha.get_attribute('src'))
     if not img_source:
@@ -142,7 +137,6 @@ def captcha_solve(webdriver: WebDriver):
     webdriver.type('#captchacharacters', text)
     webdriver.submit('#captchacharacters')
     webdriver.sleep(2)
-    print('solved!')
     return not captcha_check(webdriver)
 
 

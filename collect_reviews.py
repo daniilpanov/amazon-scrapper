@@ -138,7 +138,6 @@ def process_data():
 
 def send_request(asin, seed):
     if seed < params_len:
-        print('ok1')
         current_params = {
             'scope': 'reviewsAjax3',
             'reftag': 'cm_cr_arp_d_viewopt_srt',
@@ -156,9 +155,7 @@ def send_request(asin, seed):
                + ", null, 'text');"
 
         try:
-            print('executing script')
             res = webdriver.execute_script("return " + ajax)
-            print('script executed')
             if not res or 'BAAAAAAD ASIN!' in res:
                 logger.warning(f'Broken result! ASIN: {asin}, SEED: {seed}')
                 print(f'broken result. asin: {asin}')
@@ -174,11 +171,9 @@ def send_request(asin, seed):
                 if not captcha_solve(webdriver):
                     logger.error('Captcha error')
                     raise Exception('Captcha error')
-                print('captcha solved')
                 webdriver.reload()
                 webdriver.activate_jquery()
                 res = webdriver.execute_script("return " + ajax)
-                print('script executed!')
                 if not res or 'BAAAAAAD ASIN!' in res:
                     print(f'bad asin :( {asin}, seed={seed}')
                     logger.error(f'Bad ASIN={asin}, seed={seed}; params={current_params}')
@@ -221,11 +216,10 @@ def main(ASINs, conn_reader=None):
 
     try:
         for asin in ASINs:
-            print('current asin:', asin)
             if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
                 raise StopScript
             index = state.get_asin(asin)
-            print('current index of asin:', index)
+            print(f'current asin: {asin} with index {index}')
             if index == -1:
                 continue
             print('COLLECTING REVIEWS FOR ASIN', asin + ':')
@@ -234,11 +228,8 @@ def main(ASINs, conn_reader=None):
                 for params_seed in range(index, params_len):
                     if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
                         raise StopScript
-                    print(f'current params seed: {params_seed} of asin {asin}')
                     try:
-                        print('send request')
                         send_request(asin, params_seed)
-                        print('request sent!')
                         # print('request was sent. params: ', asin, params_seed)
                     except Exception as e:
                         if 'Bad ASIN' not in str(e):

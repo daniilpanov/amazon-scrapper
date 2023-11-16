@@ -154,7 +154,6 @@ def product_info_write(asin, html):
     db.write_product_html(asin, html)
     try:
         data = parse_product(asin, html)
+        db.write_product_parsed(*data)
     except Exception as e:
-        print(asin)
-        raise e
-    db.write_product_parsed(*data)
+        print(f'ERROR when parsing asin: {asin} -- ', e)
