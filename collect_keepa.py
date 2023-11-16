@@ -137,7 +137,10 @@ def keepa_start(asins=None, connection=None):
             for asin in asins:
                 if connection and connection.poll() and connection.recv() == False:
                     return
-                collect_one_asin(webdriver, asin)
+                try:
+                    collect_one_asin(webdriver, asin)
+                except Exception as e:
+                    print(f'***keepa error***\nASIN: {asin}, ERROR: {e}')
 
         if connection:
             asin = connection.recv()
