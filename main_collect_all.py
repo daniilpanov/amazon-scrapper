@@ -12,6 +12,7 @@ from collect_reviews import main
 
 
 def start(asins, start_time=None, callback=None, callback_args=None, conf=None, conn_reader=None):
+    conf = {'keepa': False}
     if not callback_args:
         callback_args = []
     if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
@@ -22,12 +23,12 @@ def start(asins, start_time=None, callback=None, callback_args=None, conf=None, 
     # PROCESSES
     # check config, then check need
     reader = writer = None
-    if not conf or conf['products']:
+    if not conf or conf.get('products', True):
         reader, writer = Pipe(False)
         products_info_thr = Process(target=collect_products_info, args=(list(asins), reader))
         products_info_thr.start()
     # check config, then check need
-    if not conf or conf['keepa']:
+    if not conf or conf.get('keepa', True):
         if not reader or not writer:
             reader, writer = Pipe(False)
         keepa_thr = Process(target=keepa_start, args=(list(asins), reader))
