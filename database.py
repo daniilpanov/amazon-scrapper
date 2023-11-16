@@ -1,4 +1,3 @@
-from typing import Union
 import datetime
 
 import pytz
@@ -6,7 +5,7 @@ from pymongo.database import Database
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient
 
-client: Union[MongoClient, None] = None
+client: MongoClient | None = None
 
 config = {
     'url': 'cluster0.tcwqk03.mongodb.net/?retryWrites=true&w=majority',
@@ -25,7 +24,7 @@ def set_config(**kwargs):
         config[i] = kwargs[i]
 
 
-def inst() -> Union[MongoClient, bool]:
+def inst() -> MongoClient | bool:
     global client
     if client:
         return client
