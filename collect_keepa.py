@@ -141,6 +141,7 @@ def keepa_start(asins=None, connection=None):
                     collect_one_asin(webdriver, asin)
                 except Exception as e:
                     print(f'***keepa error***\nASIN: {asin}, ERROR: {e}')
+                    webdriver.save_screenshot('keepa_screenshot')
 
         if connection:
             asin = connection.recv()
