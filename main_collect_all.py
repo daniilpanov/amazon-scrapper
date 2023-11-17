@@ -12,7 +12,8 @@ from collect_reviews import main
 
 
 def start(asins, start_time=None, callback=None, callback_args=None, conf=None, conn_reader=None):
-    conf = {'keepa': False}
+    if not conf:
+        conf = {'keepa': False}
     if not callback_args:
         callback_args = []
     if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
@@ -37,9 +38,8 @@ def start(asins, start_time=None, callback=None, callback_args=None, conf=None, 
     # FAST EXIT FROM FUNCTION
     def close_all(stime=None, cbk=None):
         if writer:
-            writer.send(False)
-            writer.send(False)
-            writer.send(False)
+            for _ in range(conf.get('keepa', True) + conf.get('products', True) + conf.get('reviews', True)):
+                writer.send(False)
             writer.close()
             reader.close()
         if products_info_thr:
