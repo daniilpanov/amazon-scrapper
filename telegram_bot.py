@@ -7,6 +7,7 @@ import main_collect_all
 import payload_manager
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
+queue = payload_manager.init()
 
 GET_ASINS = 'get_asins_data'
 GET_ASINS_CMD = '/' + GET_ASINS
@@ -81,7 +82,7 @@ def callback(uid, asins):
 def make_process(asins_list_raw, user_id):
     # Create new process
     send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
-    payload_manager.extend(main_collect_all.get_all_asins_from_text(asins_list_raw), callback, (user_id, ))
+    queue.put((main_collect_all.get_all_asins_from_text(asins_list_raw), callback, (user_id,)))
 
 
 if __name__ == '__main__':

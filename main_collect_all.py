@@ -60,7 +60,7 @@ def start(asins, callback=None, callback_args=None, conf=None, conn_reader=None)
         return close_all(callback)
     except KeyboardInterrupt:
         print('Script stopped')
-        return close_all(callback)
+        return close_all()
     except Exception as e:
         # raise e
         print('Something went wrong... reloading all script after 10 seconds')

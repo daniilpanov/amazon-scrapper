@@ -1,11 +1,28 @@
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Pipe
+from queue import Queue
+from threading import Thread
 
-import main_collect_all
+import collect_reviews
+import state
 
 processes_pool = ProcessPoolExecutor(4)
 reader, writer = Pipe(False)
 planned_asins = set()
+
+
+def init():
+    q = Queue()
+    thr = Thread(target=waiting, args=(q,))
+    thr.start()
+    return q
+
+
+def waiting(q):
+    res = q.get()
+    while res:
+        extend(*res)
+        res = q.get()
 
 
 def extend(asins, callback, callback_args=None):
@@ -16,10 +33,15 @@ def extend(asins, callback, callback_args=None):
 
 
 def append(asin, callback, callback_args):
-    feat = processes_pool.submit(main_collect_all.start([asin], callback=callback, callback_args=callback_args, conn_reader=reader))
+    if state.get_asin(asin) == -1:
+        return callback(*callback_args, (asin,))
+    feat = processes_pool.submit(collect_reviews.main([asin], conn_reader=reader))
     def decrement():
         planned_asins.remove(asin)
+    def cbk():
+        callback(*callback_args, (asin,))
     feat.add_done_callback(decrement)
+    feat.add_done_callback(cbk)
     print(asin, 'accepted')
 
 
