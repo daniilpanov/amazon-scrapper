@@ -36,10 +36,13 @@ def start(asins, callback=None, callback_args=None, conf=None, conn_reader=None)
     # FAST EXIT FROM FUNCTION
     def close_all(cbk=None):
         if writer:
-            for _ in range(conf.get('keepa', True) + conf.get('products', True) + conf.get('reviews', True)):
-                writer.send(False)
-            writer.close()
-            reader.close()
+            try:
+                for _ in range(conf.get('keepa', True) + conf.get('products', True) + conf.get('reviews', True)):
+                    writer.send(False)
+                writer.close()
+                reader.close()
+            except OSError:
+                pass
         if products_info_thr:
             products_info_thr.join()
         if keepa_thr:
