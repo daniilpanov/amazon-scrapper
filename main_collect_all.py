@@ -11,16 +11,14 @@ from collect_products import collect_products_info
 from collect_reviews import main
 
 
-def start(asins, start_time=None, callback=None, callback_args=None, conf=None, conn_reader=None):
+def start(asins, callback=None, callback_args=None, conf=None, conn_reader=None):
     if not conf:
         conf = {'keepa': False}
     if not callback_args:
         callback_args = []
     if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
         return
-    # Keep start time
-    if not start_time:
-        start_time = datetime.datetime.now()
+
     # PROCESSES
     # check config, then check need
     reader = writer = None
@@ -36,7 +34,7 @@ def start(asins, start_time=None, callback=None, callback_args=None, conf=None, 
         keepa_thr.start()
 
     # FAST EXIT FROM FUNCTION
-    def close_all(stime=None, cbk=None):
+    def close_all(cbk=None):
         if writer:
             for _ in range(conf.get('keepa', True) + conf.get('products', True) + conf.get('reviews', True)):
                 writer.send(False)
@@ -46,45 +44,27 @@ def start(asins, start_time=None, callback=None, callback_args=None, conf=None, 
             products_info_thr.join()
         if keepa_thr:
             keepa_thr.join()
-        if stime:
-            etime = datetime.datetime.now()
-            dtime = etime - stime
-            timedelta_text = (f'''{dtime.days} days, {dtime.seconds // 3600} hours, {dtime.seconds % 3600 // 60} minutes, '''
-                              f'''{dtime.seconds % 60} seconds, {dtime.microseconds} microseconds''')
-            print('The time of the collecting all data:', timedelta_text)
-            if cbk:
-                cbk(*callback_args, timedelta_text)
-            return dtime
         elif cbk:
-            cbk(*callback_args)
+            cbk(*callback_args, asins=asins)
         return None
     if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-        return close_all(start_time, callback)
+        return close_all(callback)
     # REVIEWS - in main process
     try:
         if not conf or conf.get('reviews', True):
             # process
             main(list(asins), conn_reader=reader)
-            # end time
-            end_time = datetime.datetime.now()
-            delta = end_time - start_time
-            print(
-                'The time of the reviews collecting:',
-                delta.days, 'days,', delta.seconds // 3600, 'hours,',
-                delta.seconds % 3600 // 60, 'minutes,', delta.seconds % 60, 'seconds,',
-                delta.microseconds, 'microseconds.'
-            )
-        return close_all(start_time, callback)
+        return close_all(callback)
     except KeyboardInterrupt:
         print('Script stopped')
-        return close_all(start_time, callback)
+        return close_all(callback)
     except Exception as e:
         # raise e
         print('Something went wrong... reloading all script after 10 seconds')
         print('ERROR:', e)
-        sleep(10)
         close_all()
-        return start(asins, start_time, callback, callback_args, conf)
+        sleep(10)
+        return start(asins, callback, callback_args, conf)
 
 
 # Parse raw asins list from TG message or file or other

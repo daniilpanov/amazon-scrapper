@@ -2,9 +2,9 @@
 
 import telebot
 from telebot import types
-from multiprocessing import Process, Pipe
 
 import main_collect_all
+import payload_manager
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
 
@@ -15,7 +15,6 @@ PASSWORD = '12345'
 
 auth_users = {320753905}
 processes = []
-pipe_reader, pipe_writer = Pipe(False)
 
 
 # Log helpers
@@ -75,26 +74,19 @@ def non_verification_user_msg(msg: types.Message):
     send_msg(msg.from_user.id, 'Verification failed. Please enter the master password')
 
 
-def callback(uid, asins_list_raw, timedelta_text):
-    send_msg(uid, 'List of this ASINs is ready in {}!\n'.format(timedelta_text) + asins_list_raw)
+def callback(uid, asins):
+    send_msg(uid, f'ASIN collected: {asins[0]}')
 
 
 def make_process(asins_list_raw, user_id):
     # Create new process
     send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
-    process = Process(target=main_collect_all.start, kwargs={
-        'asins': main_collect_all.get_all_asins_from_text(asins_list_raw),
-        'callback': callback, 'callback_args': (user_id, asins_list_raw),
-    })
-    process.start()
-    processes.append(process)
+    payload_manager.extend(main_collect_all.get_all_asins_from_text(asins_list_raw), callback, (user_id, ))
 
 
 if __name__ == '__main__':
     print('PROGRAM STARTED')
     bot.infinity_polling()
     print('PROGRAM IS CLOSING ALL TASKS')
-    for proc in processes:
-        pipe_writer.send(False)
-        proc.join()
+    payload_manager.close_all()
     print('PROGRAM ENDED')
