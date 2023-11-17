@@ -21,7 +21,7 @@ def start(asins, callback=None, callback_args=None, conf=None, conn_reader=None)
 
     # PROCESSES
     # check config, then check need
-    reader = writer = None
+    reader = writer = products_info_thr = keepa_thr = None
     if not conf or conf.get('products', True):
         reader, writer = Pipe(False)
         products_info_thr = Process(target=collect_products_info, args=(list(asins), reader))

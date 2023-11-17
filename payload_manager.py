@@ -20,6 +20,7 @@ def append(asin, callback, callback_args):
     def decrement():
         planned_asins.remove(asin)
     feat.add_done_callback(decrement)
+    print(asin, 'accepted')
 
 
 def close_all():
