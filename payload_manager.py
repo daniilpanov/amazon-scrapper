@@ -37,6 +37,9 @@ def extend(asins, callback, callback_args=None):
 
 
 def add_products_info_collect(asins):
+    for_collecting = set({asin for asin in asins if state.get_asin(asin, 'products') != -1})
+    asins = for_collecting
+
     feat = products_processes_pool.submit(collect_products.collect_products_info, asins, reader)
 
     def decrement(res):
