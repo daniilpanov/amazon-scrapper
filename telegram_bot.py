@@ -1,9 +1,9 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
+import re
 
 import telebot
 from telebot import types
 
-import main_collect_all
 import payload_manager
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
@@ -22,6 +22,17 @@ processes = []
 def send_msg(user_id, message, *args, **kwargs):
     print(f'Message to {user_id}: "{message}"')
     return bot.send_message(user_id, message, *args, **kwargs)
+
+
+# Parse raw asins list from TG message or file or other
+def get_all_asins_from_text(text: str):
+    pattern_find = re.compile('[A-Z0-9]{10}')
+    asins = set()
+    for line in text.strip().splitlines():
+        found = pattern_find.findall(line)
+        for item in found:
+            asins.add(item)
+    return list(asins)
 
 
 def receive_msg(msg: types.Message):
@@ -81,7 +92,7 @@ def callback(uid, asins):
 def make_process(asins_list_raw, user_id):
     # Create new process
     send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
-    queue.put((main_collect_all.get_all_asins_from_text(asins_list_raw), callback, (user_id,)))
+    queue.put((get_all_asins_from_text(asins_list_raw), callback, (user_id,)))
 
 
 if __name__ == '__main__':
