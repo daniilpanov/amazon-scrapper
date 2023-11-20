@@ -35,11 +35,14 @@ def extend(asins, callback, callback_args=None):
 def append(asin, callback, callback_args):
     if state.get_asin(asin) == -1:
         return callback(*callback_args, (asin,))
-    feat = processes_pool.submit(collect_reviews.main, [asin], conn_reader=reader)
+    feat = processes_pool.submit(collect_reviews.main, asin, reader)
     def decrement(_):
         planned_asins.remove(asin)
-    def cbk(_):
-        callback(*callback_args, (asin,))
+    def cbk(res):
+        if res.result():
+            callback(*callback_args, (asin,))
+        else:
+            append(asin, callback, callback_args)
     feat.add_done_callback(decrement)
     feat.add_done_callback(cbk)
     print(asin, 'accepted')
