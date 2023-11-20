@@ -212,7 +212,6 @@ def main(ASINs, conn_reader=None):
     user_emulate_thread.start()
     process_thread.start()
     writer_thread.start()
-    print('start all threads')
 
     try:
         for asin in ASINs:

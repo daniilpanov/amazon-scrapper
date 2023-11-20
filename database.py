@@ -128,7 +128,8 @@ if __name__ == '__main__':
     # print(db()['customer_reviews'].find().next())
     # print(db()['product_card'].delete_many({}))
     # print(db()['raw_product_card_htmls'].delete_many({}))
-    print(db()['product_card'].find().next())
-    print(db()['raw_product_card_htmls'].find().next()['asin'])
+    # print(db()['product_card'].find().next())
+    # print(db()['raw_product_card_htmls'].find().next()['asin'])
+    print(list(item['asin'] for item in db()['customer_reviews'].find(limit=10)))
     # print(keepa_db()['raw_htmls'].find().next())
 

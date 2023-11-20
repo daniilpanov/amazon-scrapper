@@ -7,7 +7,7 @@ import main_collect_all
 import payload_manager
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
-queue = payload_manager.init()
+queue, collect_thread = payload_manager.init()
 
 GET_ASINS = 'get_asins_data'
 GET_ASINS_CMD = '/' + GET_ASINS
@@ -45,9 +45,9 @@ def buttons():
 @bot.message_handler(commands=[GET_ASINS], func=check_login)
 def get_asins_data(msg: types.Message):
     receive_msg(msg)
-    content = msg.text.replace(GET_ASINS_CMD, '').strip()
-    if content:
-        return make_process(content, msg.from_user.id)
+    asins_raw = msg.text.replace(GET_ASINS_CMD, '').strip()
+    if asins_raw:
+        return make_process(asins_raw, msg.from_user.id)
     bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASINs list:'), get_asins)
 
 
@@ -61,7 +61,6 @@ def get_asins(msg: types.Message):
 @bot.message_handler(content_types=['text'], func=check_login)
 def get_text_messages(msg: types.Message):
     receive_msg(msg)
-
     send_msg(msg.from_user.id, 'Unknown command')
 
 

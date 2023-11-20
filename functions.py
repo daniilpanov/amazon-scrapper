@@ -93,17 +93,13 @@ class WebDriver(BaseCase):
 
 
 def captcha_check(webdriver: WebDriver):
-    url = webdriver.get_current_url()
     try:
-        webdriver.get('https://amazon.com')
         return (webdriver.find_text('Enter the characters you see below', timeout=.5)
                 and webdriver.find_text('Type the characters you see in this image:', timeout=.5))
     except:
         return False
     finally:
         webdriver.sleep(3)
-        webdriver.get('https://amazon.com')
-        webdriver.get(url)
 
 
 def captcha_solve(webdriver: WebDriver):
@@ -386,7 +382,6 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
 
 def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False):
     webdriver = modern_chrome_init(headless=headless, extension=extension, tor=tor)
-    webdriver.get('https://google.com/')
     ext_id = webdriver.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         webdriver.get(goto)

@@ -15,7 +15,7 @@ def init():
     q = Queue()
     thr = Thread(target=waiting, args=(q,))
     thr.start()
-    return q
+    return q, thr
 
 
 def waiting(q):
@@ -35,10 +35,10 @@ def extend(asins, callback, callback_args=None):
 def append(asin, callback, callback_args):
     if state.get_asin(asin) == -1:
         return callback(*callback_args, (asin,))
-    feat = processes_pool.submit(collect_reviews.main([asin], conn_reader=reader))
-    def decrement():
+    feat = processes_pool.submit(collect_reviews.main, [asin], conn_reader=reader)
+    def decrement(_):
         planned_asins.remove(asin)
-    def cbk():
+    def cbk(_):
         callback(*callback_args, (asin,))
     feat.add_done_callback(decrement)
     feat.add_done_callback(cbk)
