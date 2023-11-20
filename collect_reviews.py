@@ -222,22 +222,18 @@ def main(ASINs, conn_reader=None):
             if index == -1:
                 continue
             print('COLLECTING REVIEWS FOR ASIN', asin + ':')
-            with alive_bar(params_len, bar='classic') as bar:
-                bar(index, skipped=True)
-                for params_seed in range(index, params_len):
-                    if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-                        raise StopScript
-                    try:
-                        send_request(asin, params_seed)
-                        # print('request was sent. params: ', asin, params_seed)
-                    except Exception as e:
-                        if 'Bad ASIN' not in str(e):
-                            raise e
-                        logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
-                        print(f'Skip {asin}')
-                        continue
-                    finally:
-                        bar()
+            for params_seed in range(index, params_len):
+                if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
+                    raise StopScript
+                try:
+                    send_request(asin, params_seed)
+                    # print('request was sent. params: ', asin, params_seed)
+                except Exception as e:
+                    if 'Bad ASIN' not in str(e):
+                        raise e
+                    logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
+                    print(f'Skip {asin}')
+                    continue
         print('wait for writing the data...')
         print('DONE.')
         return start_time, datetime.datetime.now()
