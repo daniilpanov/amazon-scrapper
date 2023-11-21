@@ -1,5 +1,7 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
 import re
+from multiprocessing import Pipe
+from threading import Thread
 
 import telebot
 from telebot import types
@@ -7,7 +9,8 @@ from telebot import types
 import payload_manager
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
-queue, collect_thread = payload_manager.init()
+server_reader, client_writer = Pipe(False)
+queue, collect_thread = payload_manager.init(client_writer)
 
 GET_ASINS = 'get_asins_data'
 GET_ASINS_CMD = '/' + GET_ASINS
@@ -85,19 +88,36 @@ def non_verification_user_msg(msg: types.Message):
     send_msg(msg.from_user.id, 'Verification failed. Please enter the master password')
 
 
-def callback(uid, asins):
-    send_msg(uid, f'ASIN collected: {asins[0]}')
+def callback(uid, asin):
+    send_msg(uid, f'Reviews of ASIN collected: {asin}')
 
 
 def make_process(asins_list_raw, user_id):
     # Create new process
     send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
-    queue.put((get_all_asins_from_text(asins_list_raw), callback, (user_id,)))
+    asins = set(get_all_asins_from_text(asins_list_raw))
+    queue.put((asins, callback, (user_id,)))
+
+
+def products_alerts():
+    while True:
+        res = server_reader.recv()
+        if not res:
+            break
+        chat_id, res = res
+        bot.send_message(chat_id, f'Product cards of those ASIN\'s collected: {",".join(res)}')
 
 
 if __name__ == '__main__':
     print('PROGRAM STARTED')
+    make_process('''B0000BYCFU
+B0002808ZM
+''', 1428909514)
+    alerts_thr = Thread(target=products_alerts)
+    alerts_thr.start()
     bot.infinity_polling()
     print('PROGRAM IS CLOSING ALL TASKS')
     payload_manager.close_all()
+    client_writer.send(False)
+    alerts_thr.join()
     print('PROGRAM ENDED')
