@@ -24,19 +24,20 @@ def init(prods_conn=None):
 def waiting(q, prods_conn=None):
     res = q.get()
     while res:
+        res = res
         extend(*res, prods_conn=prods_conn)
         res = q.get()
 
 
-def extend(asins, callback, callback_args=None, prods_conn=None):
+def extend(asins, callback, chat_id=None, callback_args=None, prods_conn=None):
     if not callback_args:
         callback_args = []
     for asin in asins:
-        append(asin, callback, callback_args)
-    add_products_info_collect(asins, prods_conn)
+        append(asin, callback, callback_args + [chat_id])
+    add_products_info_collect(asins, prods_conn, chat_id)
 
 
-def add_products_info_collect(asins, conn=None):
+def add_products_info_collect(asins, conn=None, chat_id=None):
     if not asins:
         return
     for_collecting = set({asin for asin in asins if state.get_asin(asin, 'products') != -1})
@@ -49,19 +50,19 @@ def add_products_info_collect(asins, conn=None):
         collected_asins = res.result()
         if not collected_asins:
             if conn:
-                conn.send(asins)
-            return add_products_info_collect(asins)
+                conn.send((chat_id, asins))
+            return add_products_info_collect(asins, conn, chat_id)
         if collected_asins == -1:
             products_planned_asins -= asins
             if conn:
-                conn.send(asins)
+                conn.send((chat_id, asins))
             return
         not_collected_asins = asins - collected_asins
         products_planned_asins -= collected_asins
         if conn:
-            conn.send(collected_asins)
+            conn.send((chat_id, collected_asins))
         if len(not_collected_asins) > 0:
-            add_products_info_collect(not_collected_asins)
+            add_products_info_collect(not_collected_asins, conn, chat_id)
 
     feat.add_done_callback(decrement)
 

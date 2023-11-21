@@ -96,7 +96,7 @@ def make_process(asins_list_raw, user_id):
     # Create new process
     send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
     asins = set(get_all_asins_from_text(asins_list_raw))
-    queue.put((asins, callback, (user_id,)))
+    queue.put((asins, callback, user_id))
 
 
 def products_alerts():
@@ -114,7 +114,9 @@ if __name__ == '__main__':
     alerts_thr.start()
     bot.infinity_polling()
     print('PROGRAM IS CLOSING ALL TASKS')
+    queue.put(None)
     payload_manager.close_all()
     client_writer.send(False)
     alerts_thr.join()
+    collect_thread.join()
     print('PROGRAM ENDED')
