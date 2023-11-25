@@ -1,5 +1,6 @@
 import json
 import os.path
+from time import sleep
 
 
 def chunk(s, w=10):
@@ -28,12 +29,14 @@ def convert():
 
 
 def get_asin(asin, _type='reviews'):
-    if not os.path.exists(f'states/collect-{_type}.state'):
-        return False
-    with open(f'states/collect-{_type}.state') as sf:
-        asins = chunk(sf.read())
-    if asin in asins:
-        return -1
+    if os.path.exists(f'states/collect-{_type}.state'):
+        with open(f'states/collect-{_type}.state') as sf:
+            asins = chunk(sf.read())
+        if asin in asins:
+            return -1
+    else:
+        with open(f'states/collect-{_type}.state', 'w'):
+            pass
     if not os.path.exists(f'states/collect-{_type}-{asin}.currstate'):
         return False
     with open(f'states/collect-{_type}-{asin}.currstate') as csf:

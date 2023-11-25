@@ -17,7 +17,7 @@ GET_ASINS_CMD = '/' + GET_ASINS
 BTN_CMD_IDs = ((GET_ASINS_CMD, 'Get and process list of ASINs'),)
 PASSWORD = '12345'
 
-auth_users = {320753905}
+auth_users = {320753905, 1428909514}
 processes = []
 
 
@@ -102,6 +102,7 @@ def make_process(asins_list_raw, user_id):
 def products_alerts():
     while True:
         res = server_reader.recv()
+        print(res)
         if not res:
             break
         chat_id, res = res

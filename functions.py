@@ -377,6 +377,8 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
         sb.headless_active = False
     sb.setUp()
 
+    sb.get('https://amazon.com')
+
     return sb
 
 

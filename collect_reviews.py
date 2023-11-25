@@ -130,6 +130,8 @@ def send_request(asin, seed):
         except (JavascriptException, RetryException, TimeoutException) as e:
             logger.error('Exception', exc_info=True, stack_info=True)
             print(e)
+            print('something went wrong. send this ASIN to the end of a queue')
+            return False
             print('something went wrong. retry... ')
             sleep(1)
             try:
@@ -184,13 +186,16 @@ def main(asin, conn_reader=None):
             if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
                 raise StopScript
             try:
-                return send_request(asin, params_seed)
+                if not send_request(asin, params_seed):
+                    logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
+                    print(f'Skip {asin}')
+                    return False
             except Exception as e:
                 if 'Bad ASIN' not in str(e):
                     raise e
                 logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
                 print(f'Skip {asin}')
-                continue
+                return False
         return True
     except (InvalidSessionIdException, RetryException) as e:
         logger.error(f'Error!', exc_info=True, stack_info=True)
