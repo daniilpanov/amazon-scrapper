@@ -4,7 +4,6 @@ from multiprocessing import Process, Pipe
 from time import sleep
 
 import pytz
-from numpy import datetime_data
 
 from collect_keepa import keepa_start
 from collect_products import collect_products_info
@@ -89,7 +88,7 @@ def start(asins, start_time=None, callback=None, callback_args=None, conf=None, 
 
 # Parse raw asins list from TG message or file or other
 def get_all_asins_from_text(text: str):
-    pattern_find = re.compile('[A-Z0-9]{10}')
+    pattern_find = re.compile('B0[A-Z0-9]{8}')
     asins = set()
     for line in text.strip().splitlines():
         found = pattern_find.findall(line)

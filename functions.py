@@ -1,17 +1,22 @@
 import os
 import random
+import time
 from time import sleep
 
 import colorama
 import requests
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
+from selenium import webdriver
 from selenium.common import JavascriptException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.common.by import By
-from seleniumbase import BaseCase
-from seleniumbase import config as sbc
+from seleniumbase import config as sbc, BaseCase
 from seleniumbase.fixtures import constants
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 sb_config = sbc
 
@@ -26,20 +31,41 @@ except ImportError as e:
     captchaAI = False
 
 
-class WebDriver(BaseCase):
+class WebDriver:
+    driver: webdriver.Chrome
+
+    def __init__(self, driver):
+        self.driver = driver
+
+    def wait_for_loading(self, elem=None):
+        if not elem:
+            return WebDriverWait(self.driver, 30).until(
+                EC.presence_of_element_located((By.TAG_NAME, "html"))
+            )
+        return WebDriverWait(self.driver, 30).until(
+            EC.presence_of_element_located(elem if type(elem) is tuple else (By.CSS_SELECTOR, elem))
+        )
+
+    def click(self, elem, by=By.CSS_SELECTOR, timeout=None):
+        if timeout:
+            el = self.wait_for_loading((by, elem))
+        else:
+            el = self.find_element(by, elem)
+        el.click()
+        return el
+
     def activate_jquery(self):
         return insert_jquery(self)
 
     def get_extension_id(self, name_contains):
-        self.sleep(1)
         self.get('chrome://extensions')
         # find ID of the extension
-        self.sleep(5)
-        self.get_page_source()  # it works! maybe due to waiting loading?
+        self.wait_for_loading()
+        sleep(5)
         items = None
         try:
             # click to devmode
-            root_el = self.get_element('extensions-manager', timeout=1).shadow_root
+            root_el = self.find_element(By.TAG_NAME, 'extensions-manager').shadow_root
             items = root_el.find_element(By.CSS_SELECTOR, '#container extensions-item-list').shadow_root.find_elements(
                 By.CSS_SELECTOR,
                 '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
@@ -58,8 +84,8 @@ class WebDriver(BaseCase):
         return _id
 
     def change_loc(self, retry=True):
-        self.sleep(.5)
-        url = self.get_current_url()
+        sleep(.5)
+        url = self.current_url
         self.activate_jquery()
         try:
             # переход к необходимой локации - US (UM)
@@ -83,39 +109,168 @@ class WebDriver(BaseCase):
                 '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
             )
             self.refresh()
-            self.sleep(1)
+            self.wait_for_loading()
+            sleep(1)
             self.get(url)
             self.activate_jquery()
+            self.wait_for_loading()
         except JavascriptException as e:
             if retry and '$ is not defined' in e.msg:
-                self.sleep(1)
+                sleep(1)
                 self.change_loc(False)
+                self.wait_for_loading()
+
+    def get_page_source(self):
+        return self.driver.page_source
+
+    def change_loc_like_user(self):
+        # nav-global-location-popover-link
+        # GLUXCountryValue
+        # li[aria-labelledby^="GLUXCountryList"] -> only with data-value='{\"stringVal\":\"UM\"}'
+        # GLUXConfirmClose
+        self.click('a#nav-global-location-popover-link', timeout=5)
+        self.click('#GLUXCountryValue', timeout=5)
+        try:
+            self.click("li[aria-labelledby^='GLUXCountryList'][data-value='{\"stringVal\":\"UM\"}']", timeout=2)
+        except:
+            self.click('#GLUXCountryValue', timeout=1)
+            self.execute_script("document.querySelector(\"li[aria-labelledby^='GLUXCountryList'] a[data-value='{\\\"stringVal\\\":\\\"UM\\\"}']\").click();")
+        self.click('#GLUXConfirmClose', timeout=4)
+        self.refresh()
+        self.wait_for_loading()
+
+    def add_js_link(self, js_link):
+        script_to_add_js = """function injectJS(link) {
+                  var body_tag=document.getElementsByTagName("body")[0];
+                  var script_tag=document.createElement("script");
+                  script_tag.src=link;
+                  script_tag.type="text/javascript";
+                  script_tag.crossorigin="anonymous";
+                  script_tag.defer;
+                  script_tag.onload=function() { null };
+                  body_tag.appendChild(script_tag);
+               }
+               injectJS("%s");"""
+        if js_link.count("\\'") != js_link.count("'") or (
+                js_link.count('\\"') != js_link.count('"')
+        ):
+            if js_link.count("'") != js_link.count("\\'"):
+                js_link = js_link.replace("'", "\\'")
+            if js_link.count('"') != js_link.count('\\"'):
+                js_link = js_link.replace('"', '\\"')
+        self.execute_script(script_to_add_js % js_link)
+
+    def sleep(self, sec):
+        sleep(sec)
+
+    def find_text(self, text, selector="html", by=By.CSS_SELECTOR, timeout=None):
+        element = None
+        is_present = False
+        full_text = None
+        text = str(text)
+        start_ms = time.time() * 1000.0
+        stop_ms = start_ms + (timeout * 1000.0)
+        for x in range(int(timeout * 10)):
+            full_text = None
+            try:
+                element = self.find_element(by, selector)
+                is_present = True
+                if element.tag_name.lower() in ["input", "textarea"]:
+                    if element.is_displayed() and text in element.get_property("value"):
+                        return element
+                    else:
+                        if element.is_displayed():
+                            full_text = element.get_property("value").strip()
+                        element = None
+                        raise Exception()
+                else:
+                    if element.is_displayed() and text in element.text:
+                        return element
+                    else:
+                        if element.is_displayed():
+                            full_text = element.text.strip()
+                        element = None
+                        raise Exception()
+            except Exception:
+                now_ms = time.time() * 1000.0
+                if now_ms >= stop_ms:
+                    break
+                time.sleep(0.1)
+        plural = "s"
+        if timeout == 1:
+            plural = ""
+        if not element:
+            if not is_present:
+                # The element does not exist in the HTML
+                message = "Element {%s} was not present after %s second%s!" % (
+                    selector,
+                    timeout,
+                    plural,
+                )
+            # The element exists in the HTML, but the text is not visible
+            elif not full_text or len(str(full_text.replace("\n", ""))) > 320:
+                message = (
+                        "Expected text substring {%s} for {%s} was not visible "
+                        "after %s second%s!" % (text, selector, timeout, plural)
+                )
+            else:
+                full_text = full_text.replace("\n", "\\n ")
+                message = (
+                        "Expected text substring {%s} for {%s} was not visible "
+                        "after %s second%s!\n (Actual string found was {%s})"
+                        % (text, selector, timeout, plural, full_text)
+                )
+            print(message)
+            return None
+        else:
+            return element
+
+    def click_link_text(self, text):
+        el = self.find_text(text)
+        if not el:
+            return False
+        el.click()
+        return True
+
+    def type(self, selector, text, by=By.CSS_SELECTOR):
+        self.find_element(by, selector).send_keys(text)
+
+    def submit(self, selector, by=By.CSS_SELECTOR):
+        self.find_element(by, selector).submit()
+
+    def get_element(self, selector, by=By.CSS_SELECTOR):
+        return self.driver.find_element(by, selector)
+
+    def __getattr__(self, item):
+        print(item)
+        return self.driver.__getattribute__(item)
 
 
-def captcha_check(webdriver: WebDriver):
-    url = webdriver.get_current_url()
+
+def captcha_check(wd):
+    url = wd.current_url
     try:
-        webdriver.get('https://amazon.com')
-        return (webdriver.find_text('Enter the characters you see below', timeout=.5)
-                and webdriver.find_text('Type the characters you see in this image:', timeout=.5))
+        wd.get('https://amazon.com')
+        return (wd.find_text('Enter the characters you see below', timeout=.5)
+                and wd.find_text('Type the characters you see in this image:', timeout=.5))
     except:
         return False
     finally:
-        webdriver.sleep(3)
-        webdriver.get('https://amazon.com')
-        webdriver.get(url)
+        wd.sleep(3)
+        wd.get('https://amazon.com')
+        wd.get(url)
 
 
-def captcha_solve(webdriver: WebDriver):
-    if not captcha_check(webdriver):
+def captcha_solve(wd: WebDriver):
+    if not captcha_check(wd):
         return True
 
-    webdriver.click_link_text('Try different image')
-    webdriver.sleep(.25)
-    if not captcha_check(webdriver):
+    wd.click_link_text('Try different image')
+    wd.sleep(.25)
+    if not captcha_check(wd):
         return True
 
-    captcha = webdriver.get_element('img[src]')
+    captcha = wd.find_element('img[src]')
     img_source = requests.get(captcha.get_attribute('src'))
     if not img_source:
         return False
@@ -134,30 +289,25 @@ def captcha_solve(webdriver: WebDriver):
     os.remove(filepath)
     if not text:
         return False
-    webdriver.type('#captchacharacters', text)
-    webdriver.submit('#captchacharacters')
-    webdriver.sleep(2)
-    return not captcha_check(webdriver)
+    wd.type('#captchacharacters', text)
+    wd.submit('#captchacharacters')
+    wd.sleep(2)
+    return not captcha_check(wd)
 
 
-def insert_jquery(webdriver):
+def insert_jquery(wd):
     try:
-        webdriver.execute_script('jQuery("html")')
+        wd.execute_script('jQuery("html")')
     except JavascriptException:
-        webdriver.execute_script("""
-        var jq = document.createElement('script');
-        jq.id = 'JQUERY_ELEMENT_SCRIPT';
-        jq.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js";
-        document.getElementsByTagName('head')[0].appendChild(jq);
-        """)
-        webdriver.sleep(3)
+        wd.add_js_link('https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js')
+        wd.sleep(3)
 
 
-def user_emulate(webdriver, ev):
+def user_emulate(wd, ev):
     try:
         while not ev.is_set():
-            action = ActionChains(webdriver.driver)
-            webdriver.focus('body')
+            action = ActionChains(wd.driver)
+            wd.focus('body')
             for i in range(random.randint(20, 50)):
                 action.scroll_by_amount(0, random.randint(-4, 4) * 10).perform()
                 sleep(0.2)
@@ -168,7 +318,7 @@ def user_emulate(webdriver, ev):
         print('User emulation is stopped due to an error:', ex)
         print('Reloading...')
         sleep(20)
-        return user_emulate(webdriver, ev)
+        return user_emulate(wd, ev)
 
 
 class RetryException(Exception):
@@ -275,7 +425,7 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
     sb_config.cap_file = None
     sb_config.cap_string = None
 
-    sb = WebDriver()
+    sb = WebDriver(BaseCase())
     sb.with_testing_base = sb_config.with_testing_base
     sb.browser = sb_config.browser
     sb.is_behave = False
@@ -385,20 +535,28 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
 
 
 def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False):
-    webdriver = modern_chrome_init(headless=headless, extension=extension, tor=tor)
-    webdriver.get('https://google.com/')
-    ext_id = webdriver.get_extension_id(get_ext_id) if get_ext_id else None
+    wd = modern_chrome_init(headless=headless, extension=extension, tor=tor)
+
+    ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
-        webdriver.get(goto)
-        print('Result of solving captcha:', captcha_solve(webdriver))
+        wd.get(goto)
+        print('Result of solving captcha:', captcha_solve(wd))
     if get_ext_id:
-        return webdriver, ext_id
-    return webdriver
+        return wd, ext_id
+    return wd
 
 
-def chrome_close(webdriver: WebDriver):
+def base_chrome_init(headless=True, goto=None):
+    wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())))
+    if goto:
+        wd.get(goto)
+        print('Result of solving captcha:', captcha_solve(wd))
+    return wd
+
+
+def chrome_close(wd: WebDriver):
     try:
-        webdriver.driver.close()
+        wd.driver.close()
         return True
     except:
         return False
