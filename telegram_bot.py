@@ -7,14 +7,20 @@ import telebot
 from telebot import types
 
 import payload_manager
+from helpers import get_all_asins_from_text
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
 server_reader, client_writer = Pipe(False)
 queue, collect_thread = payload_manager.init(client_writer)
 
 GET_ASINS = 'get_asins_data'
+CSV_EXPORT_ASINS = 'get_asins_data'
 GET_ASINS_CMD = '/' + GET_ASINS
-BTN_CMD_IDs = ((GET_ASINS_CMD, 'Get and process list of ASINs'),)
+CSV_EXPORT_ASINS_CMD = '/' + CSV_EXPORT_ASINS
+BTN_CMDs = (
+    (GET_ASINS_CMD, 'Get and process list of ASINs'),
+    (CSV_EXPORT_ASINS_CMD, 'Export all data of ASINs in the CSV format'),
+)
 PASSWORD = '12345'
 
 auth_users = {320753905, 1428909514}
@@ -27,17 +33,6 @@ def send_msg(user_id, message, *args, **kwargs):
     return bot.send_message(user_id, message, *args, **kwargs)
 
 
-# Parse raw asins list from TG message or file or other
-def get_all_asins_from_text(text: str):
-    pattern_find = re.compile('[A-Z0-9]{10}')
-    asins = set()
-    for line in text.strip().splitlines():
-        found = pattern_find.findall(line)
-        for item in found:
-            asins.add(item)
-    return list(asins)
-
-
 def receive_msg(msg: types.Message):
     print(f'Receive message from {msg.from_user.id}:', msg.text)
 
@@ -48,7 +43,7 @@ def check_login(msg: types.Message):
 
 def buttons():
     keyboard = types.InlineKeyboardMarkup()
-    for cmd_id, descr in BTN_CMD_IDs:
+    for cmd_id, descr in BTN_CMDs:
         key = types.InlineKeyboardButton(text=descr, callback_data=cmd_id)
         keyboard.add(key)
 
@@ -92,6 +87,11 @@ def callback(uid, asin):
     send_msg(uid, f'Reviews of ASIN collected: {asin}')
 
 
+def export_asins(asins_list, user_id):
+    # bot.send_document()
+    pass
+
+
 def make_process(asins_list_raw, user_id):
     # Create new process
     send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
@@ -113,6 +113,7 @@ if __name__ == '__main__':
     print('PROGRAM STARTED')
     alerts_thr = Thread(target=products_alerts)
     alerts_thr.start()
+    buttons()
     bot.infinity_polling()
     print('PROGRAM IS CLOSING ALL TASKS')
     queue.put(None)
