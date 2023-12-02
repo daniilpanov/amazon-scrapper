@@ -17,7 +17,7 @@ server_reader, client_writer = Pipe(False)
 queue, collect_thread = payload_manager.init(client_writer)
 
 GET_ASINS = 'get_asins_data'
-CSV_EXPORT_ASINS = 'get_asins_data'
+CSV_EXPORT_ASINS = 'export_asins'
 GET_ASINS_CMD = '/' + GET_ASINS
 CSV_EXPORT_ASINS_CMD = '/' + CSV_EXPORT_ASINS
 BTN_CMDs = (
@@ -69,7 +69,7 @@ def export_asins_cmd(msg: types.Message):
     asins_raw = msg.text.replace(CSV_EXPORT_ASINS_CMD, '').strip()
     if asins_raw:
         export_asins(get_all_asins_from_text(asins_raw), msg.from_user.id)
-        export_asins(get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card')
+        return export_asins(get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card')
     bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASINs list:'), export_asins_msg)
 
 
@@ -109,6 +109,8 @@ def callback(uid, asin):
 
 
 def export_asins(asins_list, user_id, collection='customer_reviews'):
+    if not asins_list:
+        return bot.send_message(user_id, 'No product found')
     data = database.db()[collection].find({'asin': {'$in': asins_list}})
     df = pd.DataFrame(columns=(data[0].keys() - ['_id']))
     for row in data:
@@ -124,8 +126,10 @@ def export_asins(asins_list, user_id, collection='customer_reviews'):
 
 def make_process(asins_list_raw, user_id):
     # Create new process
-    send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
     asins = set(get_all_asins_from_text(asins_list_raw))
+    if not asins:
+        return bot.send_message(user_id, 'No valid ASIN detected')
+    send_msg(user_id, 'Process started. We\'ll notify you when it is completed')
     queue.put((asins, callback, user_id))
 
 
