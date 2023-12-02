@@ -246,7 +246,6 @@ class WebDriver:
         return self.driver.__getattribute__(item)
 
 
-
 def captcha_check(wd):
     url = wd.current_url
     try:
@@ -531,12 +530,13 @@ def modern_chrome_init(headless=True, user_path=None, user_settings=None, extens
         sb.headless_active = False
     sb.setUp()
 
+    sb.get('https://amazon.com')
+
     return sb
 
 
 def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False):
     wd = modern_chrome_init(headless=headless, extension=extension, tor=tor)
-
     ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         wd.get(goto)

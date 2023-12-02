@@ -133,7 +133,11 @@ def parse_product(asin, html):
             f.write(str(bs))
         return False
     title = bs.select_one('#titleSection, #title, #productTitle').text.strip()
-    descr = bs.find(id='feature-bullets').text.strip()
+    descr = bs.select_one('#feature-bullets, #productFactsDesktop_feature_div div[aria-expanded][style]')
+    if not descr:
+        print(f'ERROR: ASIN {asin} has no description!')
+    else:
+        descr = descr.text.strip()
     pic = bs.find(id='landingImage')['src']
     features = {}
     top5 = []

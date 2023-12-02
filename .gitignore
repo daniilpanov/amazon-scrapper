@@ -6,3 +6,5 @@ venv
 *.csv
 state.json
 out/*
+*.log
+*/*.log

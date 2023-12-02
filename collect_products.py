@@ -110,15 +110,17 @@ def callback_wait(callback, queue):
 
 def collect_products_info(products_info_list, conn_reader=None):
     if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-        return
+        return -1
     products_info_list = list([asin for asin in products_info_list if state.get_asin(asin, 'products') != -1])
     if not products_info_list:
-        return
+        return -1
     webdriver = chrome_init(goto='https://amazon.com')
     webdriver.change_loc()
+    collected = set()
 
     for el in products_info_list:
         if state.get_asin(el, 'products') == -1:
+            collected.add(el)
             continue
         if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
             return webdriver.driver.quit()
@@ -126,11 +128,12 @@ def collect_products_info(products_info_list, conn_reader=None):
         captcha_solve(webdriver)
         webdriver.activate_jquery()
 
-        webdriver.save_page_source('html')
-        state.write_asin(el, 960, 'products')
-        product_info_write(el, webdriver.get_page_source())
+        if product_info_write(el, webdriver.get_page_source()):
+            state.write_asin(el, 960, 'products')
+            collected.add(el)
 
     webdriver.driver.quit()
+    return collected
 
 
 
@@ -155,5 +158,7 @@ def product_info_write(asin, html):
     try:
         data = parse_product(asin, html)
         db.write_product_parsed(*data)
+        return True
     except Exception as e:
         print(f'ERROR when parsing asin: {asin} -- ', e)
+        return False
