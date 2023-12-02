@@ -1,11 +1,14 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
-import re
+import os
+
+import pandas as pd
 from multiprocessing import Pipe
 from threading import Thread
 
 import telebot
 from telebot import types
 
+import database
 import payload_manager
 from helpers import get_all_asins_from_text
 
@@ -52,12 +55,30 @@ def buttons():
 
 # BOT INTERFACE
 @bot.message_handler(commands=[GET_ASINS], func=check_login)
-def get_asins_data(msg: types.Message):
+def get_asins_cmd(msg: types.Message):
     receive_msg(msg)
     asins_raw = msg.text.replace(GET_ASINS_CMD, '').strip()
     if asins_raw:
         return make_process(asins_raw, msg.from_user.id)
     bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASINs list:'), get_asins)
+
+
+@bot.message_handler(commands=[CSV_EXPORT_ASINS], func=check_login)
+def export_asins_cmd(msg: types.Message):
+    receive_msg(msg)
+    asins_raw = msg.text.replace(CSV_EXPORT_ASINS_CMD, '').strip()
+    if asins_raw:
+        export_asins(get_all_asins_from_text(asins_raw), msg.from_user.id)
+        export_asins(get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card')
+    bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASINs list:'), export_asins_msg)
+
+
+def export_asins_msg(msg: types.Message):
+    receive_msg(msg)
+    if not check_login(msg):
+        return
+    export_asins(get_all_asins_from_text(msg.text.strip()), msg.from_user.id)
+    export_asins(get_all_asins_from_text(msg.text.strip()), msg.from_user.id, 'product_card')
 
 
 def get_asins(msg: types.Message):
@@ -87,10 +108,18 @@ def callback(uid, asin):
     send_msg(uid, f'Reviews of ASIN collected: {asin}')
 
 
-def export_asins(asins_list, user_id):
-    database
-    # bot.send_document()
-    pass
+def export_asins(asins_list, user_id, collection='customer_reviews'):
+    data = database.db()[collection].find({'asin': {'$in': asins_list}})
+    df = pd.DataFrame(columns=(data[0].keys() - ['_id']))
+    for row in data:
+        df.loc[len(df.index)] = row
+    if not os.path.exists('tmp'):
+        os.mkdir('tmp')
+    path = os.path.join('tmp', str(hash(df.loc)) + '.csv')
+    df.to_csv(path, index=False)
+    with open(path, 'rb') as doc:
+        bot.send_document(user_id, doc)
+    os.remove(path)
 
 
 def make_process(asins_list_raw, user_id):
