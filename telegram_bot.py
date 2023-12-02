@@ -88,6 +88,7 @@ def callback(uid, asin):
 
 
 def export_asins(asins_list, user_id):
+    database
     # bot.send_document()
     pass
 

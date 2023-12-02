@@ -10,9 +10,11 @@ client: MongoClient | None = None
 config = {
     'url': 'cluster0.tcwqk03.mongodb.net/?retryWrites=true&w=majority',
     'username': 'scrape_processing',
+    # 'username': 'ai_operator',
     'database': 'amazon_data',
     'keepa_database': 'keepa',
     'password': 'gxYSEvBIDTgy6RIg',
+    # 'password': 'jEWVWuNrgrqTkn7w',
     'proxy': 'http://Daniel:OsdKey0909@46.19.33.214:3128',
     'url_prefix': 'mongodb+srv',
 }
