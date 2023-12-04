@@ -29,6 +29,7 @@ def get_all_asins_from_deal(wd: WebDriver, deal_link, q_asins=None):
             q_asins.put(asins[0])
     return q_asins
 
+
 def get_all_deals(wd, q_deals=None, q_asins=None):
     if q_deals is None:
         q_deals = Queue()
@@ -44,7 +45,10 @@ def get_all_deals(wd, q_deals=None, q_asins=None):
     try:
         while last_button and 'a-disabled' not in last_button.get_attribute('class'):
             # collect
-            links = map(lambda el: el.get_attribute('href'), wd.find_elements(By.CSS_SELECTOR, 'div[class^="DealGridItem-module__dealItemDisplayGrid"] a:first-child'))
+            links = map(lambda el: el.get_attribute('href'), wd.find_elements(
+                By.CSS_SELECTOR,
+                'div[class^="DealGridItem-module__dealItemDisplayGrid"] a:first-child',
+            ))
             for link in links:
                 asins = get_all_asins_from_text(link)
                 if len(asins) > 0:
@@ -65,8 +69,13 @@ def get_all_deals(wd, q_deals=None, q_asins=None):
     finally:
         return q_deals, q_asins
 
+
 if __name__ == '__main__':
-    wdr = base_chrome_init(False, goto='https://www.amazon.com/deals/ref=cg_BFLOHERO_1a1_w?pf_rd_m=ATVPDKIKX0DER&pf_rd_s=slot-2&pf_rd_r=5QZFK381M65Q9B7H90E7&pf_rd_t=0&pf_rd_p=55c21ce1-047a-4190-bd23-78871098dae7&pf_rd_i=cybermonday')
+    wdr = base_chrome_init(
+        False,
+        goto='https://www.amazon.com/deals/ref=cg_BFLOHERO_1a1_w?pf_rd_m=ATVPDKIKX0DER&pf_rd_s=slot-2&pf_rd_r'
+             '=5QZFK381M65Q9B7H90E7&pf_rd_t=0&pf_rd_p=55c21ce1-047a-4190-bd23-78871098dae7&pf_rd_i=cybermonday'
+    )
     qd, qa = get_all_deals(wdr)
     print(get_all_asins_from_deal(wdr, qd.get()).get())
     try:

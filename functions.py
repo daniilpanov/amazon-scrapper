@@ -10,6 +10,7 @@ from random_user_agent.user_agent import UserAgent
 from selenium import webdriver
 from selenium.common import JavascriptException
 from selenium.webdriver import Keys, ActionChains
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from seleniumbase import config as sbc, BaseCase
 from seleniumbase.fixtures import constants
@@ -134,7 +135,8 @@ class WebDriver:
             self.click("li[aria-labelledby^='GLUXCountryList'][data-value='{\"stringVal\":\"UM\"}']", timeout=2)
         except:
             self.click('#GLUXCountryValue', timeout=1)
-            self.execute_script("document.querySelector(\"li[aria-labelledby^='GLUXCountryList'] a[data-value='{\\\"stringVal\\\":\\\"UM\\\"}']\").click();")
+            self.execute_script("document.querySelector(\"li[aria-labelledby^='GLUXCountryList'] a[data-value='{"
+                                "\\\"stringVal\\\":\\\"UM\\\"}']\").click();")
         self.click('#GLUXConfirmClose', timeout=4)
         self.refresh()
         self.wait_for_loading()
@@ -182,7 +184,7 @@ class WebDriver:
                         if element.is_displayed():
                             full_text = element.get_property("value").strip()
                         element = None
-                        raise Exception()
+                        raise Exception
                 else:
                     if element.is_displayed() and text in element.text:
                         return element
@@ -190,7 +192,7 @@ class WebDriver:
                         if element.is_displayed():
                             full_text = element.text.strip()
                         element = None
-                        raise Exception()
+                        raise Exception
             except Exception:
                 now_ms = time.time() * 1000.0
                 if now_ms >= stop_ms:
@@ -247,9 +249,11 @@ class WebDriver:
 
 
 def captcha_check(wd):
+    wd.wait_for_loading()
     url = wd.current_url
     try:
         wd.get('https://amazon.com')
+        wd.wait_for_loading()
         return (wd.find_text('Enter the characters you see below', timeout=.5)
                 and wd.find_text('Type the characters you see in this image:', timeout=.5))
     except:
@@ -258,6 +262,8 @@ def captcha_check(wd):
         wd.sleep(3)
         wd.get('https://amazon.com')
         wd.get(url)
+        wd.wait_for_loading()
+        wd.activate_jquery()
 
 
 def captcha_solve(wd: WebDriver):
@@ -290,7 +296,8 @@ def captcha_solve(wd: WebDriver):
         return False
     wd.type('#captchacharacters', text)
     wd.submit('#captchacharacters')
-    wd.sleep(2)
+    wd.sleep(1)
+    wd.wait_for_loading()
     return not captcha_check(wd)
 
 
@@ -546,11 +553,32 @@ def chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=
     return wd
 
 
-def base_chrome_init(headless=True, goto=None):
-    wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())))
+def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False):
+    opts = Options()
+    if extension:
+        opts.add_extension(os.path.abspath(extension))
+    if tor:
+        opts.add_argument('proxy-server=socks5://104.154.150.173:9050')
+    if headless:
+        opts.add_argument('--headless')
+        opts.add_argument('--headless=new')
+        opts.add_argument('--no-sandbox')
+        opts.add_argument('--disable-gpu')
+    opts.add_argument('start-maximized')
+    opts.add_argument('disable-infobars')
+    opts.add_experimental_option('excludeSwitches', ['ignore-certificate-errors'])
+    opts.add_argument('user-agent={}'.format(
+        UserAgent(software_names=(SoftwareName.CHROME.value,),
+                  operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value),
+                  limit=120).get_random_user_agent(),
+    ))
+    wd = WebDriver(webdriver.Chrome(opts, ChromeService(ChromeDriverManager().install())))
+    ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         wd.get(goto)
         print('Result of solving captcha:', captcha_solve(wd))
+    if get_ext_id:
+        return wd, ext_id
     return wd
 
 
