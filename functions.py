@@ -38,12 +38,12 @@ class WebDriver:
     def __init__(self, driver):
         self.driver = driver
 
-    def wait_for_loading(self, elem=None):
+    def wait_for_loading(self, elem=None, timeout=30):
         if not elem:
-            return WebDriverWait(self.driver, 30).until(
+            return WebDriverWait(self.driver, timeout).until(
                 EC.presence_of_element_located((By.TAG_NAME, "html"))
             )
-        return WebDriverWait(self.driver, 30).until(
+        return WebDriverWait(self.driver, timeout).until(
             EC.presence_of_element_located(elem if type(elem) is tuple else (By.CSS_SELECTOR, elem))
         )
 

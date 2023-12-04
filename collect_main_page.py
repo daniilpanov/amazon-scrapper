@@ -2,7 +2,7 @@ import sys
 from queue import Queue
 from time import sleep
 
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 
 from functions import base_chrome_init, WebDriver
@@ -19,12 +19,17 @@ def get_all_asins_from_deal(wd: WebDriver, deal_link, q_asins=None):
         q_asins = Queue()
     wd.get(deal_link)
     try:
-        wd.wait_for_loading('.octops-dlp-asin-stream-section')
-        links = wd.find_elements(By.CSS_SELECTOR, '.octops-dlp-asin-stream-section a.a-size-base[href*="B0"]')
-    except NoSuchElementException:
+        wd.wait_for_loading('.octops-dlp-asin-stream-section, '
+                            '#productInfoList, '
+                            'span[data-component-type="s-search-results"]', 5)
+        links = wd.find_elements(By.CSS_SELECTOR, '.octops-dlp-asin-stream-section a[href*="B0"],'
+                                                  '#productInfoList a[href*="B0"],'
+                                                  'span[data-component-type="s-search-results"] a[href*="B0"]')
+    except (NoSuchElementException, TimeoutException):
         return False
+    links = set([link.get_attribute('href') for link in links])
     for link in links:
-        asins = get_all_asins_from_text(link.get_attribute('href') or '')
+        asins = get_all_asins_from_text(link or '')
         if len(asins) > 0:
             q_asins.put(asins[0])
     return q_asins
@@ -63,7 +68,7 @@ def get_all_deals(wd, q_deals=None, q_asins=None):
                 if new_page_source != last_page_source:
                     break
                 wd.click('li.a-last')
-            break
+            break  # temp
     except (KeyboardInterrupt, Exception) as e:
         print(e)
     finally:
@@ -77,7 +82,11 @@ if __name__ == '__main__':
              '=5QZFK381M65Q9B7H90E7&pf_rd_t=0&pf_rd_p=55c21ce1-047a-4190-bd23-78871098dae7&pf_rd_i=cybermonday'
     )
     qd, qa = get_all_deals(wdr)
-    print(get_all_asins_from_deal(wdr, qd.get()).get())
+    # temp
+    res = get_all_asins_from_deal(wdr, qd.get())
+    print(res)
+    if res:
+        print(res.get())
     try:
         while True:
             wdr.driver.close()
