@@ -17,14 +17,14 @@ bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mo
 server_reader, client_writer = Pipe(False)
 queue, collect_thread = payload_manager.init(client_writer)
 
-get_asins_msg = 'get_asins_msg_data'
+GET_ASINS = 'get_asins_data'
 CSV_EXPORT_ASINS = 'export_asins'
 DELETE_ASINS = 'delete_asins'
-get_asins_msg_CMD = '/' + get_asins_msg
+GET_ASINS_CMD = '/' + GET_ASINS
 CSV_EXPORT_ASINS_CMD = '/' + CSV_EXPORT_ASINS
 DELETE_ASINS_CMD = '/' + DELETE_ASINS
 BTN_CMDs = (
-    (get_asins_msg, 'Get and process list of ASINs'),
+    (GET_ASINS, 'Get and process list of ASINs'),
     (CSV_EXPORT_ASINS, 'Export all data of ASINs in the CSV format'),
     (DELETE_ASINS, 'Remove all ASINs from given list'),
 )
@@ -58,10 +58,10 @@ def buttons():
 
 
 # BOT INTERFACE
-@bot.message_handler(commands=[get_asins_msg], func=check_login)
+@bot.message_handler(commands=[GET_ASINS], func=check_login)
 def get_asins_msg_cmd(msg: types.Message):
     receive_msg(msg)
-    asins_raw = msg.text.replace(get_asins_msg_CMD, '').strip()
+    asins_raw = msg.text.replace(GET_ASINS_CMD, '').strip()
     if asins_raw:
         return get_asins(get_all_asins_from_text(asins_raw), msg.from_user.id)
     bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASINs list:'), get_asins_msg)
