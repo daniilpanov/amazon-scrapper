@@ -70,11 +70,17 @@ def get_asins_msg_cmd(msg: types.Message):
 @bot.message_handler(commands=[CSV_EXPORT_ASINS], func=check_login)
 def export_asins_cmd(msg: types.Message):
     receive_msg(msg)
-    asins_raw = msg.text.replace(CSV_EXPORT_ASINS_CMD, '').strip()
-    if asins_raw:
-        export_asins(get_all_asins_from_text(asins_raw), msg.from_user.id)
-        return export_asins(get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card')
-    bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASINs list:'), export_asins_msg)
+    list_name = msg.text.replace(CSV_EXPORT_ASINS_CMD, '').strip()
+    if list_name:
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Please enter the ASINs list:'),
+            export_asins_msg,
+            list_name=list_name,
+        )
+    bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Please enter the name of the ASINs list:'),
+        export_asins_name_list_msg,
+    )
 
 
 @bot.message_handler(commands=[DELETE_ASINS], func=check_login)
@@ -94,12 +100,23 @@ def get_asins_msg(msg: types.Message):
     get_asins(get_all_asins_from_text(msg.text.strip()), msg.from_user.id)
 
 
-def export_asins_msg(msg: types.Message):
+def export_asins_name_list_msg(msg: types.Message):
     receive_msg(msg)
     if not check_login(msg):
         return
-    export_asins(get_all_asins_from_text(msg.text.strip()), msg.from_user.id)
-    export_asins(get_all_asins_from_text(msg.text.strip()), msg.from_user.id, 'product_card')
+    bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Please enter the ASINs list:'),
+        export_asins_msg,
+        list_name=msg.text.strip(),
+    )
+
+
+def export_asins_msg(msg: types.Message, list_name=None):
+    receive_msg(msg)
+    if not check_login(msg):
+        return
+    export_asins(get_all_asins_from_text(msg.text.strip()), msg.from_user.id, list_name=list_name)
+    export_asins(get_all_asins_from_text(msg.text.strip()), msg.from_user.id, 'product_card', list_name)
 
 
 def delete_asins_msg(msg: types.Message):
@@ -139,7 +156,7 @@ def get_asins(asins_list, user_id):
     queue.put((asins, callback, user_id))
 
 
-def export_asins(asins_list, user_id, collection='customer_reviews'):
+def export_asins(asins_list, user_id, collection='customer_reviews', list_name=None):
     asins = set(asins_list)
     if not asins:
         return bot.send_message(user_id, 'No product found')
@@ -149,7 +166,7 @@ def export_asins(asins_list, user_id, collection='customer_reviews'):
         df.loc[len(df.index)] = row
     if not os.path.exists('tmp'):
         os.mkdir('tmp')
-    path = os.path.join('tmp', str(hash(df.loc)) + '.csv')
+    path = os.path.join('tmp', list_name + ' (' + collection + ').csv' if list_name else str(hash(df.loc)) + '.csv')
     df.to_csv(path, index=False)
     with open(path, 'rb') as doc:
         bot.send_document(user_id, doc)
