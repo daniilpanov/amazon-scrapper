@@ -122,7 +122,7 @@ if __name__ == '__main__':
     res.to_csv('output_' + fn)
 
 
-def parse_product(asin, html):
+def parse_product(asin, html, tiny=False):
     bs = BeautifulSoup(html, features='html.parser')
     if not bs:
         print('NOT BS!')
@@ -139,6 +139,8 @@ def parse_product(asin, html):
     else:
         descr = descr.text.strip()
     pic = bs.find(id='landingImage')['src']
+    if tiny:
+        return title, descr, pic
     features = {}
     top5 = []
     try:

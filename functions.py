@@ -165,67 +165,10 @@ class WebDriver:
     def sleep(self, sec):
         sleep(sec)
 
-    def find_text(self, text, selector="html", by=By.CSS_SELECTOR, timeout=None):
-        element = None
-        is_present = False
-        full_text = None
-        text = str(text)
-        start_ms = time.time() * 1000.0
-        stop_ms = start_ms + (timeout * 1000.0)
-        for x in range(int(timeout * 10)):
-            full_text = None
-            try:
-                element = self.find_element(by, selector)
-                is_present = True
-                if element.tag_name.lower() in ["input", "textarea"]:
-                    if element.is_displayed() and text in element.get_property("value"):
-                        return element
-                    else:
-                        if element.is_displayed():
-                            full_text = element.get_property("value").strip()
-                        element = None
-                        raise Exception
-                else:
-                    if element.is_displayed() and text in element.text:
-                        return element
-                    else:
-                        if element.is_displayed():
-                            full_text = element.text.strip()
-                        element = None
-                        raise Exception
-            except Exception:
-                now_ms = time.time() * 1000.0
-                if now_ms >= stop_ms:
-                    break
-                time.sleep(0.1)
-        plural = "s"
-        if timeout == 1:
-            plural = ""
-        if not element:
-            if not is_present:
-                # The element does not exist in the HTML
-                message = "Element {%s} was not present after %s second%s!" % (
-                    selector,
-                    timeout,
-                    plural,
-                )
-            # The element exists in the HTML, but the text is not visible
-            elif not full_text or len(str(full_text.replace("\n", ""))) > 320:
-                message = (
-                        "Expected text substring {%s} for {%s} was not visible "
-                        "after %s second%s!" % (text, selector, timeout, plural)
-                )
-            else:
-                full_text = full_text.replace("\n", "\\n ")
-                message = (
-                        "Expected text substring {%s} for {%s} was not visible "
-                        "after %s second%s!\n (Actual string found was {%s})"
-                        % (text, selector, timeout, plural, full_text)
-                )
-            print(message)
-            return None
-        else:
-            return element
+    def find_text(self, text, selector='.//*[text()[contains(.,"{}")]]', timeout=None):
+        if timeout:
+            return self.wait_for_loading((By.XPATH, selector.format(text)), timeout)
+        return self.find_element(By.XPATH, selector.format(text))
 
     def click_link_text(self, text):
         el = self.find_text(text)
