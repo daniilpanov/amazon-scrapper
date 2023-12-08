@@ -291,8 +291,11 @@ def start(name=None):
     write_info(data, name)
     log('[0] Open file to send it')
     with open(os.path.join('tmp', name + '.xlsx'), 'rb') as f:
-        requests.post('localhost:8080', {'msg': 'Data collected! Your XLSX file with the Deals:', 'uid': '1456674317'}, files=[
-            f])
+        requests.post(
+            'localhost:8080',
+            {'msg': 'Data collected! Your XLSX file with the Deals:', 'uid': '1456674317,1428909514'},
+            files=[f]
+        )
         log('[0] Sent!')
     log('[0] Program finished')
 
