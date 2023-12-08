@@ -161,7 +161,7 @@ def get_all_deals_from_category(wd: WebDriver, category_link):
             res.append(level)
         # если следующей страницы нет - drop cycle
         try:
-            if wd.find_element('li.a-last.a-disabled'):
+            if wd.find_element(by=By.CSS_SELECTOR, value='li.a-last.a-disabled'):
                 log('[2] All pages collected!')
                 break
         except NoSuchElementException:
