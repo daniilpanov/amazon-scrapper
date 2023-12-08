@@ -3,12 +3,21 @@ import sys
 from time import sleep
 
 import openpyxl
+import requests
 from selenium.common import NoSuchElementException, TimeoutException, StaleElementReferenceException
 from selenium.webdriver.common.by import By
 
 import parser
 from functions import WebDriver, base_chrome_init
 from helpers import get_all_asins_from_text
+
+
+DEBUG = True
+
+
+def log(*args, **kwargs):
+    if DEBUG:
+        print(*args, **kwargs)
 
 
 class Level:
@@ -122,27 +131,41 @@ def get_products_from_deal(wd: WebDriver, deal_link):
 def get_all_deals_from_category(wd: WebDriver, category_link):
     # переход на страницу категории
     wd.get(category_link)
-    wd.wait_for_loading()
-    # получаем все карточки deals текущей категории
-    deals_els = wd.find_elements(By.CSS_SELECTOR, '[class*="DealGridItem-module__dealItemDisplayGrid_"]')
     res = []
-    # перебираем
-    for deal_el in deals_els:
-        # получаем ссылку на текущую deal (последнюю, т.к. в ней содержится название)
+
+    while True:
+        # получаем все карточки deals текущей категории
+        deals_els = wd.find_elements(By.CSS_SELECTOR, '[class*="DealGridItem-module__dealItemDisplayGrid_"]')
+        # перебираем
+        for deal_el in deals_els:
+            # получаем ссылку на текущую deal (последнюю, т.к. в ней содержится название)
+            try:
+                link_el = deal_el.find_elements(By.TAG_NAME, 'a')
+                if link_el:
+                    link_el = link_el[-1]
+                else:
+                    print(link_el)
+                    raise NoSuchElementException
+            except NoSuchElementException as e:
+                wd.execute_script('arguments[0].style.border = "3px dashed red";', deal_el)
+                print(e)
+                sleep(10000)
+                sys.exit(0)
+            level = Level.create_by_a(link_el)  # создаём уровень через ссылку
+            res.append(level)
+        # если следующей страницы нет - drop cycle
         try:
-            link_el = deal_el.find_elements(By.TAG_NAME, 'a')
-            if link_el:
-                link_el = link_el[-1]
-            else:
-                print(link_el)
-                raise NoSuchElementException
-        except NoSuchElementException as e:
-            wd.execute_script('arguments[0].style.border = "3px dashed red";', deal_el)
-            print(e)
-            sleep(10000)
-            sys.exit(0)
-        level = Level.create_by_a(link_el)  # создаём уровень через ссылку
-        res.append(level)
+            if wd.find_element('li.a-last.a-disabled'):
+                break
+        except NoSuchElementException:
+            pass
+        # переходим на следующую страницу
+        last_page_source = new_page_source = wd.get_page_source()
+        wd.click('li.a-last')
+        while new_page_source == last_page_source:
+            sleep(3)
+            new_page_source = wd.get_page_source()
+            wd.click('li.a-last')
     # перебираем полученные данные
     for level in res:
         # если deal - товар, то добавляем информацию
@@ -175,6 +198,30 @@ def collect_all_info():
     return deals_categories
 
 
+def convert_from_excel_format(cell: str):
+    conv_part = ''
+    row = ''
+    for c in cell:
+        if c.isdigit():
+            row += c
+        else:
+            conv_part += c
+    col = 0
+    for i in range(len(conv_part)):
+        col += (ord(conv_part[len(conv_part) - 1 - i]) - ord('A') + 1) * 26 ** i
+    return int(row), col
+
+
+def add_marked_cell(wb, sheet, cell: str, value):
+    row, col = convert_from_excel_format(cell)
+    sheet[cell] = value
+    wb.active.cell(column=col, row=row).fill = openpyxl.styles.PatternFill(
+        start_color='ffff00',
+        end_color='ffff00',
+        fill_type='solid',
+    )
+
+
 def write_info(data, name=None):
     if not name:
         name = hash(data)
@@ -192,48 +239,14 @@ def write_info(data, name=None):
         sheet['A1'] = data[list_name].link
         i = 2
         for item in data[list_name]:
-            sheet[f'A{i}'] = item.name
-            wb.active.cell(column=1, row=i).fill = openpyxl.styles.PatternFill(
-                start_color='ffff00',
-                end_color='ffff00',
-                fill_type='solid',
-            )
-            sheet[f'B{i}'] = item.link
-            wb.active.cell(column=2, row=i).fill = openpyxl.styles.PatternFill(
-                start_color='ffff00',
-                end_color='ffff00',
-                fill_type='solid',
-            )
-            wb.active.cell(column=3, row=i).fill = openpyxl.styles.PatternFill(
-                start_color='ffff00',
-                end_color='ffff00',
-                fill_type='solid',
-            )
+            add_marked_cell(wb, sheet, f'A{i}', item.name)
+            add_marked_cell(wb, sheet, f'B{i}', item.link)
+            add_marked_cell(wb, sheet, f'C{i}', item.asin if item.is_asin else '')
             if item.is_asin:
-                sheet[f'C{i}'] = item.asin
-                sheet[f'D{i}'] = item.title
-                wb.active.cell(column=4, row=i).fill = openpyxl.styles.PatternFill(
-                    start_color='ffff00',
-                    end_color='ffff00',
-                    fill_type='solid',
-                )
-                sheet[f'E{i}'] = item.description
-                wb.active.cell(column=5, row=i).fill = openpyxl.styles.PatternFill(
-                    start_color='ffff00',
-                    end_color='ffff00',
-                    fill_type='solid',
-                )
-                sheet[f'F{i}'] = item.image_url
-                wb.active.cell(column=6, row=i).fill = openpyxl.styles.PatternFill(
-                    start_color='ffff00',
-                    end_color='ffff00',
-                    fill_type='solid',
-                )
-                wb.active.cell(column=7, row=i).fill = openpyxl.styles.PatternFill(
-                    start_color='ffff00',
-                    end_color='ffff00',
-                    fill_type='solid',
-                )
+                add_marked_cell(wb, sheet, f'D{i}', item.title)
+                add_marked_cell(wb, sheet, f'E{i}', item.description)
+                add_marked_cell(wb, sheet, f'F{i}', item.image_url)
+                add_marked_cell(wb, sheet, f'G{i}', '')
             else:
                 j = 1
                 for asin in item:
@@ -251,8 +264,9 @@ def write_info(data, name=None):
 
 def start(name=None):
     data = collect_all_info()
-    print(data['Holiday'])
     write_info(data, name)
+    with open(os.path.join('tmp', name + '.xlsx'), 'rb') as f:
+        requests.post('localhost:8080', {'msg': 'Data collected! Your XLSX file with the Deals:', 'uid': '1456674317'}, files=[f])
 
 
 if __name__ == '__main__':
