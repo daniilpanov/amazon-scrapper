@@ -2,6 +2,7 @@ import os.path
 import sys
 from time import sleep
 
+import colorama
 import openpyxl
 import requests
 from selenium.common import NoSuchElementException, TimeoutException, StaleElementReferenceException
@@ -17,7 +18,7 @@ DEBUG = True
 
 def log(*args, **kwargs):
     if DEBUG:
-        print(*args, **kwargs)
+        print(colorama.Back.GREEN, *args, **kwargs, colorama.Back.RESET)
 
 
 class Level:
@@ -103,6 +104,7 @@ def get_all_deals_categories(wd: WebDriver, deals_link):
 
 
 def get_products_from_deal(wd: WebDriver, deal_link):
+    log('[3] Goto deal', deal_link)
     # переходим по ссылке deal
     wd.get(deal_link)
     res = []
@@ -111,8 +113,9 @@ def get_products_from_deal(wd: WebDriver, deal_link):
         wd.wait_for_loading('.octops-dlp-asin-stream-section, '
                             '#productInfoList, '
                             'span[data-component-type="s-search-results"]', 2)
+        log('[3] List of ASINs is loaded')
     except TimeoutException:
-        print('ERROR:', deal_link)
+        log('ERROR when loading ASINs list:', deal_link)
         return None
     # получаем все ссылки из списка asins
     links = wd.find_elements(By.CSS_SELECTOR, '.octops-dlp-asin-stream-section a[href*="B0"],'
@@ -122,18 +125,22 @@ def get_products_from_deal(wd: WebDriver, deal_link):
     for link in links:
         # добавляем созданный из ссылки уровень
         res.append(Level.create_by_a(link))
+    log('[3] Links list:', res)
     # после получения перебираем уровни и добавляем в каждый информацию о товаре
     for link in res:
         link.add_product_data(wd)
+    log('[3] Product data was added')
     return res
 
 
 def get_all_deals_from_category(wd: WebDriver, category_link):
+    log('[2] Goto category link:', category_link)
     # переход на страницу категории
     wd.get(category_link)
     res = []
-
+    i = 0
     while True:
+        log('[2] Loaded! Current page:', i)
         # получаем все карточки deals текущей категории
         deals_els = wd.find_elements(By.CSS_SELECTOR, '[class*="DealGridItem-module__dealItemDisplayGrid_"]')
         # перебираем
@@ -149,13 +156,14 @@ def get_all_deals_from_category(wd: WebDriver, category_link):
             except NoSuchElementException as e:
                 wd.execute_script('arguments[0].style.border = "3px dashed red";', deal_el)
                 print(e)
-                sleep(10000)
-                sys.exit(0)
+                continue
+            log('[2] Deal found:', link_el.get_attribute('href'))
             level = Level.create_by_a(link_el)  # создаём уровень через ссылку
             res.append(level)
         # если следующей страницы нет - drop cycle
         try:
             if wd.find_element('li.a-last.a-disabled'):
+                log('[2] All pages collected!')
                 break
         except NoSuchElementException:
             pass
@@ -166,6 +174,9 @@ def get_all_deals_from_category(wd: WebDriver, category_link):
             sleep(3)
             new_page_source = wd.get_page_source()
             wd.click('li.a-last')
+        log('[2] Goto next page -> -> ->')
+        i += 1
+    log('[2] Foreach levels - add the product data')
     # перебираем полученные данные
     for level in res:
         # если deal - товар, то добавляем информацию
@@ -173,27 +184,34 @@ def get_all_deals_from_category(wd: WebDriver, category_link):
             continue
         # иначе добавляем элементы - товары
         level.items = get_products_from_deal(wd, level.link)
+        log('[2] Deal upgraded:', level)
     for level in res:
+        log('[2] Add the additional data to the', level.name)
         level.add_product_data(wd)
     return res
 
 
 def collect_all_info():
+    log('[1] Init chrome')
     wd = base_chrome_init(False, goto='https://amazon.com')
+    log('[1] Change loc')
     wd.change_loc()
     wd.wait_for_loading()
     # ищем ссылку на all deals
     deals_link = search_deals_link(wd)
     if not deals_link:
         return False
+    log('[1] All Deals link found:', deals_link)
     # ищем все категории deals
     deals_categories = get_all_deals_categories(wd, deals_link)
+    log('[1] Deals categories found:', deals_categories)
     # перебираем
     for category in deals_categories:
         link = deals_categories[category]
         # создаём объект уровня
         level = deals_categories[category] = Level(False, category, link)
         # добавляем элементы - deals (see this function)
+        log('[1] Get all deals from category:', category)
         level.items = get_all_deals_from_category(wd, link)
     return deals_categories
 
@@ -229,13 +247,16 @@ def write_info(data, name=None):
         os.mkdir('tmp')
     wb = openpyxl.Workbook()
     first = True
+    log('[1] Write lists')
     for list_name in data:
         if first:
             sheet = wb['Sheet']
             sheet.title = list_name
+            log('[1] First list writen:', list_name, '\n', data[list_name].link)
             first = False
         else:
             sheet = wb.create_sheet(list_name)
+            log('[1] List writen:', list_name, '\n', data[list_name].link)
         sheet['A1'] = data[list_name].link
         i = 2
         for item in data[list_name]:
@@ -258,15 +279,22 @@ def write_info(data, name=None):
                     sheet[f'E{i}'] = asin.description
                     sheet[f'F{i}'] = asin.image_url
                     j += 1
+            log('[2] Deal writen:', item)
             i += 1
     wb.save(os.path.join('tmp', str(name) + '.xlsx'))
 
 
 def start(name=None):
+    log('[0] Start. Collect all info')
     data = collect_all_info()
+    log('[0] Write all info')
     write_info(data, name)
+    log('[0] Open file to send it')
     with open(os.path.join('tmp', name + '.xlsx'), 'rb') as f:
-        requests.post('localhost:8080', {'msg': 'Data collected! Your XLSX file with the Deals:', 'uid': '1456674317'}, files=[f])
+        requests.post('localhost:8080', {'msg': 'Data collected! Your XLSX file with the Deals:', 'uid': '1456674317'}, files=[
+            f])
+        log('[0] Sent!')
+    log('[0] Program finished')
 
 
 if __name__ == '__main__':
