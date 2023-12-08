@@ -52,7 +52,7 @@ class Level:
         if self.is_asin:
             return (f'Product "{self.name}": asin - {self.asin}, title - {self.title}, description - {self.description}' 
                     f', image_url - {self.image_url} [{self.link}]')
-        return f'Deal "{self.name}" with {len(self.items)} items [{self.link}]'
+        return f'Deal "{self.name}" with {len(self.items or [])} items [{self.link}]'
 
     def add_product_data(self, wd: WebDriver):
         # расширяем данные - добавляем информацию о товаре
@@ -117,9 +117,13 @@ def get_products_from_deal(wd: WebDriver, deal_link):
         log('ERROR when loading ASINs list:', deal_link)
         return None
     # получаем все ссылки из списка asins
-    links = wd.find_elements(By.CSS_SELECTOR, '.octops-dlp-asin-stream-section a[href*="B0"],'
-                                              '#productInfoList a[href*="B0"],'
-                                              'span[data-component-type="s-search-results"] a[href*="B0"]')
+    links = wd.find_elements(
+        By.CSS_SELECTOR,
+        '.octops-dlp-asin-stream-section a[href*="B0"],'
+        '#productInfoList a[href*="B0"],'
+        'span[data-component-type="s-search-results"] a[href*="B0"],'
+        '[class*="_octopus-search-result-card_style_apbSearchResultsContainer__"]',
+    )
     # перебираем
     for link in links:
         # добавляем созданный из ссылки уровень
