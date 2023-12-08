@@ -6,7 +6,7 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 
 from functions import base_chrome_init, WebDriver
-from main_collect_all import get_all_asins_from_text
+from helpers import get_all_asins_from_text
 
 
 def asin_level(wd: WebDriver, asin, name=None, link=None):
@@ -54,9 +54,9 @@ def deals_group_level(wd, link):
             for link in links:
                 t_asins = get_all_asins_from_text(link.get_attribute('href'))
                 if len(t_asins) > 0:
-                    deals.append((i, True, link.get_attribute('href'), link.text.strip(), t_asins[0]))
+                    deals.append([i, True, link.get_attribute('href'), link.text.strip(), t_asins[0]])
                 else:
-                    deals.append((i, False, link.get_attribute('href'), link.text.strip()))
+                    deals.append([i, False, link.get_attribute('href'), link.text.strip()])
             last_page_source = wd.get_page_source()
             wd.click('li.a-last')
             while True:
@@ -111,9 +111,8 @@ def scrap_main_page():
         # SCRAP DEAL GROUPS; INSERTING INTO SHEETS; CREATES TITLES
         for deal_idx in range(len(data[deals_group])):
             deal = data[deals_group][deal_idx]
-            if deal.get('is_asin'):
+            if not deal or deal and deal.get('is_asin'):
                 continue
-
             for asin_id in range(len(deal['items'])):
                 data[deals_group][deal_idx]['items'][asin_id] = asin_level(wd, deal[-1], deal[1], deal[2])
 

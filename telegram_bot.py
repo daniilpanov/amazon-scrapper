@@ -1,17 +1,20 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
 import os
 
+import bottle
 import pandas as pd
-from multiprocessing import Pipe
+from multiprocessing import Pipe, Process
 from threading import Thread
 
 import telebot
+from bottle import request
 from telebot import types
 
 import database
 import payload_manager
 import state
 from helpers import get_all_asins_from_text
+from state import chunk
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
 server_reader, client_writer = Pipe(False)
@@ -173,49 +176,84 @@ def export_asins(asins_list, user_id, collection='customer_reviews', list_name=N
     os.remove(path)
 
 
+def remove_asin_from_state(asins, _type):
+    if not os.path.exists(f'states/collect-{_type}.state'):
+        return
+    with open(f'states/collect-{_type}.state') as f:
+        old_asins = chunk(f.read())
+        for asin in asins:
+            st = state.get_asin(asin)
+            if st == -1:
+                old_asins.remove(asin)
+            elif st:
+                os.remove('states/collect-{}-{}.currstate'.format(_type, asin))
+        new_asins = ''.join(old_asins)
+    with open(f'states/collect-{_type}.state', 'w') as f:
+        f.write(new_asins)
+
 def delete_asins(asins_list, user_id, collection='customer_reviews'):
     asins = set(asins_list)
     if not asins:
         return bot.send_message(user_id, 'No valid ASIN found')
     try:
         database.db()[collection].delete_many({'asin': {'$in': list(asins)}})
-        if not os.path.exists('states/collect-reviews.state'):
-            return
-        with open('states/collect-reviews.state') as f:
-            asins = f.read()
-        for asin in asins:
-            st = state.get_asin(asin)
-            if st == -1:
-                asins = asins.replace(asin, '')
-            elif st:
-                os.remove('states/collect-reviews-{}.currstate'.format(asin))
-        with open('states/collect-reviews.state', 'w') as f:
-            f.write(asins)
         bot.send_message(user_id, 'These ASINs deleted successfully')
     except Exception as e:
         bot.send_message(user_id, 'Error occurred: {}'.format(e))
 
 
-def products_alerts():
+def alerts(server_pipe):
     while True:
-        res = server_reader.recv()
+        res = server_pipe.recv()
         print(res)
         if not res:
             break
-        chat_id, res = res
-        bot.send_message(chat_id, f'Product cards of those ASIN\'s collected: {",".join(res)}')
+        if type(res) is tuple and len(res) == 2:
+            chat_id, res = res
+            bot.send_message(chat_id, f'Product cards of those ASIN\'s collected: {",".join(res)}')
+        elif type(res) is dict:
+            if res['files']:
+                for file in res['files']:
+                    with open(os.path.join('tmp', file), 'rb') as f:
+                        for uid in res['users_ids']:
+                            bot.send_document(uid, f)
+            if res['text']:
+                for uid in res['users_ids']:
+                    bot.send_message(uid, res['text'])
+
+
+def run_bottle(client_pipe):
+
+    @bottle.route('/send_msg', method='POST')
+    def send_message():
+        msg = request.forms.get('msg')
+        users_ids = request.forms.get('uid').split(',')
+        files = []
+        if request.files:
+            for file in request.files:
+                if not os.path.exists('tmp'):
+                    os.mkdir('tmp')
+                request.files[file].save(os.path.join('tmp', request.files[file].filename))
+                files.append(request.files[file].filename)
+        client_pipe.send({'users_ids': users_ids, 'text': msg, 'files': files})
+
+    bottle.run(host='0.0.0.0', port=8080, debug=True)
 
 
 if __name__ == '__main__':
     print('PROGRAM STARTED')
-    alerts_thr = Thread(target=products_alerts)
+    alerts_thr = Thread(target=alerts, args=(server_reader,))
     alerts_thr.start()
+    bottle_listener = Process(target=run_bottle, args=(client_writer,))
+    bottle_listener.start()
     buttons()
     bot.infinity_polling()
     print('PROGRAM IS CLOSING ALL TASKS')
+    bottle_listener.terminate()
     queue.put(None)
     payload_manager.close_all()
-    client_writer.send(False)
+    server_reader.send(False)
+    server_reader.send(False)
     alerts_thr.join()
     collect_thread.join()
     print('PROGRAM ENDED')

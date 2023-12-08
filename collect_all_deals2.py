@@ -1,5 +1,9 @@
+import os.path
+import sys
 from time import sleep
 
+import openpyxl
+from selenium.common import NoSuchElementException, TimeoutException, StaleElementReferenceException
 from selenium.webdriver.common.by import By
 
 import parser
@@ -42,16 +46,19 @@ class Level:
         return f'Deal "{self.name}" with {len(self.items)} items [{self.link}]'
 
     def add_product_data(self, wd: WebDriver):
-        if not self.is_asin:
+        # расширяем данные - добавляем информацию о товаре
+        if not self.is_asin:  # проверка: является ли объект товаром
             return False
+        # переходим по ссылке
         wd.get(self.link)
-        wd.wait_for_loading()
+        # парсим tiny набор данных - title, description, image_url
         parsed_data = parser.parse_product(self.asin, wd.get_page_source(), True)
-        if not parsed_data:
+        if not parsed_data:  # если возникла ошибка - возвращаем False
             return False
         self.title, self.description, self.image_url = parsed_data
         return True
 
+    # Фабричный метод
     @staticmethod
     def create_by_a(el, auto_parse=False, wd=None):
         link = el.get_attribute('href')
@@ -64,8 +71,6 @@ class Level:
 
 def search_deals_link(wd: WebDriver):
     wd.get('https://amazon.com')
-    sleep(1)
-    wd.wait_for_loading()
     try:
         link = wd.find_text('See all deals', timeout=1)
         return link.get_attribute('href')
@@ -73,9 +78,9 @@ def search_deals_link(wd: WebDriver):
         return None
 
 
+# Функция для получения списка категорий deals
 def get_all_deals_categories(wd: WebDriver, deals_link):
     wd.get(deals_link)
-    wd.wait_for_loading()
     deals_els = wd.find_elements(By.CSS_SELECTOR, '.a-carousel-card[class*="GridPresets-module__gridPresetElement_"]>a')
     res = {}
     for deal_el in deals_els:
@@ -89,57 +94,166 @@ def get_all_deals_categories(wd: WebDriver, deals_link):
 
 
 def get_products_from_deal(wd: WebDriver, deal_link):
+    # переходим по ссылке deal
     wd.get(deal_link)
-    wd.wait_for_loading()
     res = []
-    wd.wait_for_loading('.octops-dlp-asin-stream-section, '
-                        '#productInfoList, '
-                        'span[data-component-type="s-search-results"]', 5)
+    try:
+        # ожидаем загрузки списка asins
+        wd.wait_for_loading('.octops-dlp-asin-stream-section, '
+                            '#productInfoList, '
+                            'span[data-component-type="s-search-results"]', 2)
+    except TimeoutException:
+        print('ERROR:', deal_link)
+        return None
+    # получаем все ссылки из списка asins
     links = wd.find_elements(By.CSS_SELECTOR, '.octops-dlp-asin-stream-section a[href*="B0"],'
                                               '#productInfoList a[href*="B0"],'
                                               'span[data-component-type="s-search-results"] a[href*="B0"]')
+    # перебираем
     for link in links:
+        # добавляем созданный из ссылки уровень
         res.append(Level.create_by_a(link))
+    # после получения перебираем уровни и добавляем в каждый информацию о товаре
     for link in res:
         link.add_product_data(wd)
     return res
 
 
 def get_all_deals_from_category(wd: WebDriver, category_link):
+    # переход на страницу категории
     wd.get(category_link)
     wd.wait_for_loading()
+    # получаем все карточки deals текущей категории
     deals_els = wd.find_elements(By.CSS_SELECTOR, '[class*="DealGridItem-module__dealItemDisplayGrid_"]')
     res = []
+    # перебираем
     for deal_el in deals_els:
-        link_el = deal_el.find_element(By.CSS_SELECTOR, 'a:last-child')
-        level = Level.create_by_a(link_el)
+        # получаем ссылку на текущую deal (последнюю, т.к. в ней содержится название)
+        try:
+            link_el = deal_el.find_elements(By.TAG_NAME, 'a')
+            if link_el:
+                link_el = link_el[-1]
+            else:
+                print(link_el)
+                raise NoSuchElementException
+        except NoSuchElementException as e:
+            wd.execute_script('arguments[0].style.border = "3px dashed red";', deal_el)
+            print(e)
+            sleep(10000)
+            sys.exit(0)
+        level = Level.create_by_a(link_el)  # создаём уровень через ссылку
         res.append(level)
+    # перебираем полученные данные
     for level in res:
+        # если deal - товар, то добавляем информацию
         if level.is_asin:
             continue
-        level.items = get_products_from_deal(wd, deal_el)
+        # иначе добавляем элементы - товары
+        level.items = get_products_from_deal(wd, level.link)
+    for level in res:
+        level.add_product_data(wd)
     return res
 
 
 def collect_all_info():
-    wd = base_chrome_init(goto='https://amazon.com')
+    wd = base_chrome_init(False, goto='https://amazon.com')
     wd.change_loc()
     wd.wait_for_loading()
+    # ищем ссылку на all deals
     deals_link = search_deals_link(wd)
     if not deals_link:
         return False
+    # ищем все категории deals
     deals_categories = get_all_deals_categories(wd, deals_link)
+    # перебираем
     for category in deals_categories:
         link = deals_categories[category]
+        # создаём объект уровня
         level = deals_categories[category] = Level(False, category, link)
+        # добавляем элементы - deals (see this function)
         level.items = get_all_deals_from_category(wd, link)
-        break
-    print(deals_categories['Holiday'])
+    return deals_categories
 
 
-def start():
-    info = collect_all_info()
+def write_info(data, name=None):
+    if not name:
+        name = hash(data)
+    if not os.path.exists('tmp'):
+        os.mkdir('tmp')
+    wb = openpyxl.Workbook()
+    first = True
+    for list_name in data:
+        if first:
+            sheet = wb['Sheet']
+            sheet.title = list_name
+            first = False
+        else:
+            sheet = wb.create_sheet(list_name)
+        sheet['A1'] = data[list_name].link
+        i = 2
+        for item in data[list_name]:
+            sheet[f'A{i}'] = item.name
+            wb.active.cell(column=1, row=i).fill = openpyxl.styles.PatternFill(
+                start_color='ffff00',
+                end_color='ffff00',
+                fill_type='solid',
+            )
+            sheet[f'B{i}'] = item.link
+            wb.active.cell(column=2, row=i).fill = openpyxl.styles.PatternFill(
+                start_color='ffff00',
+                end_color='ffff00',
+                fill_type='solid',
+            )
+            wb.active.cell(column=3, row=i).fill = openpyxl.styles.PatternFill(
+                start_color='ffff00',
+                end_color='ffff00',
+                fill_type='solid',
+            )
+            if item.is_asin:
+                sheet[f'C{i}'] = item.asin
+                sheet[f'D{i}'] = item.title
+                wb.active.cell(column=4, row=i).fill = openpyxl.styles.PatternFill(
+                    start_color='ffff00',
+                    end_color='ffff00',
+                    fill_type='solid',
+                )
+                sheet[f'E{i}'] = item.description
+                wb.active.cell(column=5, row=i).fill = openpyxl.styles.PatternFill(
+                    start_color='ffff00',
+                    end_color='ffff00',
+                    fill_type='solid',
+                )
+                sheet[f'F{i}'] = item.image_url
+                wb.active.cell(column=6, row=i).fill = openpyxl.styles.PatternFill(
+                    start_color='ffff00',
+                    end_color='ffff00',
+                    fill_type='solid',
+                )
+                wb.active.cell(column=7, row=i).fill = openpyxl.styles.PatternFill(
+                    start_color='ffff00',
+                    end_color='ffff00',
+                    fill_type='solid',
+                )
+            else:
+                j = 1
+                for asin in item:
+                    i += 1
+                    sheet[f'A{i}'] = j
+                    sheet[f'B{i}'] = asin.link
+                    sheet[f'C{i}'] = asin.asin
+                    sheet[f'D{i}'] = asin.title
+                    sheet[f'E{i}'] = asin.description
+                    sheet[f'F{i}'] = asin.image_url
+                    j += 1
+            i += 1
+    wb.save(os.path.join('tmp', str(name) + '.xlsx'))
+
+
+def start(name=None):
+    data = collect_all_info()
+    print(data['Holiday'])
+    write_info(data, name)
 
 
 if __name__ == '__main__':
-    start()
+    start('Test')

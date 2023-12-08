@@ -125,11 +125,11 @@ if __name__ == '__main__':
 def parse_product(asin, html, tiny=False):
     bs = BeautifulSoup(html, features='html.parser')
     if not bs:
-        print('NOT BS!')
+        print('NO BS! ASIN:', asin)
         return False
     if not bs.select_one('#titleSection, #title, #productTitle'):
-        print('NOT TITLE!')
-        with open('html.html.html', 'w', encoding='utf-8') as f:
+        print('NO TITLE! ASIN:', asin)
+        with open('error-dump.html', 'w', encoding='utf-8') as f:
             f.write(str(bs))
         return False
     title = bs.select_one('#titleSection, #title, #productTitle').text.strip()

@@ -34,9 +34,39 @@ except ImportError as e:
 
 class WebDriver:
     driver: webdriver.Chrome
+    auto_captcha_check: bool
+    auto_waiting: bool
+    auto_jquery_insert: bool
 
-    def __init__(self, driver):
+    def __init__(self, driver, auto_captcha_check=True, auto_waiting=True, auto_jquery_insert=True):
         self.driver = driver
+        self.auto_captcha_check = auto_captcha_check
+        self.auto_waiting = auto_waiting
+        self.auto_jquery_insert = auto_jquery_insert
+
+    def get(self, url, cap_check=None, jquery=None):
+        self.driver.get(url)
+        sleep(.04)
+        if self.auto_waiting:
+            self.wait_for_loading()
+        if jquery is None:
+            jquery = self.auto_jquery_insert
+        if jquery:
+            sleep(.06)
+            self.activate_jquery()
+        if cap_check is None:
+            cap_check = self.auto_captcha_check
+        if cap_check:
+            for _ in range(3):
+                if captcha_solve(self):
+                    break
+            if not captcha_solve(self):
+                if self.auto_waiting:
+                    self.wait_for_loading()
+                return False
+            if self.auto_waiting:
+                self.wait_for_loading()
+        return True
 
     def wait_for_loading(self, elem=None, timeout=30):
         if not elem:
@@ -84,7 +114,7 @@ class WebDriver:
                     break
         return _id
 
-    def change_loc(self, retry=True):
+    def change_loc(self, with_zip=90005, retry=True):
         sleep(.5)
         url = self.current_url
         self.activate_jquery()
@@ -109,17 +139,33 @@ class WebDriver:
                 '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
                 '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
             )
+            if with_zip:
+                sleep(3)
+                self.execute_script(
+                    '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+                    '{actionSource: "glow",'
+                    'deviceType: "web",'
+                    'locationType: "LOCATION_INPUT",'
+                    'pageType: "Gateway",'
+                    'storeContext: "generic",'
+                    f'zipCode: "{with_zip}"' + '}'
+                    ')'
+                )
+                self.execute_script(
+                    '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+                    '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
+                )
             self.refresh()
             self.wait_for_loading()
             sleep(1)
             self.get(url)
             self.activate_jquery()
-            self.wait_for_loading()
+            return True
         except JavascriptException as e:
             if retry and '$ is not defined' in e.msg:
                 sleep(1)
-                self.change_loc(False)
-                self.wait_for_loading()
+                return self.change_loc(with_zip, False)
+            return False
 
     def get_page_source(self):
         return self.driver.page_source
@@ -192,10 +238,10 @@ class WebDriver:
 
 
 def captcha_check(wd):
-    wd.wait_for_loading()
-    url = wd.current_url
+    # wd.wait_for_loading()
+    # url = wd.current_url
     try:
-        wd.get('https://amazon.com')
+        # wd.get('https://amazon.com')
         wd.wait_for_loading()
         return (wd.find_text('Enter the characters you see below', timeout=.5)
                 and wd.find_text('Type the characters you see in this image:', timeout=.5))
@@ -203,10 +249,10 @@ def captcha_check(wd):
         return False
     finally:
         wd.sleep(3)
-        wd.get('https://amazon.com')
-        wd.get(url)
-        wd.wait_for_loading()
-        wd.activate_jquery()
+        # wd.get('https://amazon.com')
+        # wd.get(url)
+        # wd.wait_for_loading()
+        # wd.activate_jquery()
 
 
 def captcha_solve(wd: WebDriver):
@@ -518,7 +564,7 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
     wd = WebDriver(webdriver.Chrome(opts, ChromeService(ChromeDriverManager().install())))
     ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
-        wd.get(goto)
+        wd.get(goto, False)
         print('Result of solving captcha:', captcha_solve(wd))
     if get_ext_id:
         return wd, ext_id

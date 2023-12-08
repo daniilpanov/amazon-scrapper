@@ -86,17 +86,6 @@ def start(asins, start_time=None, callback=None, callback_args=None, conf=None, 
         return start(asins, start_time, callback, callback_args, conf)
 
 
-# Parse raw asins list from TG message or file or other
-def get_all_asins_from_text(text: str):
-    pattern_find = re.compile('B0[A-Z0-9]{8}')
-    asins = set()
-    for line in text.strip().splitlines():
-        found = pattern_find.findall(line)
-        for item in found:
-            asins.add(item)
-    return list(asins)
-
-
 
 # Mainloop
 if __name__ == '__main__':
