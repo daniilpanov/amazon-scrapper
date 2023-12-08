@@ -111,7 +111,8 @@ def get_products_from_deal(wd: WebDriver, deal_link):
         # ожидаем загрузки списка asins
         wd.wait_for_loading('.octops-dlp-asin-stream-section, '
                             '#productInfoList, '
-                            'span[data-component-type="s-search-results"]', 2)
+                            'span[data-component-type="s-search-results"],'
+                            '[class*="_octopus-search-result-card_style_apbSearchResultsContainer__"]', 2)
         log('[3] List of ASINs is loaded')
     except TimeoutException:
         log('ERROR when loading ASINs list:', deal_link)
@@ -154,11 +155,11 @@ def get_all_deals_from_category(wd: WebDriver, category_link):
                 if link_el:
                     link_el = link_el[-1]
                 else:
-                    print(link_el)
+                    log('[2] Error when trying to get all "a" elements from deal:', link_el)
                     raise NoSuchElementException
             except NoSuchElementException as e:
-                wd.execute_script('arguments[0].style.border = "3px dashed red";', deal_el)
-                print(e)
+                # wd.execute_script('arguments[0].style.border = "3px dashed red";', deal_el)
+                log('[2] Exception:', e)
                 continue
             log('[2] Deal found:', link_el.get_attribute('href'))
             level = Level.create_by_a(link_el)  # создаём уровень через ссылку
