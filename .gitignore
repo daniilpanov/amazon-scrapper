@@ -4,7 +4,7 @@ __pycache__
 tmp
 venv
 *.csv
-state.json
+states/*
 out/*
 *.log
 */*.log

@@ -10,7 +10,7 @@ def chunk(s, w=10):
 def convert():
     if not os.path.exists('state.json'):
         return
-    if not os.path.exists('./states/'):
+    if not os.path.exists('states/'):
         os.mkdir('states')
     jsd = json.JSONDecoder()
     with open('state.json') as f:
