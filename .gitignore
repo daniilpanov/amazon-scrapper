@@ -5,6 +5,7 @@ tmp
 venv
 *.csv
 states/*
+downloaded_files/*
 out/*
 *.log
 */*.log
