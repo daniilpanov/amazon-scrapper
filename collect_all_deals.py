@@ -192,7 +192,7 @@ def get_all_deals_from_category(wd: WebDriver, category_link):
 
 def collect_all_info():
     log('[1] Init chrome')
-    wd = base_chrome_init(False, goto='https://amazon.com')
+    wd = base_chrome_init(goto='https://amazon.com')
     log('[1] Change loc')
     wd.change_loc()
     wd.wait_for_loading()
