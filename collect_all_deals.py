@@ -4,7 +4,7 @@ from time import sleep
 import colorama
 import openpyxl
 import requests
-from selenium.common import NoSuchElementException, TimeoutException, StaleElementReferenceException
+from selenium.common import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 
 import parser
