@@ -1,5 +1,4 @@
 import os.path
-import sys
 from time import sleep
 
 import colorama
@@ -18,7 +17,7 @@ DEBUG = True
 
 def log(*args, **kwargs):
     if DEBUG:
-        print(colorama.Back.GREEN, *args, **kwargs, colorama.Back.RESET)
+        print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
 
 
 class Level:
