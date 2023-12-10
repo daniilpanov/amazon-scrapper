@@ -360,7 +360,7 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
 
 def collect_all_info(xsheet: XSheet):
     log('[1] Init chrome')
-    wd = base_chrome_init(False, goto='https://amazon.com')
+    wd = base_chrome_init(goto='https://amazon.com')
     log('[1] Change loc')
     wd.change_loc()
     wd.wait_for_loading()
