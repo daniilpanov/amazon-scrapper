@@ -20,6 +20,108 @@ def log(*args, **kwargs):
         print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
 
 
+class XSheet:
+    name: str
+    wb: openpyxl.Workbook
+    current_sheet_name: str = None
+    current_row: int = 1
+    current_subcategory_row: int = 1
+    categories_links: dict[str, str] = {}
+    deals_links: dict[str, tuple[str, str]] = {}
+    products_links: dict[str, tuple[str, str]] = {}
+
+    def __init__(self, name):
+        self.name = name
+        path = os.path.join('tmp', f'{name}.xlsx')
+        if os.path.exists(path):
+            self.wb = openpyxl.load_workbook(path)
+        else:
+            self.wb = openpyxl.Workbook()
+
+    def add_sheet(self, name, link):
+        self.wb.create_sheet(name)
+        self.current_sheet_name = name
+        self.set_cells([link])
+        self.current_subcategory_row = 1
+
+    def set_deals_categories(self, names_links: dict):
+        if os.path.exists('tmp/deals-cat-links.txt'):
+            with open('tmp/deals-cat-links.txt', encoding='utf-8') as f:
+                data = set([row.strip() for row in f if row.strip()])
+            tmp_names_links = set(names_links.values()) - data
+        else:
+            tmp_names_links = True
+            open('tmp/deals-cat-links.txt', 'w', encoding='utf-8').close()
+        with open('tmp/deals-cat-links.txt', 'a', encoding='utf-8') as f:
+            res = {}
+            for name in names_links:
+                if tmp_names_links is True or names_links[name] in tmp_names_links:
+                    res[name] = names_links[name]
+                    f.write(name + ':::' + names_links[name] + '\n')
+        self.categories_links = res
+
+    def set_deals_links(self, names_links: dict):
+        if os.path.exists('tmp/deals-links.txt'):
+            with open('tmp/deals-links.txt', encoding='utf-8') as f:
+                data = set([row.strip() for row in f if row.strip()])
+            tmp_names_links = set(names_links.values()) - data
+        else:
+            tmp_names_links = True
+            open('tmp/deals-links.txt', 'w', encoding='utf-8').close()
+        with open('tmp/deals-links.txt', 'a', encoding='utf-8') as f:
+            res = {}
+            for name in names_links:
+                if tmp_names_links is True or names_links[name] in tmp_names_links:
+                    res[name] = names_links[name]
+                    f.write(name + ':::' + names_links[name] + '\n')
+        self.deals_links = res
+
+    def set_product_links(self, names_links: dict):
+        if os.path.exists('tmp/products-links.txt'):
+            with open('tmp/products-links.txt', encoding='utf-8') as f:
+                data = set([row.strip() for row in f if row.strip()])
+            tmp_names_links = set(names_links.values()) - data
+        else:
+            tmp_names_links = True
+            open('tmp/products-links.txt', 'w', encoding='utf-8').close()
+        with open('tmp/products-links.txt', 'a', encoding='utf-8') as f:
+            res = {}
+            for name in names_links:
+                if tmp_names_links is True or names_links[name] in tmp_names_links:
+                    res[name] = names_links[name]
+                    f.write(name + ':::' + names_links[name] + '\n')
+        self.products_links = res
+
+    def add_deal(self, name, link, asin=None, title=None, description=None, image_url=None):
+        if asin:
+            self.set_cells([name, link, asin, title, description, image_url], True)
+        else:
+            self.set_cells([name, link], True)
+        self.current_subcategory_row = 1
+
+    def add_product(self, link, asin, title, description, image_url):
+        self.set_cells([self.current_subcategory_row, link, asin, title,description, image_url])
+        self.current_subcategory_row += 1
+
+    def set_cells(self, cols_vals: list[str | int], marked=False, row=None):
+        cols = 'ABCDEFGHJKLMNOP'
+        if row is None:
+            row = self.current_row
+        for col_num in range(len(cols_vals)):
+            col = cols[col_num]
+            self.wb[self.current_sheet_name][col + str(row)] = cols_vals[col_num]
+            if marked:
+                self.wb.active.cell(column=col_num + 1, row=row).fill = openpyxl.styles.PatternFill(
+                    start_color='ffff00',
+                    end_color='ffff00',
+                    fill_type='solid',
+                )
+        self.current_row += 1
+
+    def to_xlsx(self):
+        self.wb.save(os.path.join('tmp', f'{self.name}.xlsx'))
+
+
 class Level:
     def __init__(self, is_asin, name, link, items=None, asin=None, title=None, description=None, img=None):
         self.is_asin = is_asin
@@ -196,6 +298,8 @@ def get_all_deals_from_category(wd: WebDriver, category_link):
 
 
 def collect_all_info():
+    if not os.path.exists('temp_deal_data'):
+        os.mkdir('temp_deal_data')
     log('[1] Init chrome')
     wd = base_chrome_init(goto='https://amazon.com')
     log('[1] Change loc')
@@ -205,9 +309,14 @@ def collect_all_info():
     deals_link = search_deals_link(wd)
     if not deals_link:
         return False
+    with open('temp_deal_data/metadata', 'w') as f:
+        f.write(deals_link + '\n\n')
     log('[1] All Deals link found:', deals_link)
     # ищем все категории deals
     deals_categories = get_all_deals_categories(wd, deals_link)
+    with open('temp_deal_data/metadata', 'a') as f:
+        for category in deals_categories:
+            f.write(category + ': ' + deals_categories[category] + '\n')
     log('[1] Deals categories found:', deals_categories)
     # перебираем
     for category in deals_categories:
@@ -250,17 +359,11 @@ def write_info(data, name=None):
     if not os.path.exists('tmp'):
         os.mkdir('tmp')
     wb = openpyxl.Workbook()
-    first = True
+    del wb['Sheet']
     log('[1] Write lists')
     for list_name in data:
-        if first:
-            sheet = wb['Sheet']
-            sheet.title = list_name
-            log('[1] First list writen:', list_name, '\n', data[list_name].link)
-            first = False
-        else:
-            sheet = wb.create_sheet(list_name)
-            log('[1] List writen:', list_name, '\n', data[list_name].link)
+        sheet = wb.create_sheet(list_name)
+        log('[1] List writen:', list_name, '\n', data[list_name].link)
         sheet['A1'] = data[list_name].link
         i = 2
         for item in data[list_name]:
