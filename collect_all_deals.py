@@ -1,5 +1,5 @@
 import os
-from json import JSONEncoder, JSONDecoder
+from json import JSONEncoder, JSONDecoder, JSONDecodeError
 from time import sleep
 from typing import List
 
@@ -26,8 +26,8 @@ def log(*args, **kwargs):
 class Level:
     name: str | None
     link: str | None
-    items: List['Level'] = []
-    items_hashes: set[int] = set()
+    items: List['Level']
+    items_hashes: set[int]
     asin: str | None
     description: str | None
     image_url: str | None
@@ -41,7 +41,10 @@ class Level:
         self.description = description
         self.image_url = img
         self.ready = ready
-        self.set_items(items or [])
+        self.items = []
+        self.items_hashes = set()
+        if items:
+            self.set_items(items)
 
     def __getitem__(self, item):
         return self.items[item]
@@ -100,6 +103,7 @@ class Level:
                 items.append(item.to_dict())
 
         return {'name': self.name, 'link': self.link} | ({
+            'asin': self.asin,
             'description': self.description,
             'image_url': self.image_url,
         } if self.asin else {'items': items}) | {'ready': self.ready}
@@ -120,6 +124,8 @@ class Level:
             return False
         # переходим по ссылке
         wd.get(self.link)
+        sleep(.1)
+        wd.wait_for_loading()
         # парсим tiny набор данных - title, description, image_url
         parsed_data = parser.parse_product(self.asin, wd.get_page_source(), True)
         if not parsed_data:  # если возникла ошибка - возвращаем False
@@ -148,9 +154,9 @@ class XSheet:
     jse: JSONEncoder
 
     def __init__(self, name):
-        self.deals_tree = self.load(name) or Level(name, None)
         self.jsd = JSONDecoder()
         self.jse = JSONEncoder()
+        self.deals_tree = self.load(name) or Level(name, None)
         path = os.path.join('tmp', f'{name}.xlsx')
         if os.path.exists(path):
             self.wb = openpyxl.load_workbook(path)
@@ -172,7 +178,11 @@ class XSheet:
         if not os.path.exists(f'tmp/{name}.json'):
             return None
         with open(f'tmp/{name}.json', encoding='utf-8') as f:
-            d = self.jsd.decode(f.read())
+            try:
+                d = self.jsd.decode(f.read())
+            except JSONDecodeError as e:
+                print(e)
+                return None
         return Level.from_dict(d)
 
     def add_sheet(self, name, link):
@@ -228,12 +238,19 @@ def get_all_deals_categories(wd: WebDriver, deals_tree: Level):
     deals_els = wd.find_elements(By.CSS_SELECTOR, '.a-carousel-card[class*="GridPresets-module__gridPresetElement_"]>a')
     res = []
     for deal_el in deals_els:
-        if deal_el.text.strip() == 'All Deals':
+        card_items = deal_el.find_elements(By.TAG_NAME, 'span')
+        if not card_items or len(card_items) < 2:
+            continue
+        title = card_items[-1].get_attribute('innerHTML').strip()
+        if title == 'All Deals':
+            continue
+        link = deal_el.get_attribute('href')
+        if 'goldbox' not in link:
             continue
         try:
-            res.append(Level(deal_el.text.strip(), deal_el.get_attribute('href')))
+            res.append(Level(title, link))
         except Exception as e:
-            print(e)
+            log(e)
             continue
     deals_tree.set_items(res)
     return res
@@ -307,13 +324,18 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
                 break
         except NoSuchElementException:
             pass
+        # сохраняемся
+        xsheet.save()
         # переходим на следующую страницу
-        last_page_source = new_page_source = wd.get_page_source()
+        last_page_source = wd.get_page_source()
         wd.click('li.a-last')
-        while new_page_source == last_page_source:
+        while True:
             sleep(3)
             new_page_source = wd.get_page_source()
+            if new_page_source != last_page_source:
+                break
             wd.click('li.a-last')
+        wd.wait_for_loading()
         log('[2] Goto next page -> -> ->')
         i += 1
     log('[2] Foreach levels - add the product data')
@@ -335,7 +357,7 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
 
 def collect_all_info(xsheet: XSheet):
     log('[1] Init chrome')
-    wd = base_chrome_init(goto='https://amazon.com')
+    wd = base_chrome_init(False, goto='https://amazon.com')
     log('[1] Change loc')
     wd.change_loc()
     wd.wait_for_loading()
