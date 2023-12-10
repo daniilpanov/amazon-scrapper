@@ -75,14 +75,10 @@ class Level:
         return len(self.items or [])
 
     def set_items(self, items: List['Level']):
-        for item in items:
-            self.add_item(item)
+        self.items.extend(items)
 
     def add_item(self, item: 'Level'):
-        _hash = hash(item)
-        if _hash not in self.items_hashes:
-            self.items_hashes.add(_hash)
-            self.items.append(item)
+        self.items.append(item)
 
     def to_list(self):
         res = []
@@ -236,24 +232,25 @@ def search_deals_link(wd: WebDriver):
 def get_all_deals_categories(wd: WebDriver, deals_tree: Level):
     wd.get(deals_tree.link)
     deals_els = wd.find_elements(By.CSS_SELECTOR, '.a-carousel-card[class*="GridPresets-module__gridPresetElement_"]>a')
-    res = []
+    links = set(deal.link for deal in deals_tree)
+    links_to_skip = set(deal.link for deal in deals_tree if deal.ready)
     for deal_el in deals_els:
-        card_items = deal_el.find_elements(By.TAG_NAME, 'span')
-        if not card_items or len(card_items) < 2:
-            continue
-        title = card_items[-1].get_attribute('innerHTML').strip()
-        if title == 'All Deals':
-            continue
-        link = deal_el.get_attribute('href')
-        if 'goldbox' not in link:
-            continue
         try:
-            res.append(Level(title, link))
+            card_items = deal_el.find_elements(By.TAG_NAME, 'span')
+            if not card_items or len(card_items) < 2:
+                continue
+            title = card_items[-1].get_attribute('innerHTML').strip()
+            if title == 'All Deals':
+                continue
+            link = deal_el.get_attribute('href')
+            if 'goldbox' not in link or link in links_to_skip:
+                continue
         except Exception as e:
             log(e)
             continue
-    deals_tree.set_items(res)
-    return res
+        if link not in links:
+            deals_tree.add_item(Level(title, link))
+    return deals_tree.items
 
 def get_products_from_deal(wd: WebDriver, deal: Level, xsheet: XSheet):
     log('[3] Goto deal', deal.link)
@@ -277,10 +274,12 @@ def get_products_from_deal(wd: WebDriver, deal: Level, xsheet: XSheet):
         'span[data-component-type="s-search-results"] a[href*="B0"],'
         '[class*="_octopus-search-result-card_style_apbSearchResultsContainer__"]',
     )
+    prepared_links = set(prod.link for prod in deal)
     # перебираем
     for link in links:
-        # добавляем созданный из ссылки уровень
-        deal.add_item(Level.create_by_a(link))
+        if not link.get_attribute('href') in prepared_links:
+            # добавляем созданный из ссылки уровень
+            deal.add_item(Level.create_by_a(link))
     log('[3] Links list:', deal)
     # после получения перебираем уровни и добавляем в каждый информацию о товаре
     for link in deal:
@@ -297,6 +296,7 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
     log('[2] Goto category link:', cat_level.link)
     # переход на страницу категории
     wd.get(cat_level.link)
+    links = set(deal.link for deal in cat_level)
     i = 0
     while True:
         log('[2] Loaded! Current page:', i)
@@ -316,7 +316,9 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
                 log('[2] Exception:', e)
                 continue
             log('[2] Deal found:', link_el.get_attribute('href'))
-            cat_level.add_item(Level.create_by_a(link_el))  # создаём уровень через ссылку
+            if link_el.get_attribute('href') not in links:
+                log('[2] Add deal:', link_el.get_attribute('href'))
+                cat_level.add_item(Level.create_by_a(link_el))  # создаём уровень через ссылку
         # если следующей страницы нет - drop cycle
         try:
             if wd.find_element(by=By.CSS_SELECTOR, value='li.a-last.a-disabled'):
