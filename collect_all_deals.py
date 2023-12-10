@@ -8,6 +8,7 @@ import openpyxl
 import requests
 from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver.common.by import By
+from urllib.parse import urlparse, parse_qs
 
 from functions import WebDriver, base_chrome_init
 
@@ -130,7 +131,7 @@ class Level:
     # Фабричный метод
     @staticmethod
     def create_by_a(el, auto_parse=False, wd=None):
-        link = el.get_attribute('href')
+        link = prepare_link(el)
         asin = get_all_asins_from_text(link)
         level = Level(el.text.strip(), link, asin=asin[0] if len(asin) > 0 else None)
         if auto_parse and wd:
@@ -240,7 +241,7 @@ def get_all_deals_categories(wd: WebDriver, deals_tree: Level):
             title = card_items[-1].get_attribute('innerHTML').strip()
             if title == 'All Deals':
                 continue
-            link = deal_el.get_attribute('href')
+            link = prepare_link(deal_el)
             if 'goldbox' not in link or link in links_to_skip:
                 continue
         except Exception as e:
@@ -275,7 +276,8 @@ def get_products_from_deal(wd: WebDriver, deal: Level, xsheet: XSheet):
     prepared_links = set(prod.link for prod in deal)
     # перебираем
     for link in links:
-        if not link.get_attribute('href') in prepared_links:
+        text_link = prepare_link(link)
+        if text_link not in prepared_links:
             # добавляем созданный из ссылки уровень
             deal.add_item(Level.create_by_a(link))
     log('[3] Links list:', deal)
@@ -313,9 +315,10 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
             except NoSuchElementException as e:
                 log('[2] Exception:', e)
                 continue
-            log('[2] Deal found:', link_el.get_attribute('href'))
-            if link_el.get_attribute('href') not in links:
-                log('[2] Add deal:', link_el.get_attribute('href'))
+            link = prepare_link(link_el)
+            log('[2] Deal found:', link)
+            if link not in links:
+                log('[2] Add deal:', link)
                 cat_level.add_item(Level.create_by_a(link_el))  # создаём уровень через ссылку
         # если следующей страницы нет - drop cycle
         try:
@@ -363,7 +366,7 @@ def collect_all_info(xsheet: XSheet):
     wd.wait_for_loading()
     # ищем ссылку на all deals
     if not xsheet.deals_tree.link:
-        deals_link = search_deals_link(wd)
+        deals_link = prepare_link(search_deals_link(wd))
         if not deals_link:
             return False
         xsheet.set_link(deals_link)
@@ -425,6 +428,15 @@ def write_info(xsheet: XSheet):
                     i += 1
             log('[2] Deal writen:', item)
     xsheet.to_xlsx()
+
+
+def prepare_link(link):
+    if type(link) is not str:
+        link = link.get_attribute('href')
+    parsed_link = urlparse(link)
+    query = parse_qs(parsed_link.query or '')
+    new_query = ('?deals-widget=' + query.get('deals-widget', [''])[0]) if 'deals-widget' in query else ''
+    return link.replace('?' + parsed_link.query, new_query)
 
 
 def start(name=None, tg_note_users_ids: list[str] | None = None):
