@@ -27,7 +27,6 @@ class Level:
     name: str | None
     link: str | None
     items: List['Level']
-    items_hashes: set[int]
     asin: str | None
     description: str | None
     image_url: str | None
@@ -42,7 +41,6 @@ class Level:
         self.image_url = img
         self.ready = ready
         self.items = []
-        self.items_hashes = set()
         if items:
             self.set_items(items)
 
