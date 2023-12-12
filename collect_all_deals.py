@@ -6,6 +6,7 @@ from typing import List
 import colorama
 import openpyxl
 import requests
+from bs4 import BeautifulSoup
 from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver.common.by import By
 from urllib.parse import urlparse, parse_qs
@@ -81,11 +82,7 @@ class Level:
 
     def to_list(self):
         res = []
-        items = []
-        if self.items:
-            for item in self.items:
-                items.append(item.to_dict())
-        for item in [self.name, self.link, self.description, self.image_url, self.asin, items, self.ready]:
+        for item in [self.name, self.link, self.asin, self.description, self.image_url]:
             if item:
                 res.append(item)
 
@@ -131,9 +128,13 @@ class Level:
     # Фабричный метод
     @staticmethod
     def create_by_a(el, auto_parse=False, wd=None):
-        link = prepare_link(el)
+        if type(el) not in (tuple, list):
+            link = prepare_link(el)
+            name = el.text.strip()
+        else:
+            name, link = el
         asin = get_all_asins_from_text(link)
-        level = Level(el.text.strip(), link, asin=asin[0] if len(asin) > 0 else None)
+        level = Level(name, link, asin=asin[0] if len(asin) > 0 else None)
         if auto_parse and wd:
             level.add_product_data(wd)
         return level
@@ -199,14 +200,15 @@ class XSheet:
         self.current_subcategory_row += 1
 
     def set_cells(self, cols_vals: list[str | int], marked=False, row=None):
-        cols = 'ABCDEFGHJKLMNOP'
+        cols = 'ABCDEFGHJKLMNOPQR'
         if row is None:
             row = self.current_row
         for col_num in range(len(cols_vals)):
             col = cols[col_num]
             self.wb[self.current_sheet_name][col + str(row)] = cols_vals[col_num]
-            if marked:
-                self.wb.active.cell(column=col_num + 1, row=row).fill = openpyxl.styles.PatternFill(
+        if marked:
+            for i in range(1, len(cols) + 1):
+                self.wb[self.current_sheet_name].cell(column=i, row=row).fill = openpyxl.styles.PatternFill(
                     start_color='ffff00',
                     end_color='ffff00',
                     fill_type='solid',
@@ -214,7 +216,7 @@ class XSheet:
         self.current_row += 1
 
     def to_xlsx(self):
-        self.wb.save(os.path.join('tmp', f'{self.name}.xlsx'))
+        self.wb.save(os.path.abspath(os.path.join('tmp', f'{self.name}.xlsx')))
 
 
 ######################################################################
@@ -265,9 +267,9 @@ def get_products_from_deal(wd: WebDriver, deal: Level, xsheet: XSheet):
     except TimeoutException:
         log('ERROR when loading ASINs list:', deal.link)
         return None
+    soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
     # получаем все ссылки из списка asins
-    links = wd.find_elements(
-        By.CSS_SELECTOR,
+    links = soup.select(
         '.octops-dlp-asin-stream-section a[href*="B0"],'
         '#productInfoList a[href*="B0"],'
         'span[data-component-type="s-search-results"] a[href*="B0"],'
@@ -298,28 +300,25 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
     wd.get(cat_level.link)
     links = set(deal.link for deal in cat_level)
     i = 0
+    soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
     while True:
         log('[2] Loaded! Current page:', i)
         # получаем все карточки deals текущей категории
-        deals_els = wd.find_elements(By.CSS_SELECTOR, '[class*="DealGridItem-module__dealItemDisplayGrid_"]')
+        deals_els = soup.select('[class*="DealGridItem-module__dealItemDisplayGrid_"]')
         # перебираем
         for deal_el in deals_els:
             # получаем ссылку на текущую deal (последнюю, т.к. в ней содержится название)
-            try:
-                link_el = deal_el.find_elements(By.TAG_NAME, 'a')
-                if link_el:
-                    link_el = link_el[-1]
-                else:
-                    log('[2] Error when trying to get all "a" elements from deal:', link_el)
-                    raise NoSuchElementException(f'[2] Error when trying to get all "a" elements from deal: {link_el}')
-            except NoSuchElementException as e:
-                log('[2] Exception:', e)
+            link_el = deal_el.find_all('a')
+            if link_el:
+                name = link_el[-1].text.strip()
+                link = prepare_link(link_el[-1])
+            else:
+                log('[2] Error when trying to get all "a" elements from deal:', link_el)
                 continue
-            link = prepare_link(link_el)
             log('[2] Deal found:', link)
             if link not in links:
                 log('[2] Add deal:', link)
-                cat_level.add_item(Level.create_by_a(link_el))  # создаём уровень через ссылку
+                cat_level.add_item(Level.create_by_a((name, link)))  # создаём уровень через ссылку
         # если следующей страницы нет - drop cycle
         try:
             if wd.find_element(by=By.CSS_SELECTOR, value='li.a-last.a-disabled'):
@@ -424,7 +423,7 @@ def write_info(xsheet: XSheet):
             if not item.asin:
                 i = 1
                 for asin in item:
-                    xsheet.set_cells([i] + asin.to_list(), True)
+                    xsheet.set_cells([i] + asin.to_list())
                     i += 1
             log('[2] Deal writen:', item)
     xsheet.to_xlsx()
@@ -432,7 +431,7 @@ def write_info(xsheet: XSheet):
 
 def prepare_link(link):
     if type(link) is not str:
-        link = link.get_attribute('href')
+        link = link['href']
     parsed_link = urlparse(link)
     query = parse_qs(parsed_link.query or '')
     new_query = ('?deals-widget=' + query.get('deals-widget', [''])[0]) if 'deals-widget' in query else ''
@@ -453,7 +452,7 @@ def start(name=None, tg_note_users_ids: list[str] | None = None):
         requests.post(
             'localhost:8080',
             {'msg': 'Data collected! Your XLSX file with the Deals:', 'uid': ','.join(tg_note_users_ids)},
-            files=[f],
+            files=[(name + '.xlsx', f)],
         )
         log('[0] Sent!')
     log('[0] Program finished')
