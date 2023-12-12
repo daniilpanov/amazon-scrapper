@@ -232,15 +232,16 @@ def search_deals_link(wd: WebDriver):
 # Функция для получения списка категорий deals
 def get_all_deals_categories(wd: WebDriver, deals_tree: Level):
     wd.get(deals_tree.link)
-    deals_els = wd.find_elements(By.CSS_SELECTOR, '.a-carousel-card[class*="GridPresets-module__gridPresetElement_"]>a')
+    soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
+    deals_els = soup.select('.a-carousel-card[class*="GridPresets-module__gridPresetElement_"]>a')
     links = set(deal.link for deal in deals_tree)
     links_to_skip = set(deal.link for deal in deals_tree if deal.ready)
     for deal_el in deals_els:
         try:
-            card_items = deal_el.find_elements(By.TAG_NAME, 'span')
+            card_items = deal_el.find_all('span')
             if not card_items or len(card_items) < 2:
                 continue
-            title = card_items[-1].get_attribute('innerHTML').strip()
+            title = card_items[-1].text.strip()
             if title == 'All Deals':
                 continue
             link = prepare_link(deal_el)
