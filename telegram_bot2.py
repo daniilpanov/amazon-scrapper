@@ -47,6 +47,7 @@ def receive_message(msg: types.Message):
 
 
 def auth(msg: types.Message):
+    print('ok!')
     return msg.from_user.id in auth_users
 
 
@@ -66,6 +67,7 @@ def get_asins_data(msg: types.Message, **kwargs):
             kwargs.update({'asins': asins})
             return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the list name:'), get_asins_data, **kwargs)
         if 'asin' in kwargs:
+            log('')
             new_process('main_collect_all', asins=''.join(kwargs['asins']), list_name=asins_raw)
             return send_msg(msg.from_user.id, 'Process started. We\'ll notify you when it is completed')
         kwargs.update({'list_name': asins_raw})
@@ -86,31 +88,35 @@ def delete_asins(msg: types.Message, *args, **kwargs):
     pass
 
 
+def unknown(msg: types.Message):
+    return send_msg(msg.from_user.id, 'Unknown command')
+
+
+CMDs = {
+    'get_all_asins_data': get_asins_data,
+    'export_asins': export_asins,
+    'import_asins': import_asins,
+    'delete_asins': delete_asins,
+}
+
+
 def buttons():
     keyboard = types.ReplyKeyboardMarkup()
     for cmd in CMDs:
-        key = types.InlineKeyboardButton(text=CMDs[cmd][1], callback_data=cmd)
+        key = types.InlineKeyboardButton(text='/' + cmd)
         keyboard.add(key)
 
     return keyboard
 
 
-@bot.callback_query_handler(func=lambda *args, **kwargs: True)
-def process_buttons():
-    pass
-
-
-CMDs = {
-    'get_all_asins_data': (get_asins_data, 'Get All ASINs Data'),
-    'export_asins': (export_asins, 'Export ASINs'),
-    'import_asins': (import_asins, 'Import ASINs'),
-    'delete_asins': (delete_asins, 'Delete ASINs'),
-}
+@bot.message_handler(commands=['cmd'])
+def cmds(msg: types.Message):
+    return bot.send_message(msg.from_user.id, 'All commands:\n/' + '\n/'.join(CMDs.keys()), reply_markup=buttons(), parse_mode='HTML')
 
 
 if __name__ == '__main__':
     for cmd in CMDs:
         dcmd = CMDs[cmd]
         bot.register_message_handler(callback=dcmd, commands=[cmd], func=auth)
-
+    bot.register_message_handler(callback=unknown, func=lambda _: True)
     bot.infinity_polling()
