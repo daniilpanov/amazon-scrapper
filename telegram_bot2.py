@@ -90,7 +90,7 @@ def get_asins_data(msg: types.Message, **kwargs):
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the ASINs list:'), get_asins_data)
 
 
-def export_asins(msg: types.Message, *args, **kwargs):
+def export_asins(msg: types.Message, **kwargs):
     receive_message(msg)
     if msg.text in ('/close', '/stop', '/quit'):
         return send_msg(msg.from_user.id, 'Cancel')
@@ -100,7 +100,7 @@ def export_asins(msg: types.Message, *args, **kwargs):
         if asins:
             kwargs.update({'asins': asins})
             if 'list_name' in kwargs and 'collections' in kwargs:
-                collections = (('amazon_data.customer_reviews', 'amazon_data.product_cards')
+                collections = (('amazon_data.customer_reviews', 'amazon_data.product_card')
                                if kwargs['collections'] == 'amadata' else kwargs['collections'])
                 for collection in collections:
                     _export_asins(asins, msg.from_user.id, collection, kwargs['list_name'])
@@ -117,7 +117,7 @@ def export_asins(msg: types.Message, *args, **kwargs):
             )
         if 'asins' in kwargs:
             if 'list_name' in kwargs:
-                collections = (('amazon_data.customer_reviews', 'amazon_data.product_cards')
+                collections = (('amazon_data.customer_reviews', 'amazon_data.product_card')
                                if asins_raw == 'amadata' else asins_raw)
                 for collection in collections:
                     _export_asins(kwargs['asins'], msg.from_user.id, collection, kwargs['list_name'])
@@ -129,7 +129,7 @@ def export_asins(msg: types.Message, *args, **kwargs):
             ), export_asins, **kwargs)
         if 'list_name' in kwargs:
             if asins_raw == 'amadata':
-                asins_raw = 'amazon_data.customer_reviews,amazon_data.product_cards'
+                asins_raw = 'amazon_data.customer_reviews,amazon_data.product_card'
             kwargs.update({'collections': asins_raw.split(',')})
             return bot.register_next_step_handler(send_msg(
                 msg.from_user.id,
@@ -224,8 +224,49 @@ def _import_asins(user_id, document, location):
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
 
 
-def delete_asins(msg: types.Message, **kwargs):
-    pass
+def delete_asins(msg: types.Message):
+    receive_message(msg)
+    asins_raw = msg.text.replace('/delete_asins', '').strip()
+    if asins_raw:
+        for args in (
+            (get_all_asins_from_text(asins_raw), msg.from_user.id),
+            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'raw_product_card_htmls'),
+            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card', 'amazon_data', 'products'),
+            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'aspects', 'ai_highlights'),
+            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'top_phrases', 'ai_highlights'),
+            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'problems', 'ai_highlights'),
+        ):
+            if not _delete_asins(*args):
+                break
+        return send_msg(msg.from_user.id, 'These ASINs deleted successfully')
+    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASINs list:'), delete_asins)
+
+
+def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='amazon_data', _type='reviews'):
+    asins = set(asins_list)
+    if not asins:
+        send_msg(user_id, 'No valid ASIN found')
+        return False
+    try:
+        try:
+            database.db(db_name)[collection].delete_many({'asin': {'$in': list(asins)}})
+        except:
+            database.spec_db(db_name)[collection].delete_many({'asin': {'$in': list(asins)}})
+        if _type is not None:
+            with open(os.path.join('states', f'collect-{_type}.state')) as f:
+                all_asins = set(chunk(f.read().strip()))
+            for asin in asins:
+                st = state.get_asin(asin, _type)
+                if st == -1:
+                    all_asins.remove(asin)
+                elif st > 0 and os.path.exists(os.path.join('states', f'collect-{_type}-{asin}.currstate')):
+                    os.remove(os.path.join('states', f'collect-{_type}-{asin}.currstate'))
+            with open(os.path.join('states', f'collect-{_type}.state'), 'w') as f:
+                f.write(''.join(all_asins))
+        return True
+    except Exception as e:
+        send_msg(user_id, 'Error occurred: {}'.format(e), parse_mode='HTML')
+        return False
 
 
 def unknown(msg: types.Message):
