@@ -6,18 +6,18 @@ from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient
 
 client: MongoClient | None = None
+client_spec: MongoClient | None = None
 
 config = {
     'url': 'cluster0.tcwqk03.mongodb.net/?retryWrites=true&w=majority',
     'username': 'scrape_processing',
-    # 'username': 'ai_operator',
     'database': 'amazon_data',
     'keepa_database': 'keepa',
     'password': 'gxYSEvBIDTgy6RIg',
-    # 'password': 'jEWVWuNrgrqTkn7w',
     'proxy': 'http://Daniel:OsdKey0909@46.19.33.214:3128',
     'url_prefix': 'mongodb+srv',
 }
+config_special = {'username': 'ai_operator', 'password': 'jEWVWuNrgrqTkn7w'}
 
 
 def set_config(**kwargs):
@@ -26,20 +26,16 @@ def set_config(**kwargs):
         config[i] = kwargs[i]
 
 
-def inst() -> MongoClient | bool:
-    global client
-    if client:
-        return client
-
+def init(username, password):
     global config
     from pymongo.server_api import ServerApi
 
-    url = f"{config['url_prefix']}://{config['username']}:{config['password']}@{config['url']}"
+    url = f"{config['url_prefix']}://{username}:{password}@{config['url']}"
     if 'proxy' in config and config['proxy']:
         import os
         os.environ['MONGO_PROXY'] = config['proxy']
     # Create a new client and connect to the server
-    client = MongoClient(url, server_api=ServerApi('1'), username=config['username'], password=config['password'])
+    client = MongoClient(url, server_api=ServerApi('1'), username=username, password=password)
     # Send a ping to confirm a successful connection
     try:
         client.admin.command('ping')
@@ -48,6 +44,26 @@ def inst() -> MongoClient | bool:
         print(e)
         return False
     return client
+
+
+def inst() -> MongoClient | bool:
+    global client
+    if client:
+        return client
+    client = init(config['username'], config['password'])
+    return client
+
+
+def spec_inst():
+    global client_spec
+    if client_spec:
+        return client_spec
+    client_spec = init(**config_special)
+    return client_spec
+
+
+def spec_db(dbname=None) -> Database:
+    return spec_inst()[dbname or config['database']]
 
 
 def db(dbname=None) -> Database:

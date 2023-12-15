@@ -1,6 +1,7 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
 import os
 import sys
+from io import StringIO
 
 import bottle
 import colorama
@@ -11,6 +12,7 @@ from threading import Thread
 import telebot
 from bottle import request
 from telebot import types
+from telebot.apihelper import ApiTelegramException
 
 import database
 import payload_manager
@@ -29,31 +31,6 @@ DEBUG = True
 def log(*args, **kwargs):
     if DEBUG:
         print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
-
-
-def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', list_name=None):
-    asins = set(asins_list)
-    db_col = location.split('.')
-    if len(db_col) != 2:
-        return send_msg(user_id, f'Invalid collection: {location}!\nWrite it like this: amazon_data.customer_reviews'
-                                 '([database].[collection] or amadata)', parse_mode='HTML')
-    db_name, collection = db_col
-    if not asins:
-        return send_msg(user_id, f'No product found: {asins_list}')
-    data = database.db(db_name)[collection].find({'asin': {'$in': list(asins)}})
-    try:
-        df = pd.DataFrame(columns=(data[0].keys() - ['_id']))
-    except IndexError:
-        df = pd.DataFrame(columns=[])
-    for row in data:
-        df.loc[len(df.index)] = row
-    if not os.path.exists('tmp'):
-        os.mkdir('tmp')
-    path = os.path.join('tmp', f'{location}.{(list_name if list_name else str(hash(df.loc)))}.csv')
-    df.to_csv(path, index=False)
-    with open(path, 'rb') as doc:
-        bot.send_document(user_id, doc)
-    os.remove(path)
 
 
 def new_process(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
@@ -168,11 +145,86 @@ def export_asins(msg: types.Message, *args, **kwargs):
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the ASINs list:'), export_asins)
 
 
-def import_asins(msg: types.Message, *args, **kwargs):
-    pass
+def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', list_name=None):
+    asins = set(asins_list)
+    db_col = location.split('.')
+    if len(db_col) != 2:
+        return send_msg(user_id, f'Invalid collection: {location}!\nWrite it like this: amazon_data.customer_reviews'
+                                 '([database].[collection] or amadata)', parse_mode='HTML')
+    db_name, collection = db_col
+    if not asins:
+        return send_msg(user_id, f'No product found: {asins_list}')
+    data = database.db(db_name)[collection].find({'asin': {'$in': list(asins)}})
+    try:
+        df = pd.DataFrame(columns=(data[0].keys() - ['_id']))
+    except IndexError:
+        df = pd.DataFrame(columns=[])
+    for row in data:
+        df.loc[len(df.index)] = row
+    if not os.path.exists('tmp'):
+        os.mkdir('tmp')
+    path = os.path.join('tmp', f'{location}.{(list_name if list_name else str(hash(df.loc)))}.csv')
+    df.to_csv(path, index=False)
+    with open(path, 'rb') as doc:
+        bot.send_document(user_id, doc)
+    os.remove(path)
 
 
-def delete_asins(msg: types.Message, *args, **kwargs):
+@bot.message_handler(content_types=['document'])
+def import_asins_doc(msg: types.Message, **kwargs):
+    return import_asins(msg, **kwargs)
+
+
+def import_asins(msg: types.Message, **kwargs):
+    receive_message(msg)
+    if msg.text in ('/close', '/stop', '/quit'):
+        return send_msg(msg.from_user.id, 'Cancel')
+    if msg.document:
+        try:
+            file_info = bot.get_file(msg.document.file_id)
+        except ApiTelegramException:
+            return send_msg(msg.from_user.id, 'File size is over than 20MB!')
+        doc = bot.download_file(file_info.file_path)
+        if 'collection' in kwargs:
+            return _import_asins(msg.from_user.id, doc, kwargs['collection'])
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Enter the collection ([database].[collection]):', parse_mode='HTML'),
+            import_asins, document=doc,
+        )
+    collection_raw = msg.text.replace('/import_asins', '').strip()
+    if collection_raw:
+        if 'document' in kwargs:
+            return _import_asins(msg.from_user.id, kwargs['document'], collection_raw)
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Send the CSV file:'),
+            import_asins, collection=collection_raw,
+        )
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Enter the collection ([database].[collection]):', parse_mode='HTML'),
+        import_asins,
+    )
+
+
+def _import_asins(user_id, document, location):
+    try:
+        df = pd.read_csv(StringIO(document.decode('utf-8')))
+    except Exception as e:
+        return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
+    db_col = location.split('.')
+    if len(db_col) != 2:
+        return send_msg(user_id, f'Collection is incorrect: {location}', parse_mode='HTML')
+    db_name, collection = db_col
+    try:
+        try:
+            database.db(db_name)[collection].insert_many(df.T.to_dict().values())
+        except Exception:
+            database.spec_db(db_name)[collection].insert_many(df.T.to_dict().values())
+        return send_msg(user_id, f'Data inserted successfully to {location}!', parse_mode='HTML')
+    except Exception as e:
+        return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
+
+
+def delete_asins(msg: types.Message, **kwargs):
     pass
 
 
