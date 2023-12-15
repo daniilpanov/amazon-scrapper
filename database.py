@@ -50,12 +50,12 @@ def inst() -> MongoClient | bool:
     return client
 
 
-def db() -> Database:
-    return inst()[config['database']]
+def db(dbname=None) -> Database:
+    return inst()[dbname or config['database']]
 
 
 def keepa_db() -> Database:
-    return inst()[config['keepa_database']]
+    return db(config['keepa_database'])
 
 
 def write_reviews(reviews):

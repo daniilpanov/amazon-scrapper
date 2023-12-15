@@ -20,6 +20,7 @@ from state import chunk
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
 auth_users = {320753905, 1428909514}
+PASSWORD = '12345'
 processes = set()
 
 DEBUG = True
@@ -30,13 +31,40 @@ def log(*args, **kwargs):
         print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
 
 
+def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', list_name=None):
+    asins = set(asins_list)
+    db_col = location.split('.')
+    if len(db_col) != 2:
+        return send_msg(user_id, f'Invalid collection: {location}!\nWrite it like this: amazon_data.customer_reviews'
+                                 '([database].[collection] or amadata)', parse_mode='HTML')
+    db_name, collection = db_col
+    if not asins:
+        return send_msg(user_id, f'No product found: {asins_list}')
+    data = database.db(db_name)[collection].find({'asin': {'$in': list(asins)}})
+    try:
+        df = pd.DataFrame(columns=(data[0].keys() - ['_id']))
+    except IndexError:
+        df = pd.DataFrame(columns=[])
+    for row in data:
+        df.loc[len(df.index)] = row
+    if not os.path.exists('tmp'):
+        os.mkdir('tmp')
+    path = os.path.join('tmp', f'{location}.{(list_name if list_name else str(hash(df.loc)))}.csv')
+    df.to_csv(path, index=False)
+    with open(path, 'rb') as doc:
+        bot.send_document(user_id, doc)
+    os.remove(path)
+
+
 def new_process(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
     log(f'new_process: {script}. ASINs:', kwargs.get('asins'), ';list_name:', kwargs.get('list_name'))
     return
-    return Popen(
+    proc = Popen(
         [sys.executable, script + '.py', *args, *list(key + '=' + kwargs[key] for key in kwargs)],
         stdin=stdin or sys.stdin, stdout=stdout or sys.stdout, stderr=stderr or sys.stderr,
     )
+    processes.add(proc)
+    return proc
 
 
 def send_msg(user_id, message, *args, **kwargs):
@@ -53,8 +81,6 @@ def auth(msg: types.Message):
 
 
 def get_asins_data(msg: types.Message, **kwargs):
-    if not auth(msg):
-        return msg
     receive_message(msg)
     if msg.text in ('/close', '/stop', '/quit'):
         return send_msg(msg.from_user.id, 'Cancel')
@@ -88,7 +114,58 @@ def get_asins_data(msg: types.Message, **kwargs):
 
 
 def export_asins(msg: types.Message, *args, **kwargs):
-    pass
+    receive_message(msg)
+    if msg.text in ('/close', '/stop', '/quit'):
+        return send_msg(msg.from_user.id, 'Cancel')
+    asins_raw = msg.text.replace('/export_asins', '').strip()
+    if asins_raw:
+        asins = set(get_all_asins_from_text(asins_raw))
+        if asins:
+            kwargs.update({'asins': asins})
+            if 'list_name' in kwargs and 'collections' in kwargs:
+                collections = (('amazon_data.customer_reviews', 'amazon_data.product_cards')
+                               if kwargs['collections'] == 'amadata' else kwargs['collections'])
+                for collection in collections:
+                    _export_asins(asins, msg.from_user.id, collection, kwargs['list_name'])
+                return
+            if 'list_name' in kwargs:
+                return bot.register_next_step_handler(send_msg(
+                    msg.from_user.id,
+                    f'Filename: {kwargs["list_name"]}. Enter the collection ([database].[collection] or amadata):',
+                    parse_mode='HTML',
+                ), export_asins, **kwargs)
+            return bot.register_next_step_handler(send_msg(
+                msg.from_user.id, 'Enter the filename:'),
+                export_asins, **kwargs,
+            )
+        if 'asins' in kwargs:
+            if 'list_name' in kwargs:
+                collections = (('amazon_data.customer_reviews', 'amazon_data.product_cards')
+                               if asins_raw == 'amadata' else asins_raw)
+                for collection in collections:
+                    _export_asins(kwargs['asins'], msg.from_user.id, collection, kwargs['list_name'])
+                return
+            kwargs.update({'list_name': asins_raw})
+            return bot.register_next_step_handler(send_msg(
+                msg.from_user.id, f'Filename: {asins_raw}. Enter the collection ([database].[collection] or amadata):',
+                parse_mode='HTML',
+            ), export_asins, **kwargs)
+        if 'list_name' in kwargs:
+            if asins_raw == 'amadata':
+                asins_raw = 'amazon_data.customer_reviews,amazon_data.product_cards'
+            kwargs.update({'collections': asins_raw.split(',')})
+            return bot.register_next_step_handler(send_msg(
+                msg.from_user.id,
+                f'Filename: {kwargs["list_name"]}; Collections: {asins_raw}. Enter the ASINs list:',
+                parse_mode='HTML',
+            ), export_asins, **kwargs)
+        kwargs.update({'list_name': asins_raw})
+        return bot.register_next_step_handler(send_msg(
+            msg.from_user.id,
+            f'Filename: {asins_raw}. Enter the ASINs list:',
+            parse_mode='HTML',
+        ), export_asins, **kwargs)
+    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the ASINs list:'), export_asins)
 
 
 def import_asins(msg: types.Message, *args, **kwargs):
@@ -120,14 +197,25 @@ def buttons():
     return keyboard
 
 
-@bot.message_handler(commands=['cmd'])
+@bot.message_handler(commands=['cmd'], func=auth)
 def cmds(msg: types.Message):
-    return bot.send_message(msg.from_user.id, 'All commands:\n/' + '\n/'.join(CMDs.keys()), reply_markup=buttons(), parse_mode='HTML')
+    return bot.send_message(msg.from_user.id, 'All commands:\n/' + '\n/'.join(CMDs.keys()), reply_markup=buttons(),
+                            parse_mode='HTML')
+
+
+def non_verification_user_msg(msg: types.Message):
+    receive_message(msg)
+    if msg.text.strip() == PASSWORD:
+        auth_users.add(msg.from_user.id)
+        send_msg(msg.from_user.id, 'Login success! You can use all bot functions!')
+        return
+    send_msg(msg.from_user.id, 'Verification failed. Please enter the master password')
 
 
 if __name__ == '__main__':
     for cmd in CMDs:
         dcmd = CMDs[cmd]
         bot.register_message_handler(callback=dcmd, commands=[cmd], func=auth)
+    bot.register_message_handler(callback=non_verification_user_msg, func=lambda msg: not auth(msg))
     bot.register_message_handler(callback=unknown, func=lambda _: True)
     bot.infinity_polling()
