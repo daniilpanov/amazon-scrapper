@@ -1,13 +1,10 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
 import os
-import sys
 from io import StringIO
 
 import bottle
 import colorama
 import pandas as pd
-from subprocess import Popen
-from threading import Thread
 
 import telebot
 from bottle import request
@@ -15,7 +12,7 @@ from telebot import types
 from telebot.apihelper import ApiTelegramException
 
 import database
-import payload_manager
+import payload_manager_new as payload_manager
 import state
 from helpers import get_all_asins_from_text
 from state import chunk
@@ -31,17 +28,6 @@ DEBUG = True
 def log(*args, **kwargs):
     if DEBUG:
         print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
-
-
-def new_process(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
-    log(f'new_process: {script}. ASINs:', kwargs.get('asins'), ';list_name:', kwargs.get('list_name'))
-    return
-    proc = Popen(
-        [sys.executable, script + '.py', *args, *list(key + '=' + kwargs[key] for key in kwargs)],
-        stdin=stdin or sys.stdin, stdout=stdout or sys.stdout, stderr=stderr or sys.stderr,
-    )
-    processes.add(proc)
-    return proc
 
 
 def send_msg(user_id, message, *args, **kwargs):
@@ -66,7 +52,8 @@ def get_asins_data(msg: types.Message, **kwargs):
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
             if 'list_name' in kwargs:
-                new_process('main_collect_all', asins=''.join(asins), list_name=kwargs['list_name'])
+                payload_manager.add_reviews_tasks(asins)
+                payload_manager.add_products_task(asins, kwargs['list_name'])
                 return send_msg(
                     msg.from_user.id,
                     f'Process started. We\'ll notify you when it is completed. List name: {kwargs["list_name"]}',
@@ -77,7 +64,8 @@ def get_asins_data(msg: types.Message, **kwargs):
                 get_asins_data, **kwargs,
             )
         if 'asins' in kwargs:
-            new_process('main_collect_all', asins=''.join(kwargs['asins']), list_name=asins_raw)
+            payload_manager.add_reviews_tasks(kwargs['asins'])
+            payload_manager.add_products_task(kwargs['asins'], asins_raw)
             return send_msg(
                 msg.from_user.id,
                 f'Process started. We\'ll notify you when it is completed. List name: {asins_raw}',
@@ -156,7 +144,7 @@ def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', 
         return send_msg(user_id, f'No product found: {asins_list}')
     data = database.db(db_name)[collection].find({'asin': {'$in': list(asins)}})
     try:
-        df = pd.DataFrame(columns=(data[0].keys() - ['_id']))
+        df = pd.DataFrame(columns=list(data[0].keys() - ['_id']))
     except IndexError:
         df = pd.DataFrame(columns=[])
     for row in data:
@@ -303,6 +291,10 @@ def non_verification_user_msg(msg: types.Message):
         send_msg(msg.from_user.id, 'Login success! You can use all bot functions!')
         return
     send_msg(msg.from_user.id, 'Verification failed. Please enter the master password')
+
+
+### BOTTLE REQUESTS
+# TODO
 
 
 if __name__ == '__main__':

@@ -148,6 +148,6 @@ if __name__ == '__main__':
     # print(db()['raw_product_card_htmls'].delete_many({}))
     # print(db()['product_card'].find().next())
     # print(db()['raw_product_card_htmls'].find().next()['asin'])
-    print(list(item['asin'] for item in db()['customer_reviews'].find(limit=10)))
+    # print(list(item['asin'] for item in db()['customer_reviews'].find(limit=10)))
     # print(keepa_db()['raw_htmls'].find().next())
 
