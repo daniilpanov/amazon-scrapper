@@ -1,6 +1,7 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
 import os
 from io import StringIO
+from threading import Thread
 
 import bottle
 import colorama
@@ -294,7 +295,28 @@ def non_verification_user_msg(msg: types.Message):
 
 
 ### BOTTLE REQUESTS
-# TODO
+def run_bottle():
+    @bottle.route('/send_msg', method='POST')
+    def send_message():
+        msg = request.forms.get('msg')
+        users_ids = request.forms.get('uid').split(',')
+        files = []
+        if request.files:
+            for file in request.files:
+                if not os.path.exists('tmp'):
+                    os.mkdir('tmp')
+                request.files[file].save(os.path.join('tmp', request.files[file].filename))
+                files.append(request.files[file].filename)
+        if files:
+            for file in files:
+                with open(os.path.join('tmp', file), 'rb') as f:
+                    for uid in users_ids:
+                        bot.send_document(uid, f)
+        if msg:
+            for uid in users_ids:
+                bot.send_message(uid, msg)
+
+    bottle.run(host='0.0.0.0', port=8080, debug=True)
 
 
 if __name__ == '__main__':
@@ -303,4 +325,6 @@ if __name__ == '__main__':
         bot.register_message_handler(callback=dcmd, commands=[cmd], func=auth)
     bot.register_message_handler(callback=non_verification_user_msg, func=lambda msg: not auth(msg))
     bot.register_message_handler(callback=unknown, func=lambda _: True)
+    bottle_thr = Thread(target=run_bottle, daemon=True)
+    bottle_thr.start()
     bot.infinity_polling()
