@@ -14,15 +14,7 @@ from urllib.parse import urlparse, parse_qs
 from functions import WebDriver, base_chrome_init
 
 import parser
-from helpers import get_all_asins_from_text
-
-
-DEBUG = True
-
-
-def log(*args, **kwargs):
-    if DEBUG:
-        print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
+from helpers import get_all_asins_from_text, log
 
 
 class Level:

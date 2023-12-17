@@ -1,13 +1,11 @@
-import datetime
+import os
 import re
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder
-from queue import Queue
 from threading import Thread, Event
 from time import sleep
-from typing import Union
 
-from alive_progress import alive_bar
+import requests
 
 from pandas import DataFrame
 from bs4 import BeautifulSoup
@@ -16,10 +14,11 @@ from selenium.common import JavascriptException, InvalidSessionIdException, Time
 import database
 import parser
 import state
-from functions import RetryException, user_emulate, chrome_init, captcha_solve, WebDriver
+from functions import RetryException, user_emulate, base_chrome_init
 
 import logging
 
+from helpers import log, parse_args
 
 logger = logging.getLogger('reviews')
 logger.setLevel(logging.DEBUG)
@@ -27,10 +26,6 @@ handler = logging.FileHandler(f'reviews.log', 'a')
 formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-
-
-class StopScript(Exception):
-    pass
 
 
 params = {
@@ -44,9 +39,7 @@ params = {
 params_len = 1
 for key in params:
     params_len *= len(params[key])
-ev = Event()
 
-webdriver: Union[None, WebDriver] = None
 url = 'https://www.amazon.com/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt'
 
 jsd = JSONDecoder()
@@ -74,7 +67,7 @@ def process_data(asin, seed, process_data_res):
             ))
         except Exception as e:
             logger.error(f'Exception on div revs of [{asin}] [seed={seed}]', exc_info=True)
-            print(e)
+            log(e)
             return False
         data_with_quantity = None
         for item in raw:
@@ -99,11 +92,11 @@ def process_data(asin, seed, process_data_res):
         write_data(asin, seed, res)
         return True
     except Exception as ex:
-        print(ex)
+        log(ex)
         return False
 
 
-def send_request(asin, seed):
+def send_request(webdriver, asin, seed):
     if seed < params_len:
         current_params = {
             'scope': 'reviewsAjax3',
@@ -125,84 +118,53 @@ def send_request(asin, seed):
             res = webdriver.execute_script("return " + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
                 logger.warning(f'Broken result! ASIN: {asin}, SEED: {seed}')
-                print(f'broken result. asin: {asin}')
-                raise RetryException('Broken result')
+                log(f'broken result. ASIN: {asin}')
+                return False
         except (JavascriptException, RetryException, TimeoutException) as e:
             logger.error('Exception', exc_info=True, stack_info=True)
-            print(e)
-            print('something went wrong. send this ASIN to the end of a queue')
+            log(e)
+            log('something went wrong. send this ASIN to the end of a queue')
             return False
-            print('something went wrong. retry... ')
-            sleep(1)
-            try:
-                webdriver.reload()
-                print('reloaded')
-                if not captcha_solve(webdriver):
-                    logger.error('Captcha error')
-                    raise Exception('Captcha error')
-                webdriver.reload()
-                webdriver.activate_jquery()
-                res = webdriver.execute_script("return " + ajax)
-                if not res or 'BAAAAAAD ASIN!' in res:
-                    print(f'bad asin :( {asin}, seed={seed}')
-                    logger.error(f'Bad ASIN={asin}, seed={seed}; params={current_params}')
-                    raise Exception('Bad ASIN')
-                print('success. continue')
-            except Exception as e:
-                logger.error(f'Exception: ASIN={asin}, seed={seed}; params={current_params}', exc_info=True, stack_info=True)
-                print('ERROR:', e)
-                return False
 
         process_data(asin, seed, res)
     return True
 
 
-def main(asin, conn_reader=None):
-    print('loading webdriver')
-    global webdriver, ev
-
+def collect(asin):
+    log('loading webdriver')
     ev = Event()
-    webdriver = chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
-    webdriver.activate_jquery()
-
-    if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-        try:
-            webdriver.driver.close()
-        except:
-            pass
-
+    webdriver = base_chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
-    user_emulate_thread.start()
 
     try:
-        if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-            raise StopScript
+        webdriver.activate_jquery()
+        user_emulate_thread.start()
+
         index = state.get_asin(asin)
-        print(f'current asin: {asin} with index {index}')
+        log(f'current asin: {asin} with index {index}')
         if index == -1:
             return True
-        print('COLLECTING REVIEWS FOR ASIN', asin + ':')
+        log('COLLECTING REVIEWS FOR ASIN', asin + ':')
         for params_seed in range(index, params_len):
-            if conn_reader and conn_reader.poll() and conn_reader.recv() == False:
-                raise StopScript
             try:
-                if not send_request(asin, params_seed):
+                if not send_request(webdriver, asin, params_seed):
                     logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
-                    print(f'Skip {asin}')
+                    log(f'Skip {asin}')
                     return False
             except Exception as e:
                 if 'Bad ASIN' not in str(e):
                     raise e
                 logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
-                print(f'Skip {asin}')
+                log(f'Skip {asin}')
                 return False
         return True
     except (InvalidSessionIdException, RetryException) as e:
         logger.error(f'Error!', exc_info=True, stack_info=True)
-        print('ERROR: invalid session. ASIN will be collected later')
+        log('ERROR: invalid session. ASIN will be collected later')
         try:
             ev.set()
-            user_emulate_thread.join()
+            if user_emulate_thread.is_alive():
+                user_emulate_thread.join()
         except:
             pass
         try:
@@ -212,7 +174,7 @@ def main(asin, conn_reader=None):
         sleep(10)
         return False
     except KeyboardInterrupt:
-        print('Script stopped')
+        log('Script stopped')
         return False
     finally:
         try:
@@ -226,3 +188,24 @@ def main(asin, conn_reader=None):
         except:
             pass
 
+
+if __name__ == '__main__':
+    import sys
+    params_dict = parse_args(sys.argv)
+
+    res = False
+    c = 99
+    try:
+        while not res and c > 0:
+            res = collect(params_dict['asin'])
+            c -= 1
+    except KeyError:
+        log('No ASIN error!')
+    else:
+        if 'user' in params_dict:
+            requests.post('http://localhost:8080/send_msg', {
+                'msg': f'Reviews of ASIN {params_dict.get("asin")} collected!',
+                'uid': params_dict['user'],
+            })
+    finally:
+        requests.post('http://localhost:8080/end_task', {'pid': os.getpid()})

@@ -15,20 +15,13 @@ from telebot.apihelper import ApiTelegramException
 import database
 import payload_manager_new as payload_manager
 import state
-from helpers import get_all_asins_from_text
+from helpers import get_all_asins_from_text, log
 from state import chunk
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
 auth_users = {320753905, 1428909514}
 PASSWORD = '12345'
 processes = set()
-
-DEBUG = True
-
-
-def log(*args, **kwargs):
-    if DEBUG:
-        print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
 
 
 def send_msg(user_id, message, *args, **kwargs):
@@ -300,21 +293,21 @@ def run_bottle():
     def send_message():
         msg = request.forms.get('msg')
         users_ids = request.forms.get('uid').split(',')
-        files = []
         if request.files:
             for file in request.files:
-                if not os.path.exists('tmp'):
-                    os.mkdir('tmp')
-                request.files[file].save(os.path.join('tmp', request.files[file].filename))
-                files.append(request.files[file].filename)
-        if files:
-            for file in files:
-                with open(os.path.join('tmp', file), 'rb') as f:
-                    for uid in users_ids:
-                        bot.send_document(uid, f)
+                for uid in users_ids:
+                    try:
+                        bot.send_document(uid, request.files[file].file, visible_file_name=request.files[file].filename)
+                    except:
+                        pass
         if msg:
             for uid in users_ids:
                 bot.send_message(uid, msg)
+
+    @bottle.route('/end_task', method='POST')
+    def end_task():
+        pid = request.forms.get('pid')
+        payload_manager.end_task(pid)
 
     bottle.run(host='0.0.0.0', port=8080, debug=True)
 
