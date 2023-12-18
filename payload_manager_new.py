@@ -17,7 +17,6 @@ def add_reviews_tasks(asins, user_id):
 
 
 def add_products_task(asins, list_name, user_id):
-    return
     good_asins = set()
     for asin in asins:
         if state.get_asin(asin, 'products') > -1:
@@ -44,12 +43,9 @@ def end_task(_id, hard_kill=True):
     if _id not in processes:
         raise KeyError
 
-    if hard_kill:
-        for sig in [signal.CTRL_C_EVENT, signal.CTRL_BREAK_EVENT, signal.SIGTERM]:
-            if processes[_id].poll() is not None:
-                break
-            processes[_id].send_signal(sig)
-            sleep(3)
+    if hard_kill and processes[_id].poll() is None:
+        processes[_id].send_signal(signal.SIGTERM)
+        sleep(3)
 
     if processes[_id].poll() is not None:
         log(f'Process [{_id}] exited with code {processes[_id].returncode}')
