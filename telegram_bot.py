@@ -132,15 +132,21 @@ def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', 
     db_col = location.split('.')
     if len(db_col) != 2:
         return send_msg(user_id, f'Invalid collection: {location}!\nWrite it like this: amazon_data.customer_reviews'
-                                 '([database].[collection] or amadata)', parse_mode='HTML')
+                                 '([database].[collection] or "amadata" (reviews+products))', parse_mode='HTML')
     db_name, collection = db_col
     if not asins:
         return send_msg(user_id, f'No product found: {asins_list}')
     data = database.db(db_name)[collection].find({'asin': {'$in': list(asins)}})
+    cols_mapping = {
+        'amazon_data.customer_reviews':
+            'helpful,country,name,rating,review_id,date,scrap_datetime,title,description,asin,product_url,options'
+            .split(','),
+    }
     try:
-        df = pd.DataFrame(columns=list(data[0].keys() - ['_id']))
+        cols = cols_mapping.get(location, list(data[0].keys() - ['_id']))
     except IndexError:
-        df = pd.DataFrame(columns=[])
+        cols = []
+    df = pd.DataFrame(columns=cols)
     for row in data:
         df.loc[len(df.index)] = row
     if not os.path.exists('tmp'):
