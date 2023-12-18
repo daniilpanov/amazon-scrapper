@@ -85,6 +85,9 @@ class WebDriver:
         el.click()
         return el
 
+    def focus(self, selector, by=By.CSS_SELECTOR):
+        self.driver.execute_script('arguments[0].focus();', self.get_element(selector, by))
+
     def activate_jquery(self):
         return insert_jquery(self)
 
@@ -101,7 +104,7 @@ class WebDriver:
                 By.CSS_SELECTOR,
                 '#container > #content-wrapper > .items-container:not(.review-panel-container) > extensions-item',
             )
-        except Exception as e:
+        except Exception:
             pass
         _id = None
         if items:

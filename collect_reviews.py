@@ -1,4 +1,3 @@
-import os
 import re
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder
@@ -131,6 +130,8 @@ def send_request(webdriver, asin, seed):
 
 
 def collect(asin):
+    if state.get_asin(asin) == -1:
+        return True
     log('loading webdriver')
     ev = Event()
     webdriver = base_chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
@@ -203,9 +204,15 @@ if __name__ == '__main__':
         log('No ASIN error!')
     else:
         if 'user' in params_dict:
-            requests.post('http://localhost:8080/send_msg', {
-                'msg': f'Reviews of ASIN {params_dict.get("asin")} collected!',
-                'uid': params_dict['user'],
-            })
+            if res or c == 99:
+                requests.post('http://localhost:8080/send_msg', {
+                    'msg': f'Reviews of ASIN {params_dict["asin"]} collected!',
+                    'uid': params_dict['user'],
+                })
+            else:
+                requests.post('http://localhost:8080/send_msg', {
+                    'msg': f'Reviews of ASIN {params_dict["asin"]} did NOT collected.',
+                    'uid': params_dict['user'],
+                })
     finally:
-        requests.post('http://localhost:8080/end_task', {'pid': os.getpid()})
+        requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})

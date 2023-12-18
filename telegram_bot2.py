@@ -46,8 +46,8 @@ def get_asins_data(msg: types.Message, **kwargs):
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
             if 'list_name' in kwargs:
-                payload_manager.add_reviews_tasks(asins)
-                payload_manager.add_products_task(asins, kwargs['list_name'])
+                payload_manager.add_reviews_tasks(asins, msg.from_user.id)
+                payload_manager.add_products_task(asins, kwargs['list_name'], msg.from_user.id)
                 return send_msg(
                     msg.from_user.id,
                     f'Process started. We\'ll notify you when it is completed. List name: {kwargs["list_name"]}',
@@ -58,8 +58,8 @@ def get_asins_data(msg: types.Message, **kwargs):
                 get_asins_data, **kwargs,
             )
         if 'asins' in kwargs:
-            payload_manager.add_reviews_tasks(kwargs['asins'])
-            payload_manager.add_products_task(kwargs['asins'], asins_raw)
+            payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id)
+            payload_manager.add_products_task(kwargs['asins'], asins_raw, msg.from_user.id)
             return send_msg(
                 msg.from_user.id,
                 f'Process started. We\'ll notify you when it is completed. List name: {asins_raw}',
@@ -306,8 +306,8 @@ def run_bottle():
 
     @bottle.route('/end_task', method='POST')
     def end_task():
-        pid = request.forms.get('pid')
-        payload_manager.end_task(pid)
+        _id = request.forms.get('_id')
+        payload_manager.end_task(_id)
 
     bottle.run(host='0.0.0.0', port=8080, debug=True)
 
