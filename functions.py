@@ -271,12 +271,12 @@ def captcha_solve(wd: WebDriver):
     img_source = requests.get(captcha.get_attribute('src'))
     if not img_source:
         return False
-    if not os.path.exists(os.path.join('.', 'tmp')):
-        os.makedirs('tmp')
-    filepath = os.path.join('tmp', 'captcha.jpg')
+    if not os.path.exists(os.path.join('.', 'tmp__')):
+        os.makedirs('tmp__')
+    filepath = os.path.join('tmp__', 'captcha.jpg')
     counter = 0
     while os.path.exists(filepath):
-        filepath = os.path.join('tmp', f'captcha{counter}.jpg')
+        filepath = os.path.join('tmp__', f'captcha{counter}.jpg')
         counter += 1
     file = open(filepath, 'wb')
     file.write(img_source.content)

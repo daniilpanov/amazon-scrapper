@@ -3,7 +3,6 @@ from json import JSONEncoder, JSONDecoder, JSONDecodeError
 from time import sleep
 from typing import List
 
-import colorama
 import openpyxl
 import requests
 from bs4 import BeautifulSoup
@@ -14,7 +13,7 @@ from urllib.parse import urlparse, parse_qs
 from functions import WebDriver, base_chrome_init
 
 import parser
-from helpers import get_all_asins_from_text, log
+from helpers import get_all_asins_from_text, log, parse_args
 
 
 class Level:
@@ -25,15 +24,19 @@ class Level:
     description: str | None
     image_url: str | None
     ready: bool
+    all_items_preloaded: bool
     i: int = 0
 
-    def __init__(self, name, link, items=None, asin=None, description=None, img=None, ready=False):
+    def __init__(self, name, link: str, items=None, asin=None, description=None, img=None, ready=False, all_items_preloaded=False):
         self.name = name
+        if link and not link.strip().startswith('https://amazon.com') and not link.strip().startswith('https://www.amazon.com'):
+            link = 'https://amazon.com' + link
         self.link = link
         self.asin = asin
         self.description = description
         self.image_url = img
         self.ready = ready
+        self.all_items_preloaded = all_items_preloaded
         self.items = []
         if items:
             self.set_items(items)
@@ -90,12 +93,13 @@ class Level:
             'asin': self.asin,
             'description': self.description,
             'image_url': self.image_url,
-        } if self.asin else {'items': items}) | {'ready': self.ready}
+        } if self.asin else {'items': items}) | {'ready': self.ready, 'all_items_preloaded': self.all_items_preloaded}
 
     @staticmethod
     def from_dict(d):
         level = Level(d.get('name'), d.get('link'), None,
-                      d.get('asin'), d.get('description'), d.get('image_url'), d.get('ready', False))
+                      d.get('asin'), d.get('description'), d.get('image_url'), d.get('ready', False),
+                      d.get('all_items_preloaded', False))
         items = []
         for item in d.get('items', []):
             items.append(Level.from_dict(item))
@@ -107,6 +111,7 @@ class Level:
         if not self.asin or self.ready:  # проверка: является ли объект товаром и готов ли товар
             return False
         # переходим по ссылке
+        print(self.link)
         wd.get(self.link)
         sleep(.1)
         wd.wait_for_loading()
@@ -145,7 +150,7 @@ class XSheet:
         self.jsd = JSONDecoder()
         self.jse = JSONEncoder()
         self.deals_tree = self.load(name) or Level(name, None)
-        path = os.path.join('tmp', f'{name}.xlsx')
+        path = os.path.join('tmp__', f'{name}.xlsx')
         if os.path.exists(path):
             self.wb = openpyxl.load_workbook(path)
         else:
@@ -159,13 +164,15 @@ class XSheet:
         return self.deals_tree.name
 
     def save(self):
-        with open(f'tmp/{self.name}.json', 'w', encoding='utf-8') as f:
+        if not os.path.isdir('tmp__'):
+            os.mkdir('tmp__')
+        with open(f'tmp__/{self.name}.json', 'w', encoding='utf-8') as f:
             f.write(self.jse.encode(self.deals_tree.to_dict()))
 
     def load(self, name):
-        if not os.path.exists(f'tmp/{name}.json'):
+        if not os.path.exists(f'tmp__/{name}.json'):
             return None
-        with open(f'tmp/{name}.json', encoding='utf-8') as f:
+        with open(f'tmp__/{name}.json', encoding='utf-8') as f:
             try:
                 d = self.jsd.decode(f.read())
             except JSONDecodeError as e:
@@ -208,7 +215,7 @@ class XSheet:
         self.current_row += 1
 
     def to_xlsx(self):
-        self.wb.save(os.path.abspath(os.path.join('tmp', f'{self.name}.xlsx')))
+        self.wb.save(os.path.abspath(os.path.join('tmp__', f'{self.name}.xlsx')))
 
 
 ######################################################################
@@ -244,37 +251,41 @@ def get_all_deals_categories(wd: WebDriver, deals_tree: Level):
             continue
         if link not in links:
             deals_tree.add_item(Level(title, link))
+    deals_tree.all_items_preloaded = True
     return deals_tree.items
 
 def get_products_from_deal(wd: WebDriver, deal: Level, xsheet: XSheet):
     log('[3] Goto deal', deal.link)
     # переходим по ссылке deal
     wd.get(deal.link)
-    try:
-        # ожидаем загрузки списка asins
-        wd.wait_for_loading('.octops-dlp-asin-stream-section, '
-                            '#productInfoList,'
-                            'span[data-component-type="s-search-results"],'
-                            '[class*="_octopus-search-result-card_style_apbSearchResultsContainer__"]', 2)
-        log('[3] List of ASINs is loaded')
-    except TimeoutException:
-        log('ERROR when loading ASINs list:', deal.link)
-        return None
-    soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
-    # получаем все ссылки из списка asins
-    links = soup.select(
-        '.octops-dlp-asin-stream-section a[href*="B0"],'
-        '#productInfoList a[href*="B0"],'
-        'span[data-component-type="s-search-results"] a[href*="B0"],'
-        '[class*="_octopus-search-result-card_style_apbSearchResultsContainer__"]',
-    )
-    prepared_links = set(prod.link for prod in deal)
-    # перебираем
-    for link in links:
-        text_link = prepare_link(link)
-        if text_link not in prepared_links:
-            # добавляем созданный из ссылки уровень
-            deal.add_item(Level.create_by_a(link))
+    if not deal.all_items_preloaded:
+        try:
+            # ожидаем загрузки списка asins
+            wd.wait_for_loading('.octops-dlp-asin-stream-section, '
+                                '#productInfoList,'
+                                'span[data-component-type="s-search-results"],'
+                                '[class*="_octopus-search-result-card_style_apbSearchResultsContainer__"]', 2)
+            log('[3] List of ASINs is loaded')
+        except TimeoutException:
+            log('ERROR when loading ASINs list:', deal.link)
+            return None
+        soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
+        # получаем все ссылки из списка asins
+        links = soup.select(
+            '.octops-dlp-asin-stream-section a[href*="B0"],'
+            '#productInfoList a[href*="B0"],'
+            'span[data-component-type="s-search-results"] a[href*="B0"],'
+            '[class*="_octopus-search-result-card_style_apbSearchResultsContainer__"]',
+        )
+        prepared_links = set(prod.link for prod in deal)
+        # перебираем
+        for link in links:
+            text_link = prepare_link(link)
+            if text_link not in prepared_links:
+                # добавляем созданный из ссылки уровень
+                deal.add_item(Level.create_by_a(link))
+        deal.all_items_preloaded = True
+        xsheet.save()
     log('[3] Links list:', deal)
     # после получения перебираем уровни и добавляем в каждый информацию о товаре
     for link in deal:
@@ -294,45 +305,53 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
     links = set(deal.link for deal in cat_level)
     i = 0
     soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
-    while True:
-        log('[2] Loaded! Current page:', i)
-        # получаем все карточки deals текущей категории
-        deals_els = soup.select('[class*="DealGridItem-module__dealItemDisplayGrid_"]')
-        # перебираем
-        for deal_el in deals_els:
-            # получаем ссылку на текущую deal (последнюю, т.к. в ней содержится название)
-            link_el = deal_el.find_all('a')
-            if link_el:
-                name = link_el[-1].text.strip()
-                link = prepare_link(link_el[-1])
-            else:
-                log('[2] Error when trying to get all "a" elements from deal:', link_el)
-                continue
-            log('[2] Deal found:', link)
-            if link not in links:
-                log('[2] Add deal:', link)
-                cat_level.add_item(Level.create_by_a((name, link)))  # создаём уровень через ссылку
-        # если следующей страницы нет - drop cycle
-        try:
-            if wd.find_element(by=By.CSS_SELECTOR, value='li.a-last.a-disabled'):
-                log('[2] All pages collected!')
-                break
-        except NoSuchElementException:
-            pass
-        # сохраняемся
-        xsheet.save()
-        # переходим на следующую страницу
-        last_page_source = wd.get_page_source()
-        wd.click('li.a-last')
+    if not cat_level.all_items_preloaded:
         while True:
-            sleep(3)
-            new_page_source = wd.get_page_source()
-            if new_page_source != last_page_source:
-                break
+            log('[2] Loaded! Current page:', i)
+            # получаем все карточки deals текущей категории
+            deals_els = soup.select('[class*="DealGridItem-module__dealItemDisplayGrid_"]')
+            # перебираем
+            for deal_el in deals_els:
+                # получаем ссылку на текущую deal (последнюю, т.к. в ней содержится название)
+                link_el = deal_el.find_all('a')
+                if link_el:
+                    name = link_el[-1].text.strip()
+                    link = prepare_link(link_el[-1])
+                else:
+                    log('[2] Error when trying to get all "a" elements from deal:', link_el)
+                    continue
+                log('[2] Deal found:', link)
+                if link not in links:
+                    log('[2] Add deal:', link)
+                    cat_level.add_item(Level.create_by_a((name, link)))  # создаём уровень через ссылку
+            # если следующей страницы нет - drop cycle
+            try:
+                if wd.find_element(by=By.CSS_SELECTOR, value='li.a-last.a-disabled'):
+                    log('[2] All pages collected!')
+                    break
+            except NoSuchElementException:
+                pass
+            # сохраняемся
+            xsheet.save()
+            # переходим на следующую страницу
+            last_page_url = wd.current_url
             wd.click('li.a-last')
-        wd.wait_for_loading()
-        log('[2] Goto next page -> -> ->')
-        i += 1
+            while True:
+                wd.wait_for_loading()
+                sleep(3)
+                if wd.current_url != last_page_url:
+                    break
+                wd.wait_for_loading()
+                sleep(1)
+                wd.click('li.a-last')
+            wd.wait_for_loading()
+            log('[2] Goto next page -> -> ->')
+            if i > 9:
+                break
+            i += 1
+        # все ссылки загружены
+        cat_level.all_items_preloaded = True
+        xsheet.save()
     log('[2] Foreach levels - add the product data')
     # перебираем полученные данные
     for deal in cat_level:
@@ -363,9 +382,12 @@ def collect_all_info(xsheet: XSheet):
             return False
         xsheet.set_link(deals_link)
         log('[1] All Deals link found:', deals_link)
-    # ищем все категории deals
-    deals_categories = get_all_deals_categories(wd, xsheet.deals_tree)
-    xsheet.save()
+    # ищем все категории deals, если не собраны
+    if xsheet.deals_tree.all_items_preloaded:
+        deals_categories = xsheet.deals_tree.items
+    else:
+        deals_categories = get_all_deals_categories(wd, xsheet.deals_tree)
+        xsheet.save()
     log('[1] Deals categories found:', xsheet.deals_tree)
     # перебираем
     for category in deals_categories:
@@ -405,8 +427,8 @@ def add_marked_cell(wb, sheet, cell: str, value):
 
 
 def write_info(xsheet: XSheet):
-    if not os.path.exists('tmp'):
-        os.mkdir('tmp')
+    if not os.path.exists('tmp__'):
+        os.mkdir('tmp__')
     log('[1] Write lists')
     for list in xsheet.deals_tree:
         xsheet.add_sheet(list.name, list.link)
@@ -441,7 +463,7 @@ def start(name=None, tg_note_users_ids: list[str] | None = None):
     log('[0] Write all info')
     write_info(xsh)
     log('[0] Open file to send it')
-    with open(os.path.join('tmp', name + '.xlsx'), 'rb') as f:
+    with open(os.path.join('tmp__', name + '.xlsx'), 'rb') as f:
         requests.post(
             'localhost:8080',
             {'msg': 'Data collected! Your XLSX file with the Deals:', 'uid': ','.join(tg_note_users_ids)},
@@ -452,4 +474,18 @@ def start(name=None, tg_note_users_ids: list[str] | None = None):
 
 
 if __name__ == '__main__':
-    start('Test', ['1456674317', '1428909514'])
+    import sys
+    params_dict = parse_args(sys.argv)
+    try:
+        start(params_dict.get('sheet_name', 'TMP'), params_dict.get('user', '1456674317,1428909514').split(','))
+        requests.post('http://localhost:8080/send_msg', {
+            'msg': f'Deals collected: {params_dict.get("sheet_name")}',
+            'uid': params_dict['user'],
+        })
+    except Exception as e:
+        requests.post('http://localhost:8080/send_msg', {
+            'msg': f'Error on collecting deals: {params_dict.get("sheet_name")}\n' + str(e) + '\n',
+            'uid': params_dict['user'],
+        })
+    finally:
+        requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})

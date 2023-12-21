@@ -1,7 +1,7 @@
 .idea
 __pycache__
 */__pycache__
-tmp
+tmp__
 venv
 *.csv
 states/*

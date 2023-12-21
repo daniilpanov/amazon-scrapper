@@ -24,12 +24,16 @@ def add_products_task(asins, list_name, user_id):
     processes_waiters.submit(add_task, 'collect_products', list_name=list_name, asins=''.join(good_asins), user=str(user_id))
 
 
+def add_deals_task(name, user_id):
+    processes_waiters.submit(add_task, 'collect_all_deals', sheet_name=name, user=user_id)
+
+
 # Добавление процесса и ожидание завершения (ф-я запускается в отдельном потоке)
 def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
-    log(f'Process: {script}. Params:', list(kwargs))
+    log(f'Process: {script}. Params:', dict(kwargs))
     kwargs['_id'] = str(len(processes))
     proc = Popen(
-        [sys.executable, f'{script}.py', *args, *list(key + '=' + kwargs[key] for key in kwargs)],
+        [sys.executable, f'{script}.py', *args, *list(key + '=' + str(kwargs[key]) for key in kwargs)],
         stdin=stdin or sys.stdin, stdout=stdout or sys.stdout, stderr=stderr or sys.stderr,
     )
     log(f'Process [{kwargs["_id"]}] started!')

@@ -149,9 +149,9 @@ def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', 
     df = pd.DataFrame(columns=cols)
     for row in data:
         df.loc[len(df.index)] = row
-    if not os.path.exists('tmp'):
-        os.mkdir('tmp')
-    path = os.path.join('tmp', f'{location}.{(list_name if list_name else str(hash(df.loc)))}.csv')
+    if not os.path.exists('tmp__'):
+        os.mkdir('tmp__')
+    path = os.path.join('tmp__', f'{location}.{(list_name if list_name else str(hash(df.loc)))}.csv')
     df.to_csv(path, index=False)
     with open(path, 'rb') as doc:
         bot.send_document(user_id, doc)
@@ -257,6 +257,15 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
         return False
 
 
+def collect_deals(msg: types.Message):
+    receive_message(msg)
+    name = msg.text.replace('/collect_deals', '').strip()
+    if name:
+        payload_manager.add_deals_task(name, msg.from_user.id)
+        return send_msg(msg.from_user.id, f'Start collecting deals sheet under the name "{name}"')
+    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the .xlsx filename: '), collect_deals)
+
+
 def unknown(msg: types.Message):
     return send_msg(msg.from_user.id, 'Unknown command')
 
@@ -266,6 +275,7 @@ CMDs = {
     'export_asins': export_asins,
     'import_asins': import_asins,
     'delete_asins': delete_asins,
+    'collect_deals': collect_deals,
 }
 
 
