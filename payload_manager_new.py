@@ -1,5 +1,6 @@
 import signal
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from subprocess import Popen
 from time import sleep
 
@@ -7,13 +8,12 @@ import state
 from helpers import log
 
 processes: dict[int, Popen] = {}
+processes_waiters = ThreadPoolExecutor(5)
 
 
 def add_reviews_tasks(asins, user_id):
-    tasks = []
     for asin in asins:
-        tasks.append(add_task('collect_reviews', asin=asin, user=str(user_id)))
-    return tasks
+        processes_waiters.submit(add_task, 'collect_reviews', asin=asin, user=str(user_id))
 
 
 def add_products_task(asins, list_name, user_id):
@@ -21,9 +21,10 @@ def add_products_task(asins, list_name, user_id):
     for asin in asins:
         if state.get_asin(asin, 'products') > -1:
             good_asins.add(asin)
-    return add_task('collect_products', list_name=list_name, asins=''.join(good_asins), user=str(user_id))
+    processes_waiters.submit(add_task, 'collect_products', list_name=list_name, asins=''.join(good_asins), user=str(user_id))
 
 
+# Добавление процесса и ожидание завершения (ф-я запускается в отдельном потоке)
 def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
     log(f'Process: {script}. Params:', list(kwargs))
     kwargs['_id'] = str(len(processes))
@@ -35,7 +36,8 @@ def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
     for _id in processes:
         end_task(_id, False)
     processes[kwargs['_id']] = proc
-    return proc
+    # Ожидание завершения процесса
+    proc.wait()
 
 
 def end_task(_id, hard_kill=True):

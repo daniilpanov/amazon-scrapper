@@ -4,6 +4,7 @@ from time import sleep
 
 
 def chunk(s, w=10):
+    s = s.replace('\n', '').replace(' ', '').replace(',', '').replace('.', '').strip()
     return set([s[i:i + w] for i in range(0, len(s), w)])
 
 
@@ -29,6 +30,8 @@ def convert():
 
 
 def get_asin(asin, _type='reviews'):
+    if not os.path.exists('states'):
+        os.mkdir('states')
     if os.path.exists(f'states/collect-{_type}.state'):
         with open(f'states/collect-{_type}.state') as sf:
             asins = chunk(sf.read())
