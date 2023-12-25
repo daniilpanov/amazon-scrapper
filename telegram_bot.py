@@ -194,6 +194,9 @@ def import_asins(msg: types.Message, **kwargs):
 
 
 def _import_asins(user_id, document, location):
+    locations_validator = {
+        'ai_highlights.top_phrases': ['ASIN', 'Phrase', 'Qty'],
+    }
     try:
         string = document.decode('utf-8')
         lines = string.splitlines()
@@ -205,9 +208,11 @@ def _import_asins(user_id, document, location):
                 break
         if not delimiter:
             raise Exception('Invalid delimiter!')
-        headmap = header.split(delimiter)
-        if 'ASIN' not in headmap or 'Phrase' not in headmap or 'Qty' not in headmap:
-            raise Exception('Invalid header!')
+        headmap = set(header.split(delimiter))
+        if location in locations_validator:
+            for rule in locations_validator[location]:
+                if rule not in headmap:
+                    raise Exception('Invalid header!')
         df = pd.read_csv(StringIO(string), delimiter=delimiter)
     except Exception as e:
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
