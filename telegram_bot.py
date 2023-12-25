@@ -268,7 +268,7 @@ def collect_deals(msg: types.Message):
 
 def collect_asins_nearby(msg: types.Message):
     receive_message(msg)
-    asin = msg.text.replace('/collect_deals', '').strip()
+    asin = msg.text.replace('/collect_asins_nearby', '').strip()
     if asin:
         payload_manager.add_asins_nearby_task(asin, msg.from_user.id)
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
