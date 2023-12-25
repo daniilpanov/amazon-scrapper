@@ -60,7 +60,7 @@ if __name__ == '__main__':
     params_dict = parse_args(sys.argv)
     print(params_dict)
     try:
-        wd = base_chrome_init(False, 'https://amazon.com')
+        wd = base_chrome_init('https://amazon.com')
         wd.change_loc()
         # get department url
         url = get_bsr(params_dict['asin'], wd)
@@ -76,7 +76,7 @@ if __name__ == '__main__':
         })
     except Exception as e:
         requests.post('http://localhost:8080/send_msg', {
-            'msg': f'Error on collecting nearby asins: {params_dict.get("sheet_name")}\n' + str(e) + '\n',
+            'msg': f'Error on collecting nearby asins: {params_dict["asin"]}\n' + str(e) + '\n',
             'uid': params_dict['user'],
         })
     finally:
