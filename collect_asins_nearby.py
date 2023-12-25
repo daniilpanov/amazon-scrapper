@@ -19,10 +19,7 @@ def get_asins(url, wd):
         if reviews_count < 700:
             continue
         i += 1
-        url = link.find('a')['href']
-        if not url.startswith('https://'):
-            url = 'https://amazon.com' + url
-        yield url
+        yield 'https://amazon.com/dp/' + get_all_asins_from_text(link.find('a')['href'])
 
 
 def get_bsr(asin, wd):
@@ -60,7 +57,6 @@ def get_bsr(asin, wd):
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
-    print(params_dict)
     try:
         wd = base_chrome_init('https://amazon.com')
         wd.change_loc()
