@@ -196,7 +196,7 @@ def import_asins(msg: types.Message, **kwargs):
 def _import_asins(user_id, document, location):
     locations_validator = {
         'ai_highlights.top_phrases': ['asin', 'phrase', 'count'],
-        'ai_highlights.problems': ['asin', 'problem', 'description', 'top_aspects'],
+        'ai_highlights.problems': ['ASIN', 'Aspects', 'Description Problem', 'Problem'],
     }
     try:
         string = document.decode('utf-8')
