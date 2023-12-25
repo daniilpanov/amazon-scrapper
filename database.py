@@ -144,7 +144,13 @@ def write_keepa_html(asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
 if __name__ == '__main__':
     print(db().list_collection_names())
     # print(spec_db('ai_highlights')['aspects'].delete_many({}))
-    # print(spec_db('ai_highlights')['top_phrases'].delete_many({}))
+    data = (spec_db('ai_highlights')['top_phrases'].find({}))
+    new_data = []
+    for row in data:
+        new_data.append({'asin': row['ASIN'], 'phrase': row['Phrase'], 'count': row['Qty']})
+    print(new_data[0])
+    print(spec_db('ai_highlights')['top_phrases'].delete_many({}))
+    print(spec_db('ai_highlights')['top_phrases'].insert_many(new_data))
     # print(spec_db('ai_highlights')['problems'].delete_many({}))
     # print(db()['customer_reviews'].find().next())
     # print(db()['product_card'].delete_many({}))
