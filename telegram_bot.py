@@ -18,7 +18,7 @@ import state
 from helpers import get_all_asins_from_text, log
 from state import chunk
 
-bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc', parse_mode='Markdown')
+bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc')
 auth_users = {320753905, 1428909514}
 PASSWORD = '12345'
 processes = set()
