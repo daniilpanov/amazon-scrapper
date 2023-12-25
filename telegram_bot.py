@@ -266,6 +266,14 @@ def collect_deals(msg: types.Message):
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the .xlsx filename: '), collect_deals)
 
 
+def collect_asins_nearby(msg: types.Message):
+    receive_message(msg)
+    asin = msg.text.replace('/collect_deals', '').strip()
+    if asin:
+        payload_manager.add_asins_nearby_task(asin, msg.from_user.id)
+        return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
+    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_asins_nearby)
+
 def unknown(msg: types.Message):
     return send_msg(msg.from_user.id, 'Unknown command')
 

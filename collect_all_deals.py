@@ -187,17 +187,6 @@ class XSheet:
         self.set_cells([link])
         self.current_subcategory_row = 1
 
-    def add_deal(self, name, link, asin=None, title=None, description=None, image_url=None):
-        if asin:
-            self.set_cells([name, link, asin, title, description, image_url], True)
-        else:
-            self.set_cells([name, link], True)
-        self.current_subcategory_row = 1
-
-    def add_product(self, link, asin, title, description, image_url):
-        self.set_cells([self.current_subcategory_row, link, asin, title, description, image_url])
-        self.current_subcategory_row += 1
-
     def set_cells(self, cols_vals: list[str | int], marked=False, row=None):
         cols = 'ABCDEFGHJKLMNOPQR'
         if row is None:

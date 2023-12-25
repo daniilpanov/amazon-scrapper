@@ -28,6 +28,10 @@ def add_deals_task(name, user_id):
     processes_waiters.submit(add_task, 'collect_all_deals', sheet_name=name, user=user_id)
 
 
+def add_asins_nearby_task(asin):
+    processes_waiters.submit(add_task, 'collect_asins_nearby', asin=asin)
+
+
 # Добавление процесса и ожидание завершения (ф-я запускается в отдельном потоке)
 def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
     log(f'Process: {script}. Params:', dict(kwargs))

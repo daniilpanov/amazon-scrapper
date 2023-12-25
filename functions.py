@@ -1,6 +1,5 @@
 import os
 import random
-import time
 from time import sleep
 
 import colorama
@@ -44,11 +43,15 @@ class WebDriver:
         self.auto_waiting = auto_waiting
         self.auto_jquery_insert = auto_jquery_insert
 
-    def get(self, url, cap_check=None, jquery=None):
+    def get(self, url, cap_check=None, jquery=None, wait=None):
         self.driver.get(url)
-        sleep(.04)
-        if self.auto_waiting:
-            self.wait_for_loading()
+        if wait is None and self.auto_waiting or wait:
+            sleep(.04)
+            htmltag = self.wait_for_loading()
+            if htmltag.text == 'Request was throttled. Please wait a moment and refresh the page':
+                print('OK!')
+                sleep(3)
+                return self.get(url, cap_check, jquery, wait)
         if jquery is None:
             jquery = self.auto_jquery_insert
         if jquery:
@@ -559,7 +562,8 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
         opts.add_argument('--disable-dev-shm-usage')
     opts.add_argument('start-maximized')
     opts.add_argument('disable-infobars')
-    opts.add_experimental_option('excludeSwitches', ['ignore-certificate-errors'])
+    opts.add_experimental_option('excludeSwitches', ['ignore-certificate-errors', 'enable-automation'])
+    opts.add_argument('--disable-blink-features=AutomationControlled')
     opts.add_argument('user-agent={}'.format(
         UserAgent(software_names=(SoftwareName.CHROME.value,),
                   operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value),
