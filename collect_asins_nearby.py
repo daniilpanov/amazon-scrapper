@@ -58,11 +58,11 @@ def get_bsr(asin, wd):
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
+    print(params_dict)
     try:
         wd = base_chrome_init(False, 'https://amazon.com')
         wd.change_loc()
         # get department url
-        params_dict.setdefault('asin', 'B0725YPBPR')
         url = get_bsr(params_dict['asin'], wd)
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
