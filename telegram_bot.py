@@ -204,7 +204,7 @@ def _import_asins(user_id, document, location):
         header = lines[0]
         delimiter = None
         for d in [',', ';']:
-            if header.count(d) == 2:
+            if header.count(d):
                 delimiter = d
                 break
         if not delimiter:
