@@ -49,7 +49,6 @@ class WebDriver:
             sleep(.04)
             htmltag = self.wait_for_loading()
             if htmltag.text == 'Request was throttled. Please wait a moment and refresh the page':
-                print('OK!')
                 sleep(3)
                 return self.get(url, cap_check, jquery, wait)
         if jquery is None:

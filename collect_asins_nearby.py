@@ -14,9 +14,7 @@ def get_asins(url, wd):
         if i >= 5:
             break
         reviews_lnk = link.select_one('a[href*="product-reviews"]')
-        print(reviews_lnk.text)
         reviews_info = reviews_lnk.text.replace('\u2009', '\n').split('\n')
-        print(reviews_info)
         reviews_count = int(reviews_info[1].strip().replace(',', '').replace(' ', ''))
         if reviews_count < 700:
             continue
