@@ -11,7 +11,7 @@ def get_asins(url, wd):
     links_a = soup.select('div.a-cardui[id*="asin-index"]')
     i = 0
     for link in links_a:
-        if i > 5:
+        if i >= 5:
             break
         reviews_lnk = link.select_one('a[href*="product-reviews"]')
         print(reviews_lnk.text)
