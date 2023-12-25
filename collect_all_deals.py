@@ -288,6 +288,9 @@ def get_products_from_deal(wd: WebDriver, deal: Level, xsheet: XSheet):
 
 
 def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet):
+    if 'stores/luxurystores' in cat_level.link:
+        log('[2] Skip category:', cat_level.link)
+        return
     log('[2] Goto category link:', cat_level.link)
     # переход на страницу категории
     wd.get(cat_level.link)
@@ -438,7 +441,8 @@ def prepare_link(link):
         link = link['href']
     parsed_link = urlparse(link)
     query = parse_qs(parsed_link.query or '')
-    new_query = ('?deals-widget=' + query.get('deals-widget', [''])[0]) if 'deals-widget' in query else ''
+    new_query = ('?deals-widget=' + query['deals-widget'][0]) if 'deals-widget' in query\
+        else ('?k=' + query['k'][0] if 'k' in query else '')
     return link.replace('?' + parsed_link.query, new_query)
 
 
