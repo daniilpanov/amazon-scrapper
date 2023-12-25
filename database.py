@@ -143,6 +143,9 @@ def write_keepa_html(asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
 
 if __name__ == '__main__':
     print(db().list_collection_names())
+    # print(spec_db('ai_highlights')['aspects'].delete_many({}))
+    # print(spec_db('ai_highlights')['top_phrases'].delete_many({}))
+    # print(spec_db('ai_highlights')['problems'].delete_many({}))
     # print(db()['customer_reviews'].find().next())
     # print(db()['product_card'].delete_many({}))
     # print(db()['raw_product_card_htmls'].delete_many({}))

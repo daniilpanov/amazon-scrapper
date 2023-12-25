@@ -25,7 +25,7 @@ def get_asins(url, wd):
 def get_bsr(asin, wd):
     asins = get_all_asins_from_text(asin)
     if not asins:
-        return False
+        return asin
     asin = asins[0]
 
     wd.get(f'https://amazon.com/dp/{asin}')

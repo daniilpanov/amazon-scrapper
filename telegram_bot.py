@@ -195,7 +195,20 @@ def import_asins(msg: types.Message, **kwargs):
 
 def _import_asins(user_id, document, location):
     try:
-        df = pd.read_csv(StringIO(document.decode('utf-8')))
+        string = document.decode('utf-8')
+        lines = string.splitlines()
+        header = lines[0]
+        delimiter = None
+        for d in [',', ';']:
+            if header.count(d) == 2:
+                delimiter = d
+                break
+        if not delimiter:
+            raise Exception('Invalid delimiter!')
+        headmap = header.split(delimiter)
+        if 'ASIN' not in headmap or 'Phrase' not in headmap or 'Qty' not in headmap:
+            raise Exception('Invalid header!')
+        df = pd.read_csv(StringIO(string), delimiter=delimiter)
     except Exception as e:
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
     db_col = location.split('.')
