@@ -9,7 +9,10 @@ def get_asins(url, wd):
     wd.get(url)
     soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
     links_a = soup.select('div.a-cardui[id*="asin-index"]')
+    i = 0
     for link in links_a:
+        if i > 5:
+            break
         reviews_lnk = link.select_one('a[href*="product-reviews"]')
         print(reviews_lnk.text)
         reviews_info = reviews_lnk.text.replace('\u2009', '\n').split('\n')
@@ -17,6 +20,7 @@ def get_asins(url, wd):
         reviews_count = int(reviews_info[1].strip().replace(',', '').replace(' ', ''))
         if reviews_count < 700:
             continue
+        i += 1
         url = link.find('a')['href']
         if not url.startswith('https://'):
             url = 'https://amazon.com' + url
