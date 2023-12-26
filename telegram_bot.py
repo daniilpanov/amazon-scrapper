@@ -204,7 +204,7 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     for _, row in data.iterrows():
         new_row = {}
         for i in range(7):
-            new_row[f'asp{i+1}'] = keys[i] + '=' + row[keys[i]]
+            new_row[f'asp{i+1}'] = keys[i] + '=' + str(row[keys[i]])
         new_row['asin'] = row['asin']
         new_row['review_id'] = row['review_id']
         new_data.loc[len(new_data.index)] = new_row
