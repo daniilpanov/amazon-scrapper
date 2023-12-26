@@ -195,7 +195,7 @@ def import_asins(msg: types.Message, **kwargs):
 
 def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     # format: {asp1: 'key=value', asp2: ts, asp3: ts, ..., asp7: ts, asin: <ASIN>, review_id: <REVIEW_ID>}
-    if len(head) != 9 or 'asin' not in head or 'review_id' not in head:
+    if len(head) < 9 or 'asin' not in head or 'review_id' not in head:
         raise Exception('Invalid header!')
     keys = head.copy()
     keys.remove('asin')
