@@ -235,7 +235,7 @@ def _import_asins(user_id, document, location):
                 for rule in locations_validator[location]:
                     if rule not in headmap:
                         raise Exception('Invalid header!')
-        if not df:
+        if df is None:
             df = pd.read_csv(StringIO(string), delimiter=delimiter)
     except Exception as e:
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
