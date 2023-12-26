@@ -200,14 +200,11 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     keys = head.copy()
     keys.remove('asin')
     keys.remove('review_id')
-    new_data = DataFrame(columns=head)
-    for _, row in data.iterrows():
-        new_row = {}
-        for i in range(7):
-            new_row[f'asp{i+1}'] = keys[i] + '=' + str(row[keys[i]])
-        new_row['asin'] = row['asin']
-        new_row['review_id'] = row['review_id']
-        new_data.loc[len(new_data.index)] = new_row
+    new_data = DataFrame(columns=list([f'asp{i}' for i in range(1, 8)]) + ['asin', 'review_id'])
+    for i in range(7):
+        new_data[f'asp{i + 1}'] = keys[i] + '=' + data[keys[i]].astype(str)
+    new_data['asin'] = data['asin']
+    new_data['review_id'] = data['review_id']
     return new_data
 
 
@@ -232,7 +229,7 @@ def _import_asins(user_id, document, location):
         headmap = header.split(delimiter)
         df = None
         if location in locations_validator:
-            if type(locations_validator[location]) is type(_import_asins):
+            if callable(locations_validator[location]):
                 df = locations_validator[location](headmap, pd.read_csv(StringIO(string), delimiter=delimiter))
             else:
                 for rule in locations_validator[location]:
