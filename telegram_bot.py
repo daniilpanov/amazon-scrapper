@@ -197,6 +197,7 @@ def _import_asins(user_id, document, location):
     locations_validator = {
         'ai_highlights.top_phrases': ['asin', 'phrase', 'count'],
         'ai_highlights.problems': ['ASIN', 'Aspects', 'Description Problem', 'Problem'],
+        'ai_highlights.aspects': ['asin', 'review_id'],
     }
     try:
         string = document.decode('utf-8')
@@ -219,7 +220,7 @@ def _import_asins(user_id, document, location):
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
     db_col = location.split('.')
     if len(db_col) != 2:
-        return send_msg(user_id, f'Collection is incorrect: {location}', parse_mode='HTML')
+        return send_msg(user_id, f'Collection location is incorrect: {location}', parse_mode='HTML')
     db_name, collection = db_col
     try:
         try:
