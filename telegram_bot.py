@@ -216,7 +216,7 @@ def _import_asins(user_id, document, location):
         'ai_highlights.aspects_new': ai_highlights_aspects_new_mapping,
     }
     try:
-        string = document.decode('ascii')
+        string = document.decode('cp1251')
         lines = string.splitlines()
         header = lines[0]
         delimiter = None
