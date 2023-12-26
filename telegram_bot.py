@@ -1,11 +1,9 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
 import os
-from builtins import function
 from io import StringIO
 from threading import Thread
 
 import bottle
-import colorama
 import pandas as pd
 
 import telebot
@@ -234,7 +232,7 @@ def _import_asins(user_id, document, location):
         headmap = set(header.split(delimiter))
         df = None
         if location in locations_validator:
-            if type(locations_validator[location]) is function:
+            if type(locations_validator[location]) is type(_import_asins):
                 df = locations_validator[location](headmap, pd.read_csv(StringIO(string), delimiter=delimiter))
             else:
                 for rule in locations_validator[location]:
@@ -319,6 +317,7 @@ def collect_asins_nearby(msg: types.Message):
         payload_manager.add_asins_nearby_task(asin, msg.from_user.id)
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_asins_nearby)
+
 
 def unknown(msg: types.Message):
     return send_msg(msg.from_user.id, 'Unknown command')
