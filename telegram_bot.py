@@ -1,5 +1,6 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
 import os
+from builtins import function
 from io import StringIO
 from threading import Thread
 
@@ -9,6 +10,7 @@ import pandas as pd
 
 import telebot
 from bottle import request
+from pandas import DataFrame
 from telebot import types
 from telebot.apihelper import ApiTelegramException
 
@@ -193,11 +195,30 @@ def import_asins(msg: types.Message, **kwargs):
     )
 
 
+def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
+    # format: {asp1: 'key=value', asp2: ts, asp3: ts, ..., asp7: ts, asin: <ASIN>, review_id: <REVIEW_ID>}
+    if len(head) != 9 or 'asin' not in head or 'review_id' not in head:
+        raise Exception('Invalid header!')
+    keys = head.copy()
+    keys.remove('asin')
+    keys.remove('review_id')
+    new_data = DataFrame(columns=head)
+    for _, row in data.iterrows():
+        new_row = {}
+        for i in range(7):
+            new_row[f'asp{i+1}'] = keys[i] + '=' + row[keys[i]]
+        new_row['asin'] = row['asin']
+        new_row['review_id'] = row['review_id']
+        new_data.loc[len(new_data.index)] = new_row
+    return new_data
+
+
 def _import_asins(user_id, document, location):
     locations_validator = {
         'ai_highlights.top_phrases': ['asin', 'phrase', 'count'],
         'ai_highlights.problems': ['ASIN', 'Aspects', 'Description Problem', 'Problem'],
-        'ai_highlights.aspects': ['asin', 'review_id'],
+        'ai_highlights.aspects2': ['asin', 'review_id'],
+        'ai_highlights.aspects_new': ai_highlights_aspects_new_mapping,
     }
     try:
         string = document.decode('utf-8')
@@ -211,11 +232,16 @@ def _import_asins(user_id, document, location):
         if not delimiter:
             raise Exception('Invalid delimiter!')
         headmap = set(header.split(delimiter))
+        df = None
         if location in locations_validator:
-            for rule in locations_validator[location]:
-                if rule not in headmap:
-                    raise Exception('Invalid header!')
-        df = pd.read_csv(StringIO(string), delimiter=delimiter)
+            if type(locations_validator[location]) is function:
+                df = locations_validator[location](headmap, pd.read_csv(StringIO(string), delimiter=delimiter))
+            else:
+                for rule in locations_validator[location]:
+                    if rule not in headmap:
+                        raise Exception('Invalid header!')
+        if not df:
+            df = pd.read_csv(StringIO(string), delimiter=delimiter)
     except Exception as e:
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
     db_col = location.split('.')
