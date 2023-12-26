@@ -229,7 +229,7 @@ def _import_asins(user_id, document, location):
                 break
         if not delimiter:
             raise Exception('Invalid delimiter!')
-        headmap = set(header.split(delimiter))
+        headmap = header.split(delimiter)
         df = None
         if location in locations_validator:
             if type(locations_validator[location]) is type(_import_asins):
