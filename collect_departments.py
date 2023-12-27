@@ -338,6 +338,7 @@ if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
     try:
+        params_dict.setdefault('dep_name', 'Beauty & Personal Care')
         start(
             params_dict.get('dep_name', 'ALL'),
             params_dict.get('dep_name'),
