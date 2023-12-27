@@ -6,6 +6,7 @@ from typing import List
 import openpyxl
 import requests
 from bs4 import BeautifulSoup
+from selenium.webdriver import Keys
 
 import parser
 from collect_all_deals import prepare_link
@@ -19,18 +20,20 @@ class Level:
     items: List['Level']
     asin: str | None
     brand: str | None
+    score: int | None
     is_last_group: bool
     ready: bool
     all_items_preloaded: bool
     i: int = 0
 
-    def __init__(self, name, link: str, items=None, is_last_group=None, asin=None, brand=None, ready=False, all_items_preloaded=False):
+    def __init__(self, name, link: str, items=None, is_last_group=None, asin=None, score=None, brand=None, ready=False, all_items_preloaded=False):
         self.name = name
         if link and not link.strip().startswith('https://amazon.com') and not link.strip().startswith('https://www.amazon.com'):
             link = 'https://amazon.com' + link
         self.link = link
         self.is_last_group = is_last_group
         self.asin = asin
+        self.score = score
         self.brand = brand
         self.ready = ready
         self.all_items_preloaded = all_items_preloaded
@@ -56,7 +59,7 @@ class Level:
 
     def __str__(self):
         if self.asin:
-            return (f'Product "{self.name}": asin - {self.asin}, brand - {self.brand}' 
+            return (f'Product "{self.name}": asin - {self.asin}, brand - {self.brand}, score - {self.score}' 
                     f' [{self.link}] {self.ready}')
         return f'Department "{self.name}" with {len(self.items or [])} items [{self.link}] {self.ready}'
 
@@ -95,13 +98,14 @@ class Level:
 
         return {'name': self.name, 'link': self.link, 'is_last_group': self.is_last_group} | ({
             'asin': self.asin,
+            'score': self.score,
             'brand': self.brand,
         } if self.asin else {'items': items}) | {'ready': self.ready, 'all_items_preloaded': self.all_items_preloaded}
 
     @staticmethod
     def from_dict(d):
         level = Level(d.get('name'), d.get('link'), None, d.get('is_last_group', False),
-                      d.get('asin'), d.get('brand'), d.get('ready', False),
+                      d.get('asin'), d.get('score'), d.get('brand'), d.get('ready', False),
                       d.get('all_items_preloaded', False))
         items = []
         for item in d.get('items', []):
@@ -114,15 +118,15 @@ class Level:
         if not self.asin or self.ready:  # проверка: является ли объект товаром и готов ли товар
             return False
         # переходим по ссылке
-        print(self.link)
         wd.get(self.link)
         sleep(.1)
         wd.wait_for_loading()
         # парсим tiny набор данных - title, description, image_url
-        parsed_data = parser.parse_product(self.asin, wd.get_page_source(), True)
+        parsed_data = parser.parse_product(self.asin, wd.get_page_source(), -1)
         if not parsed_data:  # если возникла ошибка - возвращаем False
             return False
-        self.name, self.description, self.image_url = parsed_data
+        self.name, self.brand = parsed_data
+        self.ready = True
         return True
 
     # Фабричный метод
@@ -216,28 +220,42 @@ def recursive_tree(tree: Level, wd: WebDriver, xsh: XSheet, name_only=None):
         return
     # if links are not collected
     if not tree.all_items_preloaded:
+        wd.get(tree.link)
         soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
         view_tree = soup.find(role='tree')
         group = view_tree.find(role='group')
-        if group is None:
+        if group is None or tree.name in group.text:
             tree.is_last_group = True
-            links_a = soup.select('div.a-cardui[id*="asin-index"]')
-            for div in links_a or []:
-                asin_div = div.select_one('div[data-asin]')
-                if not asin_div:
-                    continue
-                asin = asin_div['data-asin']
-                a_tags = div.find_all('a')
-                a_tag = None
-                for a_tag_item in a_tags:
-                    if a_tag_item.text:
-                        a_tag = a_tag_item
-                        break
-                if not a_tag:
-                    continue
-                name = a_tag.text
-                if not name_only or name_only == name:
-                    tree.add_item(Level(name, a_tag['href'], asin=asin), True)
+            for pg in range(1, 3):
+                wd.get(tree.link + ('&pg=' + str(pg) if '?' in tree.link else '?pg=' + str(pg)))
+                for _ in range(12):
+                    body = wd.get_element('body')
+                    body.send_keys(Keys.PAGE_DOWN)
+                    sleep(.9)
+                soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
+                links_a = soup.select('div.a-cardui[id*="asin-index"]')
+                for div in links_a or []:
+                    asin_div = div.select_one('div[data-asin]')
+                    if not asin_div:
+                        continue
+                    asin = asin_div['data-asin']
+                    a_tags = div.find_all('a')
+                    a_tag = None
+                    for a_tag_item in a_tags:
+                        if a_tag_item.text:
+                            a_tag = a_tag_item
+                            break
+                    if not a_tag:
+                        continue
+                    name = a_tag.text
+                    if not name_only or name_only == name:
+                        prod = Level(name, a_tag['href'], asin=asin)
+                        score_item = asin_div.find(attrs={'class': 'zg-bdg-text'})
+                        if score_item:
+                            prod.score = score_item.text
+                            if prod.score:
+                                prod.score = int(prod.score.replace('#', '').strip())
+                        tree.add_item(prod, True)
         else:
             tree.is_last_group = False
             links_a = group.find_all('a')
@@ -253,7 +271,7 @@ def recursive_tree(tree: Level, wd: WebDriver, xsh: XSheet, name_only=None):
         # full loading
         for link in tree:
             if not name_only or name_only == link.name:
-                pass  # recursive_tree(link, wd, xsh)
+                recursive_tree(link, wd, xsh)
         xsh.save()
     # it is last-point group
     else:
@@ -262,7 +280,7 @@ def recursive_tree(tree: Level, wd: WebDriver, xsh: XSheet, name_only=None):
         for link in tree:
             if not name_only or name_only == link.name:
                 link.add_product_data(wd)
-        xsh.save()
+                xsh.save()
 
 
 def recursive_find(tree: Level, name_only=None):
@@ -277,25 +295,15 @@ def recursive_find(tree: Level, name_only=None):
 
 def collect_all_info(xsheet: XSheet, dep_name=None):
     log('[1] Init chrome')
-    wd = base_chrome_init(False, goto='https://amazon.com')
+    wd = base_chrome_init(goto='https://amazon.com')
     log('[1] Change loc')
     wd.change_loc()
     wd.wait_for_loading()
     wd.get(xsheet.set_link('https://amazon.com/gp/bestsellers'))
-    if not xsheet.departments_tree.all_items_preloaded:
-        recursive_tree(xsheet.departments_tree, wd, xsheet, dep_name)
-        xsheet.save()
-    asins = recursive_find(xsheet.departments_tree)
+    recursive_tree(xsheet.departments_tree, wd, xsheet, dep_name)
+    xsheet.save()
+    # asins = recursive_find(xsheet.departments_tree)
     log('[1] Tree collected:', xsheet.departments_tree)
-    # перебираем
-    for asin in asins:
-        if asin.ready:
-            continue
-        # добавляем элементы - deals (see this function)
-        asin.add_product_data(wd)
-        log('[1] ASIN collected:', asin.asin)
-        asin.ready = True
-        xsheet.save()
     xsheet.departments_tree.ready = True
     xsheet.save()
 
@@ -304,21 +312,23 @@ def write_info(xsh: XSheet):
     pass
 
 
-def start(name=None, tg_note_users_ids: list[str] | None = None):
+def start(sheet_name=None, dep_name=None, tg_note_users_ids: list[str] | None = None):
     if not tg_note_users_ids:
         tg_note_users_ids = []
-    xsh = XSheet(name or hash(tg_note_users_ids))
+    if not sheet_name:
+        sheet_name = str(hash(tg_note_users_ids))
+    xsh = XSheet(sheet_name)
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
-        collect_all_info(xsh)
+        collect_all_info(xsh, dep_name)
     log('[0] Write all info')
     write_info(xsh)
     log('[0] Open file to send it')
-    with open(os.path.join('tmp__', name + '.xlsx'), 'rb') as f:
+    with open(os.path.join('tmp__', sheet_name + '.xlsx'), 'rb') as f:
         requests.post(
             'localhost:8080',
             {'msg': 'Data collected! Your XLSX file with the Departments:', 'uid': ','.join(tg_note_users_ids)},
-            files=[(name + '.xlsx', f)],
+            files=[(sheet_name + '.xlsx', f)],
         )
         log('[0] Sent!')
     log('[0] Program finished')
@@ -328,7 +338,7 @@ if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
     try:
-        start(params_dict.get('sheet_name', 'TMP'), params_dict.get('user', '1456674317,1428909514').split(','))
+        start(params_dict.get('sheet_name', 'TMP'), params_dict.get('department', 'Beauty & Personal Care'), params_dict.get('user', '1456674317,1428909514').split(','))
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'Departments collected: {params_dict.get("sheet_name")}',
             'uid': params_dict['user'],

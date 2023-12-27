@@ -133,6 +133,13 @@ def parse_product(asin, html, tiny=False):
             f.write(str(bs))
         return False
     title = bs.select_one('#titleSection, #title, #productTitle').text.strip()
+    if tiny == -1:
+        brand = bs.select_one('.po-brand')
+        if brand:
+            brand = brand.text
+            if brand:
+                brand = brand.replace('Brand', '').strip()
+        return title, brand
     descr = bs.select_one('#feature-bullets, #productFactsDesktop_feature_div div[aria-expanded]')
     if not descr:
         print(f'ERROR: ASIN {asin} has no description!')
