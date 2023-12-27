@@ -333,6 +333,7 @@ CMDs = {
     'import_asins': import_asins,
     'delete_asins': delete_asins,
     'collect_deals': collect_deals,
+    'collect_departments': collect_departments,
     'collect_asins_nearby': collect_asins_nearby,
 }
 
