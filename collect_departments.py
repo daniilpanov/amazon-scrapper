@@ -344,12 +344,12 @@ if __name__ == '__main__':
             params_dict.get('user', '1456674317,1428909514').split(',')
         )
         requests.post('http://localhost:8080/send_msg', {
-            'msg': f'Departments collected: {params_dict.get("dep_name")}',
+            'msg': f'Departments collected: {params_dict.get("dep_name", "all")}',
             'uid': params_dict.get('user', '1456674317,1428909514'),
         })
     except Exception as e:
         requests.post('http://localhost:8080/send_msg', {
-            'msg': f'Error on collecting departments: {params_dict.get("dep_name")}\n' + str(e) + '\n',
+            'msg': f'Error on collecting departments: {params_dict.get("dep_name", "all")}\n' + str(e) + '\n',
             'uid': params_dict.get('user', '1456674317,1428909514'),
         })
     finally:

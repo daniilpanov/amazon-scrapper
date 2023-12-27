@@ -60,6 +60,7 @@ def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
 
 def end_task(_id, hard_kill=True):
     global processes
+    _id = int(_id)
     if _id not in processes:
         raise KeyError
 
