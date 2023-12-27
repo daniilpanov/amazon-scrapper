@@ -338,15 +338,19 @@ if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
     try:
-        start(params_dict.get('sheet_name', 'TMP'), params_dict.get('department', 'Beauty & Personal Care'), params_dict.get('user', '1456674317,1428909514').split(','))
+        start(
+            params_dict.get('dep_name', 'ALL'),
+            params_dict.get('dep_name'),
+            params_dict.get('user', '1456674317,1428909514').split(',')
+        )
         requests.post('http://localhost:8080/send_msg', {
-            'msg': f'Departments collected: {params_dict.get("sheet_name")}',
-            'uid': params_dict['user'],
+            'msg': f'Departments collected: {params_dict.get("dep_name")}',
+            'uid': params_dict.get('user', '1456674317,1428909514'),
         })
     except Exception as e:
         requests.post('http://localhost:8080/send_msg', {
-            'msg': f'Error on collecting departments: {params_dict.get("sheet_name")}\n' + str(e) + '\n',
-            'uid': params_dict['user'],
+            'msg': f'Error on collecting departments: {params_dict.get("dep_name")}\n' + str(e) + '\n',
+            'uid': params_dict.get('user', '1456674317,1428909514'),
         })
     finally:
         requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})

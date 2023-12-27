@@ -8,6 +8,7 @@ import state
 from helpers import log
 
 processes: dict[int, Popen] = {}
+i = 0
 processes_waiters = ThreadPoolExecutor(5)
 
 
@@ -32,10 +33,15 @@ def add_asins_nearby_task(asin, user_id):
     processes_waiters.submit(add_task, 'collect_asins_nearby', asin=asin, user=user_id)
 
 
+def add_departments_task(department, user_id):
+    processes_waiters.submit(add_task, 'collect_departments', dep_name=department, user=user_id)
+
+
 # Добавление процесса и ожидание завершения (ф-я запускается в отдельном потоке)
 def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
+    global i
     log(f'Process: {script}. Params:', dict(kwargs))
-    kwargs['_id'] = str(len(processes))
+    kwargs['_id'] = i
     proc = Popen(
         [sys.executable, f'{script}.py', *args, *list(key + '=' + str(kwargs[key]) for key in kwargs)],
         stdin=stdin or sys.stdin, stdout=stdout or sys.stdout, stderr=stderr or sys.stderr,
@@ -46,6 +52,10 @@ def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
     processes[kwargs['_id']] = proc
     # Ожидание завершения процесса
     proc.wait()
+    if i not in processes and i > 255:
+        i = 0
+    else:
+        i += 1
 
 
 def end_task(_id, hard_kill=True):
