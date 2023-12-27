@@ -318,7 +318,7 @@ def collect_asins_nearby(msg: types.Message):
 
 def collect_departments(msg: types.Message):
     receive_message(msg)
-    department = msg.text.replace('/collect_asins_nearby', '').strip() or None
+    department = msg.text.replace('/collect_departments', '').strip() or None
     payload_manager.add_departments_task(department, msg.from_user.id)
     return send_msg(msg.from_user.id, f'Start collecting: {department if department else "all departments"}')
 
