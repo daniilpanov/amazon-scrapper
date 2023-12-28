@@ -234,7 +234,7 @@ def _import_asins(user_id, document, location):
         df = None
         if location in locations_validator:
             if callable(locations_validator[location]):
-                df = locations_validator[location](headmap, pd.read_csv(StringIO(string), delimiter=delimiter))
+                df = locations_validator[location](headmap, pd.read_csv(StringIO(string), delimiter=delimiter, encoding='utf-8'))
             else:
                 for rule in locations_validator[location]:
                     if rule not in headmap:
