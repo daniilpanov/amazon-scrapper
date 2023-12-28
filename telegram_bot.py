@@ -258,7 +258,6 @@ def _import_asins(user_id, document, location):
             database.spec_db(db_name)[collection].insert_many(df.T.to_dict().values())
         return send_msg(user_id, f'Data inserted successfully to {location}!', parse_mode='HTML')
     except Exception as e:
-        print(df.T.to_dict().values(), type(df.T.to_dict().values()))
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
 
 
