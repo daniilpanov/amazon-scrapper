@@ -20,9 +20,24 @@ from helpers import get_all_asins_from_text, log
 from state import chunk
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc')
-auth_users = {320753905, 1428909514}
+auth_users = set()
 PASSWORD = '12345'
 processes = set()
+CMDs = {}
+
+
+def cmdreg(func):
+    global CMDs
+
+    def wrapper(msg: types.Message, *args, **kwargs):
+        receive_message(msg)
+        if msg.text in ('/close', '/stop', '/quit'):
+            return send_msg(msg.from_user.id, 'Cancel')
+        return func(msg, *args, **kwargs)
+
+    CMDs[func.__name__] = wrapper
+    bot.register_message_handler(callback=wrapper, commands=[func.__name__], func=auth)
+    return wrapper
 
 
 def send_msg(user_id, message, *args, **kwargs):
@@ -38,10 +53,8 @@ def auth(msg: types.Message):
     return msg.from_user.id in auth_users
 
 
+@cmdreg
 def get_asins_data(msg: types.Message, **kwargs):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     asins_raw = msg.text.replace('/get_asins_data', '').strip()
     if asins_raw:
         asins = set(get_all_asins_from_text(asins_raw))
@@ -73,10 +86,8 @@ def get_asins_data(msg: types.Message, **kwargs):
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the ASINs list:'), get_asins_data)
 
 
+@cmdreg
 def export_asins(msg: types.Message, **kwargs):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     asins_raw = msg.text.replace('/export_asins', '').strip()
     if asins_raw:
         asins = set(get_all_asins_from_text(asins_raw))
@@ -164,10 +175,8 @@ def import_asins_doc(msg: types.Message, **kwargs):
     return import_asins(msg, **kwargs)
 
 
+@cmdreg
 def import_asins(msg: types.Message, **kwargs):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     if msg.document:
         try:
             file_info = bot.get_file(msg.document.file_id)
@@ -261,10 +270,8 @@ def _import_asins(user_id, document, location):
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
 
 
+@cmdreg
 def set_category(msg: types.Message, **kwargs):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     category_or_asins = msg.text.replace('/set_category', '').strip()
     if category_or_asins:
         if 'category' in kwargs:
@@ -287,10 +294,8 @@ def _set_category(user_id, asins, cat_name):
         return send_msg(user_id, f'An error occurred on saving category {cat_name}:\n{e}')
 
 
+@cmdreg
 def rename_category(msg: types.Message, **kwargs):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     category = msg.text.replace('/rename_category', '').strip()
     if category:
         if 'category_old' in kwargs:
@@ -313,10 +318,8 @@ def _rename_category(user_id, cat_old, cat_new):
         return send_msg(user_id, f'An error occurred on renaming category {cat_old} to {cat_new}:\n{e}')
 
 
+@cmdreg
 def delete_asins(msg: types.Message):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     asins_raw = msg.text.replace('/delete_asins', '').strip()
     if asins_raw:
         for args in (
@@ -360,10 +363,8 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
         return False
 
 
+@cmdreg
 def collect_deals(msg: types.Message):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     name = msg.text.replace('/collect_deals', '').strip()
     if name:
         payload_manager.add_deals_task(name, msg.from_user.id)
@@ -371,10 +372,8 @@ def collect_deals(msg: types.Message):
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the .xlsx filename: '), collect_deals)
 
 
+@cmdreg
 def collect_asins_nearby(msg: types.Message):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     asin = msg.text.replace('/collect_asins_nearby', '').strip()
     if asin:
         payload_manager.add_asins_nearby_task(asin, msg.from_user.id)
@@ -382,10 +381,8 @@ def collect_asins_nearby(msg: types.Message):
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_asins_nearby)
 
 
+@cmdreg
 def collect_departments(msg: types.Message):
-    receive_message(msg)
-    if msg.text in ('/close', '/stop', '/quit'):
-        return send_msg(msg.from_user.id, 'Cancel')
     department = msg.text.replace('/collect_departments', '').strip() or None
     payload_manager.add_departments_task(department, msg.from_user.id)
     return send_msg(msg.from_user.id, f'Start collecting: {department if department else "all departments"}')
@@ -395,30 +392,17 @@ def unknown(msg: types.Message):
     return send_msg(msg.from_user.id, 'Unknown command')
 
 
-CMDs = {
-    'get_asins_data': get_asins_data,
-    'export_asins': export_asins,
-    'import_asins': import_asins,
-    'delete_asins': delete_asins,
-    'collect_deals': collect_deals,
-    'collect_departments': collect_departments,
-    'collect_asins_nearby': collect_asins_nearby,
-    'set_category': set_category,
-    'rename_category': rename_category,
-}
-
-
 def buttons():
     keyboard = types.ReplyKeyboardMarkup()
-    for cmd in CMDs:
-        key = types.InlineKeyboardButton(text='/' + cmd)
+    for command in CMDs:
+        key = types.InlineKeyboardButton(text='/' + command)
         keyboard.add(key)
 
     return keyboard
 
 
-@bot.message_handler(commands=['cmd'], func=auth)
-def cmds(msg: types.Message):
+@cmdreg
+def cmd(msg: types.Message):
     return bot.send_message(msg.from_user.id, 'All commands:\n/' + '\n/'.join(CMDs.keys()), reply_markup=buttons(),
                             parse_mode='HTML')
 
@@ -458,11 +442,17 @@ def run_bottle():
 
 
 if __name__ == '__main__':
-    for cmd in CMDs:
-        dcmd = CMDs[cmd]
-        bot.register_message_handler(callback=dcmd, commands=[cmd], func=auth)
     bot.register_message_handler(callback=non_verification_user_msg, func=lambda msg: not auth(msg))
     bot.register_message_handler(callback=unknown, func=lambda _: True)
     bottle_thr = Thread(target=run_bottle, daemon=True)
     bottle_thr.start()
+    if os.path.exists('auth_users.data'):
+        with open('auth_users.data') as f:
+            for user in f:
+                auth_users.add(int(user))
+                bot.send_message(user, 'Hello! Bot is alive!')
     bot.infinity_polling()
+    with open('auth_users.data', 'w') as f:
+        for user in auth_users:
+            f.write(str(user) + '\n')
+            bot.send_message(user, 'Bot stopped. We will notify you when the bot is alive')
