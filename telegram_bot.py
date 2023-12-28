@@ -204,8 +204,7 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     ] if col in head)
     data = data.drop(cols_for_drop, axis=1)
     new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
-    new_data = new_data.dropna(subset=['Aspect', 'Value'])
-    return new_data
+    return new_data.dropna(subset=['Aspect', 'Value'])
 
 
 def _import_asins(user_id, document, location):
