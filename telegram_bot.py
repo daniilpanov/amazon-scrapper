@@ -213,7 +213,7 @@ def _import_asins(user_id, document, location):
         'ai_highlights.top_phrases': ['asin', 'phrase', 'count'],
         'ai_highlights.problems': ['ASIN', 'Aspects', 'Description Problem', 'Problem'],
         'ai_highlights.aspects2': ['asin', 'review_id'],
-        'ai_highlights.aspects_new': ai_highlights_aspects_new_mapping,
+        'ai_highlights.aspects_new2': ai_highlights_aspects_new_mapping,
         'amazon_data.customer_reviews': [
             'review_id', 'product_url', 'asin', 'date', 'country',
             'name', 'title', 'content', 'rating', 'helpful', 'options', 'scrap_datetime',
@@ -234,13 +234,16 @@ def _import_asins(user_id, document, location):
         df = None
         if location in locations_validator:
             if callable(locations_validator[location]):
-                df = locations_validator[location](headmap, pd.read_csv(StringIO(string), delimiter=delimiter, encoding='utf-8'))
+                df = locations_validator[location](
+                    headmap,
+                    pd.read_csv(StringIO(string), delimiter=delimiter, encoding='latin-1'),
+                )
             else:
                 for rule in locations_validator[location]:
                     if rule not in headmap:
                         raise Exception('Invalid header!')
         if df is None:
-            df = pd.read_csv(StringIO(string), delimiter=delimiter)
+            df = pd.read_csv(StringIO(string), delimiter=delimiter, encoding='latin-1')
     except Exception as e:
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
     db_col = location.split('.')
