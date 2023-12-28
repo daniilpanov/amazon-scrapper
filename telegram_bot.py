@@ -4,6 +4,7 @@ from io import StringIO
 from threading import Thread
 
 import bottle
+import pandas
 import pandas as pd
 
 import telebot
@@ -194,17 +195,16 @@ def import_asins(msg: types.Message, **kwargs):
 
 
 def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
-    # format: {asp1: 'key=value', asp2: ts, asp3: ts, ..., asp7: ts, asin: <ASIN>, review_id: <REVIEW_ID>}
-    if len(head) < 9 or 'asin' not in head or 'review_id' not in head:
+    # format: {key, value, asin, review_id}
+    if 'asin' not in head or 'review_id' not in head:
         raise Exception('Invalid header!')
-    keys = head.copy()
-    keys.remove('asin')
-    keys.remove('review_id')
-    new_data = DataFrame(columns=list([f'asp{i}' for i in range(1, 8)]) + ['asin', 'review_id'])
-    for i in range(7):
-        new_data[f'asp{i + 1}'] = keys[i] + '=' + data[keys[i]].astype(str)
-    new_data['asin'] = data['asin']
-    new_data['review_id'] = data['review_id']
+    cols_for_drop = [
+        'product_url', 'date', 'country', 'name', 'title',
+        'content', 'rating', 'helpful', 'options', 'scrap_datetime',
+    ]
+    data.drop(cols_for_drop, axis=1)
+    new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
+    new_data.dropna(subset=['Aspect', 'Value'])
     return new_data
 
 
@@ -214,6 +214,10 @@ def _import_asins(user_id, document, location):
         'ai_highlights.problems': ['ASIN', 'Aspects', 'Description Problem', 'Problem'],
         'ai_highlights.aspects2': ['asin', 'review_id'],
         'ai_highlights.aspects_new': ai_highlights_aspects_new_mapping,
+        'amazon_data.customer_reviews': [
+            'review_id', 'product_url', 'asin', 'date', 'country',
+            'name', 'title', 'content', 'rating', 'helpful', 'options', 'scrap_datetime',
+        ],
     }
     try:
         string = document.decode('utf-8')
