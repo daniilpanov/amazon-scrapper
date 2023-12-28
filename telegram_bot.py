@@ -204,7 +204,9 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     ] if col in head)
     data = data.drop(cols_for_drop, axis=1)
     new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
-    return new_data.dropna(subset=['Aspect', 'Value'])
+    new_data = new_data.dropna(subset=['Aspect', 'Value'])
+    new_data = new_data['Aspect'].str.strip()
+    return new_data
 
 
 def _import_asins(user_id, document, location):
@@ -259,8 +261,62 @@ def _import_asins(user_id, document, location):
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
 
 
+def set_category(msg: types.Message, **kwargs):
+    receive_message(msg)
+    if msg.text in ('/close', '/stop', '/quit'):
+        return send_msg(msg.from_user.id, 'Cancel')
+    category_or_asins = msg.text.replace('/set_category', '').strip()
+    if category_or_asins:
+        if 'category' in kwargs:
+            return _set_category(msg.from_user.id, category_or_asins, kwargs['category'])
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Enter the ASINs list:'),
+            set_category, category=category_or_asins,
+        )
+    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the category name:'), set_category)
+
+
+def _set_category(user_id, asins, cat_name):
+    data = list([{'Category': cat_name, 'ASIN': asin} for asin in get_all_asins_from_text(asins)])
+    if not data:
+        return send_msg(user_id, f'Category is empty')
+    try:
+        database.db()['categories'].insert_many(data)
+        return send_msg(user_id, f'Category {cat_name} saved')
+    except Exception as e:
+        return send_msg(user_id, f'An error occurred on saving category {cat_name}:\n{e}')
+
+
+def rename_category(msg: types.Message, **kwargs):
+    receive_message(msg)
+    if msg.text in ('/close', '/stop', '/quit'):
+        return send_msg(msg.from_user.id, 'Cancel')
+    category = msg.text.replace('/rename_category', '').strip()
+    if category:
+        if 'category_old' in kwargs:
+            return _rename_category(msg.from_user.id, kwargs['category_old'], category)
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Enter the new name of the category:'),
+            rename_category, category_old=category,
+        )
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Enter the old category name:'),
+        rename_category,
+    )
+
+
+def _rename_category(user_id, cat_old, cat_new):
+    try:
+        database.db()['categories'].update_many({'Category': cat_old}, {'$set': {'Category': cat_new}})
+        return send_msg(user_id, f'Category {cat_old} renamed to {cat_new}')
+    except Exception as e:
+        return send_msg(user_id, f'An error occurred on renaming category {cat_old} to {cat_new}:\n{e}')
+
+
 def delete_asins(msg: types.Message):
     receive_message(msg)
+    if msg.text in ('/close', '/stop', '/quit'):
+        return send_msg(msg.from_user.id, 'Cancel')
     asins_raw = msg.text.replace('/delete_asins', '').strip()
     if asins_raw:
         for args in (
@@ -306,6 +362,8 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
 
 def collect_deals(msg: types.Message):
     receive_message(msg)
+    if msg.text in ('/close', '/stop', '/quit'):
+        return send_msg(msg.from_user.id, 'Cancel')
     name = msg.text.replace('/collect_deals', '').strip()
     if name:
         payload_manager.add_deals_task(name, msg.from_user.id)
@@ -315,6 +373,8 @@ def collect_deals(msg: types.Message):
 
 def collect_asins_nearby(msg: types.Message):
     receive_message(msg)
+    if msg.text in ('/close', '/stop', '/quit'):
+        return send_msg(msg.from_user.id, 'Cancel')
     asin = msg.text.replace('/collect_asins_nearby', '').strip()
     if asin:
         payload_manager.add_asins_nearby_task(asin, msg.from_user.id)
@@ -324,6 +384,8 @@ def collect_asins_nearby(msg: types.Message):
 
 def collect_departments(msg: types.Message):
     receive_message(msg)
+    if msg.text in ('/close', '/stop', '/quit'):
+        return send_msg(msg.from_user.id, 'Cancel')
     department = msg.text.replace('/collect_departments', '').strip() or None
     payload_manager.add_departments_task(department, msg.from_user.id)
     return send_msg(msg.from_user.id, f'Start collecting: {department if department else "all departments"}')
@@ -341,6 +403,8 @@ CMDs = {
     'collect_deals': collect_deals,
     'collect_departments': collect_departments,
     'collect_asins_nearby': collect_asins_nearby,
+    'set_category': set_category,
+    'rename_category': rename_category,
 }
 
 
@@ -368,7 +432,7 @@ def non_verification_user_msg(msg: types.Message):
     send_msg(msg.from_user.id, 'Verification failed. Please enter the master password')
 
 
-### BOTTLE REQUESTS
+# ##BOTTLE REQUESTS## #
 def run_bottle():
     @bottle.route('/send_msg', method='POST')
     def send_message():
