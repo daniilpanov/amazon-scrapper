@@ -199,7 +199,7 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     if 'asin' not in head or 'review_id' not in head:
         raise Exception('Invalid header!')
     cols_for_drop = list(col for col in [
-        'product_url', 'date', 'country', 'name', 'title',
+        'product_url', 'date', 'country', 'name', 'title', 'description',
         'content', 'rating', 'helpful', 'options', 'scrap_datetime',
     ] if col in head)
     data = data.drop(cols_for_drop, axis=1)
