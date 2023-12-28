@@ -198,10 +198,10 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     # format: {key, value, asin, review_id}
     if 'asin' not in head or 'review_id' not in head:
         raise Exception('Invalid header!')
-    cols_for_drop = [
+    cols_for_drop = list(col for col in [
         'product_url', 'date', 'country', 'name', 'title',
         'content', 'rating', 'helpful', 'options', 'scrap_datetime',
-    ]
+    ] if col in head)
     data.drop(cols_for_drop, axis=1)
     new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
     new_data.dropna(subset=['Aspect', 'Value'])
