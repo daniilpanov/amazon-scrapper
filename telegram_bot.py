@@ -205,7 +205,7 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     data = data.drop(cols_for_drop, axis=1)
     new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
     new_data = new_data.dropna(subset=['Aspect', 'Value'])
-    new_data = new_data['Aspect'].str.strip()
+    new_data['Aspect'] = new_data['Aspect'].str.strip()
     return new_data
 
 
@@ -258,6 +258,7 @@ def _import_asins(user_id, document, location):
             database.spec_db(db_name)[collection].insert_many(df.T.to_dict().values())
         return send_msg(user_id, f'Data inserted successfully to {location}!', parse_mode='HTML')
     except Exception as e:
+        print(df.T.to_dict().values(), type(df.T.to_dict().values()))
         return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
 
 
