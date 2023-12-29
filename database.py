@@ -142,7 +142,8 @@ def write_keepa_html(asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
 
 
 if __name__ == '__main__':
-    print(db().list_collection_names())
+    for row in set(x['asin'] for x in spec_db('ai_highlights')['aspects_new2'].find({'Aspect': '_id'})):
+        print(row)
 #     asins = '''B081SKK9XJ
 # B07J1H37ZF
 # B01N3SK45R

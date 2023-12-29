@@ -112,7 +112,7 @@ def export_asins(msg: types.Message, **kwargs):
         if 'asins' in kwargs:
             if 'list_name' in kwargs:
                 collections = (('amazon_data.customer_reviews', 'amazon_data.product_card')
-                               if asins_raw == 'amadata' else asins_raw)
+                               if asins_raw == 'amadata' else asins_raw.split(','))
                 for collection in collections:
                     _export_asins(kwargs['asins'], msg.from_user.id, collection, kwargs['list_name'])
                 return
@@ -456,11 +456,18 @@ if __name__ == '__main__':
     bot.register_message_handler(callback=unknown, func=lambda _: True)
     bottle_thr = Thread(target=run_bottle, daemon=True)
     bottle_thr.start()
+    changelog = None
+    if os.path.exists('CHANGELOG'):
+        with open('CHANGELOG') as f:
+            changelog = f.read()
+        os.remove('CHANGELOG')
     if os.path.exists('auth_users.data'):
         with open('auth_users.data') as f:
             for user in f:
                 auth_users.add(int(user))
                 bot.send_message(user, 'Hello! Bot is alive!')
+                if changelog:
+                    bot.send_message(user, 'CHANGELOG:\n' + changelog)
     bot.infinity_polling()
     with open('auth_users.data', 'w') as f:
         for user in auth_users:
