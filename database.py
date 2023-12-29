@@ -152,7 +152,7 @@ if __name__ == '__main__':
 # B005HJ1S0A
 # B003XDIU30
 # B003U2AAQY'''
-#     print(spec_db('ai_highlights')['problems'].delete_many({'asin': {'$in': asins.splitlines()}}))
+#     print(spec_db('ai_highlights')['problems'].delete_many({'ASIN': {'$in': asins.splitlines()}}))
     # print(spec_db('ai_highlights')['aspects'].delete_many({}))
     # data = (spec_db('ai_highlights')['problems'].find({}))
     # new_data = []
