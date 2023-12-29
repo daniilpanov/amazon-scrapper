@@ -143,14 +143,24 @@ def write_keepa_html(asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
 
 if __name__ == '__main__':
     print(db().list_collection_names())
+#     asins = '''B081SKK9XJ
+# B07J1H37ZF
+# B01N3SK45R
+# B01I4CVE8C
+# B01GTXLINO
+# B00B1H8VMU
+# B005HJ1S0A
+# B003XDIU30
+# B003U2AAQY'''
+#     print(spec_db('ai_highlights')['problems'].delete_many({'asin': {'$in': asins.splitlines()}}))
     # print(spec_db('ai_highlights')['aspects'].delete_many({}))
-    data = (spec_db('ai_highlights')['problems'].find({}))
-    new_data = []
-    for row in data:
-        new_data.append({'ASIN': row['asin'], 'Aspects': row['top_aspects'], 'Description Problem': row['description'], 'Problem': row['problem']})
-    print(new_data[0])
-    print(spec_db('ai_highlights')['problems'].delete_many({}))
-    print(spec_db('ai_highlights')['problems'].insert_many(new_data))
+    # data = (spec_db('ai_highlights')['problems'].find({}))
+    # new_data = []
+    # for row in data:
+    #     new_data.append({'ASIN': row['asin'], 'Aspects': row['top_aspects'], 'Description Problem': row['description'], 'Problem': row['problem']})
+    # print(new_data[0])
+    # print(spec_db('ai_highlights')['problems'].delete_many({}))
+    # print(spec_db('ai_highlights')['problems'].insert_many(new_data))
     # print(spec_db('ai_highlights')['problems'].delete_many({}))
     # print(db()['customer_reviews'].find().next())
     # print(db()['product_card'].delete_many({}))

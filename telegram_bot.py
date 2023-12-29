@@ -159,9 +159,12 @@ def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', 
     except IndexError:
         return send_msg(user_id, 'Empty file!')
     df = pd.DataFrame(columns=cols)
-    print(cols)
-    print(data[0].values())
-    print(list(data[0].values()))
+    log(cols, '0')
+    log(set(cols), '1')
+    log(data[0].values(), '2')
+    log(list(data[0].values()), '3')
+    log(set(data[0].values()), '4')
+    log(set(list(data[0].values())), '5')
     if len(set(cols) - set(data[0].values())) == 0:
         data = data[1:]
     for row in data:
