@@ -204,6 +204,15 @@ def import_asins(msg: types.Message, **kwargs):
     )
 
 
+def ai_highlights_problems_mapping(head: list[str], data: DataFrame):
+    if {'ASIN', 'Aspects', 'Description Problem', 'Problem'} - set(head) \
+            or {'ASIN', 'Aspects', 'Description Problem', 'Problem'} - set(head):
+        raise Exception('Invalid header!')
+    asins = data['ASIN'].tolist()
+    database.spec_db('ai_highlights')['problems'].delete_many({'ASIN': {'$in': asins}})
+    return data
+
+
 def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     # format: {key, value, asin, review_id}
     if 'asin' not in head or 'review_id' not in head:
@@ -223,8 +232,7 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
 def _import_asins(user_id, document, location):
     locations_validator = {
         'ai_highlights.top_phrases': ['asin', 'phrase', 'count'],
-        'ai_highlights.problems': ['ASIN', 'Aspects', 'Description Problem', 'Problem'],
-        'ai_highlights.aspects2': ['asin', 'review_id'],
+        'ai_highlights.problems': ai_highlights_problems_mapping,
         'ai_highlights.aspects_new2': ai_highlights_aspects_new_mapping,
         'amazon_data.customer_reviews': [
             'review_id', 'product_url', 'asin', 'date', 'country',
@@ -257,10 +265,10 @@ def _import_asins(user_id, document, location):
         if df is None:
             df = pd.read_csv(StringIO(string), delimiter=delimiter, encoding='latin-1')
     except Exception as e:
-        return send_msg(user_id, f'Error occurred: {str(e)}', parse_mode='HTML')
+        return send_msg(user_id, f'Error occurred: {str(e)}')
     db_col = location.split('.')
     if len(db_col) != 2:
-        return send_msg(user_id, f'Collection location is incorrect: {location}', parse_mode='HTML')
+        return send_msg(user_id, f'Collection location is incorrect: {location}')
     db_name, collection = db_col
     try:
         try:
