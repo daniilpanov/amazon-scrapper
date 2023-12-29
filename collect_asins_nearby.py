@@ -19,7 +19,7 @@ def get_asins(url, wd):
         if reviews_count < 700:
             continue
         i += 1
-        yield 'https://amazon.com/dp/' + get_all_asins_from_text(link.find('a')['href'])
+        yield 'https://amazon.com/dp/' + get_all_asins_from_text(link.find('a')['href'])[0]
 
 
 def get_bsr(asin, wd):
