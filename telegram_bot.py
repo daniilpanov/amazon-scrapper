@@ -163,8 +163,7 @@ def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', 
     log(set(cols), '1')
     log(data[0].values(), '2')
     log(list(data[0].values()), '3')
-    log(set(data[0].values()), '4')
-    log(set(list(data[0].values())), '5')
+    log(set(list(data[0].values())), '4')
     if len(set(cols) - set(data[0].values())) == 0:
         data = data[1:]
     for row in data:
