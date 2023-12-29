@@ -157,8 +157,10 @@ def _export_asins(asins_list, user_id, location='amazon_data.customer_reviews', 
     try:
         cols = cols_mapping.get(location, list(data[0].keys() - ['_id']))
     except IndexError:
-        cols = []
+        return send_msg(user_id, 'Empty file!')
     df = pd.DataFrame(columns=cols)
+    if len(set(cols) - set(data[0].split(','))) == 0:
+        data = data[1:]
     for row in data:
         df.loc[len(df.index)] = row
     if not os.path.exists('tmp__'):
@@ -207,10 +209,11 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
     # format: {key, value, asin, review_id}
     if 'asin' not in head or 'review_id' not in head:
         raise Exception('Invalid header!')
-    cols_for_drop = list(col for col in [
-        'product_url', 'date', 'country', 'name', 'title', 'description',
-        'content', 'rating', 'helpful', 'options', 'scrap_datetime',
-    ] if col in head)
+    cols_for_drop = list(
+        col for col in
+        'helpful;country;name;rating;date;scrap_datetime;title;description;product_url;options'
+        .split(';') if col in head
+    )
     data = data.drop(cols_for_drop, axis=1)
     new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
     new_data = new_data.dropna(subset=['Aspect', 'Value'])
