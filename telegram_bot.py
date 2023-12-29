@@ -219,7 +219,7 @@ def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
         raise Exception('Invalid header!')
     cols_for_drop = list(
         col for col in
-        'helpful;country;name;rating;date;scrap_datetime;title;description;product_url;options'
+        'helpful;country;name;rating;date;scrap_datetime;title;description;product_url;options;_id'
         .split(';') if col in head
     )
     data = data.drop(cols_for_drop, axis=1)
