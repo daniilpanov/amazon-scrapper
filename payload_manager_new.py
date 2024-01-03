@@ -9,7 +9,7 @@ from helpers import log
 
 processes: dict[int, Popen] = {}
 i = 0
-processes_waiters = ThreadPoolExecutor(3)
+processes_waiters = ThreadPoolExecutor(7)
 
 
 def add_reviews_tasks(asins, user_id):

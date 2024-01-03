@@ -456,11 +456,12 @@ if __name__ == '__main__':
     bot.register_message_handler(callback=unknown, func=lambda _: True)
     bottle_thr = Thread(target=run_bottle, daemon=True)
     bottle_thr.start()
-    changelog = None
     if os.path.exists('CHANGELOG'):
         with open('CHANGELOG') as f:
             changelog = f.read()
         os.remove('CHANGELOG')
+    else:
+        changelog = input('Enter the CHANGELOG: ') or None
     if os.path.exists('auth_users.data'):
         with open('auth_users.data') as f:
             for user in f:
