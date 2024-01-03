@@ -14,7 +14,7 @@ config = {
     'database': 'amazon_data',
     'keepa_database': 'keepa',
     'password': 'gxYSEvBIDTgy6RIg',
-    'proxy': 'http://Daniel:OsdKey0909@46.19.33.214:3128',
+    # 'proxy': 'http://Daniel:OsdKey0909@46.19.33.214:3128',
     'url_prefix': 'mongodb+srv',
 }
 config_special = {'username': 'ai_operator', 'password': 'jEWVWuNrgrqTkn7w'}
