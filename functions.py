@@ -11,8 +11,6 @@ from selenium.common import JavascriptException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from seleniumbase import config as sbc, BaseCase
-from seleniumbase.fixtures import constants
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support.ui import WebDriverWait

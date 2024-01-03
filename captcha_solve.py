@@ -1,7 +1,6 @@
-from seleniumbase.common.exceptions import NoSuchElementException
+
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
-from seleniumbase import BaseCase
 
 
 def init(api_key: str, driver: BaseCase, _id):

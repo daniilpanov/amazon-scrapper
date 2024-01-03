@@ -12,7 +12,7 @@ config = {
     'url': 'cluster0.tcwqk03.mongodb.net/?retryWrites=true&w=majority',
     'username': 'scrape_processing',
     'database': 'amazon_data',
-    'keepa_database': 'keepa',
+    # 'keepa_database': 'keepa',
     'password': 'gxYSEvBIDTgy6RIg',
     # 'proxy': 'http://Daniel:OsdKey0909@46.19.33.214:3128',
     'url_prefix': 'mongodb+srv',
@@ -70,10 +70,6 @@ def db(dbname=None) -> Database:
     return inst()[dbname or config['database']]
 
 
-def keepa_db() -> Database:
-    return db(config['keepa_database'])
-
-
 def write_reviews(reviews):
     revs = []
     for i, row in reviews.iterrows():
@@ -122,20 +118,6 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
             'features': features,
             'top_5_phrases': top5phr,
             'product_price': price,
-        })
-    except (BulkWriteError, DuplicateKeyError) as e:
-        return True
-
-
-def write_keepa_html(asin, keepa_ph, keepa_stats, keepa_comparing, keepa_data):
-    try:
-        return keepa_db()['raw_htmls'].insert_one({
-            'asin': asin,
-            'keepa_price_history': keepa_ph,
-            'keepa_statistics': keepa_stats,
-            'keepa_comparing': keepa_comparing,
-            'keepa_data': keepa_data,
-            'scrap_datetime': datetime.datetime.now(pytz.UTC),
         })
     except (BulkWriteError, DuplicateKeyError) as e:
         return True
