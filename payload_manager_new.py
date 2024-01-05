@@ -8,8 +8,8 @@ import state
 from helpers import log
 
 processes: dict[int, Popen] = {}
-i = 0
-processes_waiters = ThreadPoolExecutor(7)
+processes_waiters = ThreadPoolExecutor(2)
+alive = True
 
 
 def add_reviews_tasks(asins, user_id):
@@ -39,30 +39,32 @@ def add_departments_task(department, user_id):
 
 # Добавление процесса и ожидание завершения (ф-я запускается в отдельном потоке)
 def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
-    global i
+    if not alive:
+        return
     log(f'Process: {script}. Params:', dict(kwargs))
-    kwargs['_id'] = i
+    _id = hash(hash(str(args)) + hash(str(kwargs)) + hash(script))
+    while _id in processes:
+        _id += 1
+    kwargs['_id'] = _id
     proc = Popen(
         [sys.executable, f'{script}.py', *args, *list(key + '=' + str(kwargs[key]) for key in kwargs)],
         stdin=stdin or sys.stdin, stdout=stdout or sys.stdout, stderr=stderr or sys.stderr,
     )
-    log(f'Process [{kwargs["_id"]}] started!')
-    for _id in processes:
-        end_task(_id, False)
-    processes[kwargs['_id']] = proc
+    log(f'Process [{_id}] started!')
+    for item_id in processes:
+        end_task(item_id, False, False)
+    processes[_id] = proc
     # Ожидание завершения процесса
     proc.wait()
-    if i not in processes and i > 255:
-        i = 0
-    else:
-        i += 1
 
 
-def end_task(_id, hard_kill=True):
+def end_task(_id, hard_kill=True, exc=True):
     global processes
     _id = int(_id)
     if _id not in processes:
-        raise KeyError
+        if exc:
+            raise KeyError
+        return False
 
     if hard_kill and processes[_id].poll() is None:
         processes[_id].send_signal(signal.SIGTERM)
@@ -71,3 +73,5 @@ def end_task(_id, hard_kill=True):
     if processes[_id].poll() is not None:
         log(f'Process [{_id}] exited with code {processes[_id].returncode}')
         del processes[_id]
+        return True
+    return False

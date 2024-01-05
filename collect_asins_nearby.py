@@ -64,13 +64,13 @@ if __name__ == '__main__':
         url = get_bsr(params_dict['asin'], wd)
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
-            'uid': params_dict.get('user', '1456674317,1428909514'),
+            'uid': params_dict.get('user', '1428909514'),
         })
         # search asins
         result = list(get_asins(url, wd))
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
-            'uid': params_dict.get('user', '1456674317,1428909514'),
+            'uid': params_dict.get('user', '1428909514'),
         })
     except Exception as e:
         requests.post('http://localhost:8080/send_msg', {

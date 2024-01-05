@@ -1,4 +1,5 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
+import json
 import os
 from io import StringIO
 from threading import Thread
@@ -22,7 +23,6 @@ from state import chunk
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc')
 auth_users = set()
 PASSWORD = '12345'
-processes = set()
 CMDs = {}
 
 
@@ -31,7 +31,7 @@ def cmdreg(func):
 
     def wrapper(msg: types.Message, *args, **kwargs):
         receive_message(msg)
-        if msg.text in ('/close', '/stop', '/quit'):
+        if msg.text in ('/close', '/stop', '/quit', '/cancel', '/exit'):
             return send_msg(msg.from_user.id, 'Cancel')
         return func(msg, *args, **kwargs)
 
@@ -204,27 +204,29 @@ def import_asins(msg: types.Message, **kwargs):
     )
 
 
-def ai_highlights_problems_mapping(head: list[str], data: DataFrame):
-    if {'ASIN', 'Aspects', 'Description Problem', 'Problem'} - set(head) \
-            or {'ASIN', 'Aspects', 'Description Problem', 'Problem'} - set(head):
+def ai_highlights_problems_mapping(data: DataFrame):
+    head = set(data.columns.str.strip())
+    needle_head = {'ASIN', 'Aspects', 'Description Problem', 'Problem'}
+    if head == needle_head:
         raise Exception('Invalid header!')
     asins = data['ASIN'].tolist()
     database.spec_db('ai_highlights')['problems'].delete_many({'ASIN': {'$in': asins}})
     return data
 
 
-def ai_highlights_aspects_new_mapping(head: list[str], data: DataFrame):
-    # format: {key, value, asin, review_id}
+def ai_highlights_aspects_new_mapping(data: DataFrame):
+    data.columns = data.columns.str.strip()
+    head = set(data.columns)
     if 'asin' not in head or 'review_id' not in head:
         raise Exception('Invalid header!')
     cols_for_drop = list(
         col for col in
-        'helpful;country;name;rating;date;scrap_datetime;title;description;product_url;options;_id'
+        'helpful;country;name;rating;date;scrap_datetime;title;description;product_url;options;_id;content;product_url'
         .split(';') if col in head
     )
     data = data.drop(cols_for_drop, axis=1)
     new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
-    new_data = new_data.dropna(subset=['Aspect', 'Value'])
+    new_data = new_data.dropna(subset=new_data.columns)
     new_data['Aspect'] = new_data['Aspect'].str.strip()
     return new_data
 
@@ -255,7 +257,6 @@ def _import_asins(user_id, document, location):
         if location in locations_validator:
             if callable(locations_validator[location]):
                 df = locations_validator[location](
-                    headmap,
                     pd.read_csv(StringIO(string), delimiter=delimiter, encoding='latin-1'),
                 )
             else:
@@ -282,47 +283,55 @@ def _import_asins(user_id, document, location):
 
 @cmdreg
 def set_category(msg: types.Message, **kwargs):
-    category_or_asins = msg.text.replace('/set_category', '').strip()
-    if category_or_asins:
+    text = msg.text.replace('/set_category', '').strip() or None
+    if 'cat_group' in kwargs:
         if 'category' in kwargs:
-            return _set_category(msg.from_user.id, category_or_asins, kwargs['category'])
+            return _set_category(msg.from_user.id, text, kwargs['category'], kwargs['cat_group'])
         return bot.register_next_step_handler(
             send_msg(msg.from_user.id, 'Enter the ASINs list:'),
-            set_category, category=category_or_asins,
+            set_category, category=text, cat_group=kwargs['cat_group'],
         )
-    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the category name:'), set_category)
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Enter the category name:'),
+        set_category, cat_group=text,
+    )
 
 
-def _set_category(user_id, asins, cat_name):
+def _set_category(user_id, asins, cat_name, cat_group=None):
+    if not cat_group:
+        cat_group = 'categories'
     data = list([{'Category': cat_name, 'ASIN': asin} for asin in get_all_asins_from_text(asins)])
     if not data:
         return send_msg(user_id, f'Category is empty')
     try:
-        database.db()['categories'].insert_many(data)
-        return send_msg(user_id, f'Category {cat_name} saved')
+        database.db()[cat_group].insert_many(data)
+        return send_msg(user_id, f'Category {cat_name} saved to the amazon_data.' + cat_group)
     except Exception as e:
-        return send_msg(user_id, f'An error occurred on saving category {cat_name}:\n{e}')
+        return send_msg(user_id, f'An error occurred on saving category {cat_name} '
+                                 f'to the amazon_data.{cat_group}:\n{e}')
 
 
 @cmdreg
 def rename_category(msg: types.Message, **kwargs):
-    category = msg.text.replace('/rename_category', '').strip()
-    if category:
-        if 'category_old' in kwargs:
-            return _rename_category(msg.from_user.id, kwargs['category_old'], category)
+    text = msg.text.replace('/rename_category', '').strip() or None
+    if 'cat_group' in kwargs:
+        if 'cat_old' in kwargs:
+            return _rename_category(msg.from_user.id, kwargs['cat_old'], text, kwargs['cat_group'])
         return bot.register_next_step_handler(
             send_msg(msg.from_user.id, 'Enter the new name of the category:'),
-            rename_category, category_old=category,
+            rename_category, cat_old=text, cat_group=kwargs['cat_group'],
         )
     return bot.register_next_step_handler(
         send_msg(msg.from_user.id, 'Enter the old category name:'),
-        rename_category,
+        rename_category, cat_group=text,
     )
 
 
-def _rename_category(user_id, cat_old, cat_new):
+def _rename_category(user_id, cat_old, cat_new, cat_group=None):
+    if not cat_group:
+        cat_group = 'categories'
     try:
-        database.db()['categories'].update_many({'Category': cat_old}, {'$set': {'Category': cat_new}})
+        database.db()[cat_group].update_many({'Category': cat_old}, {'$set': {'Category': cat_new}})
         return send_msg(user_id, f'Category {cat_old} renamed to {cat_new}')
     except Exception as e:
         return send_msg(user_id, f'An error occurred on renaming category {cat_old} to {cat_new}:\n{e}')
@@ -374,28 +383,12 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
 
 
 @cmdreg
-def collect_deals(msg: types.Message):
-    name = msg.text.replace('/collect_deals', '').strip()
-    if name:
-        payload_manager.add_deals_task(name, msg.from_user.id)
-        return send_msg(msg.from_user.id, f'Start collecting deals sheet under the name "{name}"')
-    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the .xlsx filename: '), collect_deals)
-
-
-@cmdreg
 def collect_asins_nearby(msg: types.Message):
     asin = msg.text.replace('/collect_asins_nearby', '').strip()
     if asin:
         payload_manager.add_asins_nearby_task(asin, msg.from_user.id)
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_asins_nearby)
-
-
-@cmdreg
-def collect_departments(msg: types.Message):
-    department = msg.text.replace('/collect_departments', '').strip() or None
-    payload_manager.add_departments_task(department, msg.from_user.id)
-    return send_msg(msg.from_user.id, f'Start collecting: {department if department else "all departments"}')
 
 
 def unknown(msg: types.Message):
@@ -431,22 +424,50 @@ def run_bottle():
     @bottle.route('/send_msg', method='POST')
     def send_message():
         msg = request.forms.get('msg')
-        users_ids = request.forms.get('uid').split(',')
+        user_id = request.forms.get('uid')
+        resp_body = {}
         if request.files:
+            resp_body['doc_id'] = []
             for file in request.files:
-                for uid in users_ids:
-                    try:
-                        bot.send_document(uid, request.files[file].file, visible_file_name=request.files[file].filename)
-                    except:
-                        pass
+                try:
+                    resp_body['doc_id'].append(bot.send_document(
+                        user_id, request.files[file].file,
+                        visible_file_name=request.files[file].filename,
+                    ).message_id)
+                except:
+                    pass
         if msg:
-            for uid in users_ids:
-                bot.send_message(uid, msg)
+            try:
+                resp_body['msg_id'] = bot.send_message(user_id, msg).message_id
+            except:
+                pass
+        return bottle.HTTPResponse(status=200, body=json.dumps(resp_body))
+
+    @bottle.route('/edit_msg', method='POST')
+    def edit_msg():
+        msg_id = request.forms.get('msg_id')
+        user_id = request.forms.get('user_id')
+        new_text = request.forms.get('msg_text')
+        log(msg_id, user_id, new_text)
+        try:
+            if bot.edit_message_text(new_text, user_id, msg_id):
+                return bottle.HTTPResponse(status=204)
+            else:
+                return bottle.HTTPResponse(status=500)
+        except Exception as e:
+            return bottle.HTTPResponse(status=500, body=str(e))
+
 
     @bottle.route('/end_task', method='POST')
     def end_task():
         _id = request.forms.get('_id')
-        payload_manager.end_task(_id)
+        try:
+            payload_manager.end_task(_id)
+            return bottle.HTTPResponse(status=204)
+        except KeyError:
+            return bottle.HTTPResponse(status=404)
+        except:
+            return bottle.HTTPResponse(status=500)
 
     bottle.run(host='0.0.0.0', port=8080, debug=True)
 
@@ -469,8 +490,12 @@ if __name__ == '__main__':
                 bot.send_message(user, 'Hello! Bot is alive!')
                 if changelog:
                     bot.send_message(user, 'CHANGELOG:\n' + changelog)
-    bot.infinity_polling()
-    with open('auth_users.data', 'w') as f:
-        for user in auth_users:
-            f.write(str(user) + '\n')
-            bot.send_message(user, 'Bot stopped. We will notify you when the bot is alive')
+    try:
+        bot.infinity_polling()
+    finally:
+        payload_manager.alive = False
+        payload_manager.processes_waiters.shutdown(cancel_futures=True)
+        with open('auth_users.data', 'w') as f:
+            for user in auth_users:
+                f.write(str(user) + '\n')
+                bot.send_message(user, 'Bot stopped. We will notify you when the bot is alive')

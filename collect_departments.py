@@ -312,25 +312,24 @@ def write_info(xsh: XSheet):
     pass
 
 
-def start(sheet_name=None, dep_name=None, tg_note_users_ids: list[str] | None = None):
-    if not tg_note_users_ids:
-        tg_note_users_ids = []
+def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = None):
     if not sheet_name:
-        sheet_name = str(hash(tg_note_users_ids))
+        sheet_name = str(hash(tg_note_user_id))
     xsh = XSheet(sheet_name)
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
         collect_all_info(xsh, dep_name)
     log('[0] Write all info')
     write_info(xsh)
-    log('[0] Open file to send it')
-    with open(os.path.join('tmp__', sheet_name + '.xlsx'), 'rb') as f:
-        requests.post(
-            'localhost:8080',
-            {'msg': 'Data collected! Your XLSX file with the Departments:', 'uid': ','.join(tg_note_users_ids)},
-            files=[(sheet_name + '.xlsx', f)],
-        )
-        log('[0] Sent!')
+    if tg_note_user_id:
+        log('[0] Open file to send it')
+        with open(os.path.join('tmp__', sheet_name + '.xlsx'), 'rb') as f:
+            requests.post(
+                'localhost:8080',
+                {'msg': 'Data collected! Your XLSX file with the Departments:', 'uid': tg_note_user_id},
+                files=[(sheet_name + '.xlsx', f)],
+            )
+            log('[0] Sent!')
     log('[0] Program finished')
 
 
@@ -342,16 +341,16 @@ if __name__ == '__main__':
         start(
             params_dict.get('dep_name', 'ALL'),
             params_dict.get('dep_name'),
-            params_dict.get('user', '1456674317,1428909514').split(',')
+            params_dict.get('user', '1428909514')
         )
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'Departments collected: {params_dict.get("dep_name", "all")}',
-            'uid': params_dict.get('user', '1456674317,1428909514'),
+            'uid': params_dict.get('user', '1428909514'),
         })
     except Exception as e:
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'Error on collecting departments: {params_dict.get("dep_name", "all")}\n' + str(e) + '\n',
-            'uid': params_dict.get('user', '1456674317,1428909514'),
+            'uid': params_dict.get('user', '1428909514'),
         })
     finally:
         requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})

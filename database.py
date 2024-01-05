@@ -13,9 +13,8 @@ config = {
     'url': 'cluster0.tcwqk03.mongodb.net/?retryWrites=true&w=majority',
     'username': 'scrape_processing',
     'database': 'amazon_data',
-    # 'keepa_database': 'keepa',
     'password': 'gxYSEvBIDTgy6RIg',
-    # 'proxy': 'http://Daniel:OsdKey0909@46.19.33.214:3128',
+    'proxy': 'http://proxydb:StdInp0101@185.234.247.250:3128',
     'url_prefix': 'mongodb+srv',
 }
 config_special = {'username': 'ai_operator', 'password': 'jEWVWuNrgrqTkn7w'}
