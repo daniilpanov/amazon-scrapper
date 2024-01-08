@@ -391,6 +391,13 @@ def collect_asins_nearby(msg: types.Message):
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_asins_nearby)
 
 
+@cmdreg
+def update_department_collection(msg: types.Message):
+    dep_name = msg.text.replace('/update_department_collection', '').strip()
+    payload_manager.add_departments_task(dep_name, msg.from_user.id)
+    return send_msg(msg.from_user.id, f'Start collecting departments [{dep_name or "all deps."}]')
+
+
 def unknown(msg: types.Message):
     return send_msg(msg.from_user.id, 'Unknown command')
 
