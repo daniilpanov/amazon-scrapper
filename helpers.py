@@ -1,7 +1,9 @@
 import re
 
 import colorama
-
+import requests
+from urllib3.exceptions import NewConnectionError, MaxRetryError
+from requests.exceptions import ConnectionError
 
 DEBUG = True
 
@@ -20,6 +22,7 @@ def get_all_asins_from_text(text: str):
 def log(*args, **kwargs):
     if DEBUG:
         print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
+    return True
 
 
 def parse_args(argv: list[str]):
@@ -29,3 +32,11 @@ def parse_args(argv: list[str]):
         if len(row) > 1:
             params_dict[row[0]] = row[1]
     return params_dict
+
+
+def send_bot_msg(user, msg=None, files=None):
+    if msg or files:
+        try:
+            requests.post('http://localhost:8080/send_msg', {'msg': msg, 'uid': user, 'files': files})
+        except (ConnectionError, MaxRetryError, ConnectionRefusedError, NewConnectionError):
+            pass
