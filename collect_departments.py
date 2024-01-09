@@ -197,7 +197,7 @@ def recursive_tree(tree: Level, wd: WebDriver, xsh: XSheet, name_only=None):
 
 def collect_all_info(xsheet: XSheet, dep_name=None):
     log('[1] Init chrome')
-    wd = base_chrome_init(False, goto='https://amazon.com')
+    wd = base_chrome_init(goto='https://amazon.com')
     log('[1] Change loc')
     wd.change_loc()
     wd.wait_for_loading()
