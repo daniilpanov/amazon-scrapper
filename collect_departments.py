@@ -3,11 +3,12 @@ from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from typing import List
 
 import openpyxl
+from openpyxl.utils.cell import get_column_letter
 import requests
 from bs4 import BeautifulSoup
 
 from functions import WebDriver, base_chrome_init
-from helpers import log, parse_args, send_bot_msg
+from helpers import log, parse_args, send_bot_msg, path
 
 
 class Level:
@@ -107,9 +108,7 @@ class Level:
 
 class XSheet:
     wb: openpyxl.Workbook
-    current_sheet_name: str = None
     current_row: int = 1
-    current_subcategory_row: int = 1
     departments_tree: Level
     jsd: JSONDecoder
     jse: JSONEncoder
@@ -118,11 +117,12 @@ class XSheet:
         self.jsd = JSONDecoder()
         self.jse = JSONEncoder()
         self.departments_tree = self.load(name) or Level(name)
-        path = os.path.join('tmp__', f'{name}.xlsx')
-        if os.path.exists(path):
-            self.wb = openpyxl.load_workbook(path)
+        p = path('tmp__', f'{name}.xlsx', filecontent=False)
+        if os.path.exists(p):
+            self.wb = openpyxl.load_workbook(p)
         else:
             self.wb = openpyxl.Workbook()
+        self.wb.active.title = name
 
     def set_link(self, link):
         self.departments_tree.link = link
@@ -133,9 +133,7 @@ class XSheet:
         return self.departments_tree.name
 
     def save(self):
-        if not os.path.isdir('tmp__'):
-            os.mkdir('tmp__')
-        with open(f'tmp__/{self.name}.json', 'w', encoding='utf-8') as f:
+        with open(path('tmp__', f'{self.name}.json', filecontent=False), 'w', encoding='utf-8') as f:
             f.write(self.jse.encode(self.departments_tree.to_dict()))
 
     def load(self, name):
@@ -149,29 +147,21 @@ class XSheet:
                 return None
         return Level.from_dict(d)
 
-    def add_sheet(self, name, link):
-        self.wb.create_sheet(name)
-        self.current_sheet_name = name
-        self.current_row = 1
-        self.set_cells([link])
-        self.current_subcategory_row = 1
-
-    def set_cells(self, cols_vals: list[str | int], marked=False, row=None):
-        if row is None:
-            row = self.current_row
+    def set_cells(self, cols_vals: list[str | int]):
         for col_num in range(len(cols_vals)):
-            self.wb[self.current_sheet_name].cell(row, col_num).value = cols_vals[col_num]
-        if marked:
-            for i in range(1, 11):
-                self.wb[self.current_sheet_name].cell(row, i).fill = openpyxl.styles.PatternFill(
-                    start_color='ffff00',
-                    end_color='ffff00',
-                    fill_type='solid',
+            self.wb.active.cell(self.current_row, col_num + 1).value = cols_vals[col_num]
+            if self.current_row > 1:
+                w = max(
+                    self.wb.active.column_dimensions[get_column_letter(col_num + 1)].width,
+                    len(cols_vals[col_num]) * 11**(11*0.009),
                 )
+            else:
+                w = len(cols_vals[col_num]) * 11**(11*0.009)
+            self.wb.active.column_dimensions[get_column_letter(col_num + 1)].width = w
         self.current_row += 1
 
     def to_xlsx(self):
-        self.wb.save(os.path.abspath(os.path.join('tmp__', f'{self.name}.xlsx')))
+        self.wb.save(os.path.abspath(path('tmp__', f'{self.name}.xlsx', filecontent=False)))
 
 
 def recursive_tree(tree: Level, wd: WebDriver, xsh: XSheet, name_only=None):
@@ -219,20 +209,31 @@ def collect_all_info(xsheet: XSheet, dep_name=None):
     xsheet.save()
 
 
-def write_info(xsh: XSheet):
-    pass
+def write_info(xsh: XSheet, tree: Level, cat_names: list[str] | None = None):
+    if not cat_names:
+        cat_names = []
+    if tree.is_last_group:
+        xsh.set_cells(cat_names + [tree.name])
+    for item in tree:
+        log(item)
+        write_info(xsh, item, cat_names + [tree.name])
+    return True
 
 
-def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = None):
+def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = True):
     if not sheet_name:
         sheet_name = str(hash(tg_note_user_id))
     xsh = XSheet(sheet_name)
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
         collect_all_info(xsh, dep_name)
-    if tg_note_user_id and log('[0] Write all info') and write_info(xsh):
+    if tg_note_user_id:
+        log('[0] Write all info')
+        for item in xsh.departments_tree:
+            write_info(xsh, item)
+        xsh.to_xlsx()
         log('[0] Open file to send it')
-        with open(os.path.join('tmp__', sheet_name + '.xlsx'), 'rb') as f:
+        with open(path('tmp__', sheet_name + '.xlsx'), 'rb') as f:
             send_bot_msg(
                 tg_note_user_id,
                 'Data collected! Your XLSX file with the Departments:',

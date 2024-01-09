@@ -1,3 +1,4 @@
+import os.path
 import re
 
 import colorama
@@ -40,3 +41,18 @@ def send_bot_msg(user, msg=None, files=None):
             requests.post('http://localhost:8080/send_msg', {'msg': msg, 'uid': user, 'files': files})
         except (ConnectionError, MaxRetryError, ConnectionRefusedError, NewConnectionError):
             pass
+
+
+def path(*p: str, last_dir=False, filecontent: bool | str = ''):
+    curr = ''
+    dirs = p if last_dir else p[:-1]
+    for item in dirs:
+        curr = os.path.join(curr, item)
+        if not os.path.exists(curr):
+            os.mkdir(curr)
+    if not last_dir:
+        curr = os.path.join(curr, p[-1])
+        if not os.path.exists(curr) and filecontent is not False:
+            with open(curr, 'w') as f:
+                f.write(filecontent if type(filecontent) is str else '')
+    return curr
