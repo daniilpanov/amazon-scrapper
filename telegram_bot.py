@@ -207,7 +207,7 @@ def import_asins(msg: types.Message, **kwargs):
 def ai_highlights_problems_mapping(data: DataFrame):
     head = set(data.columns.str.strip())
     needle_head = {'ASIN', 'Aspects', 'Description Problem', 'Problem'}
-    if head == needle_head:
+    if head != needle_head:
         raise Exception('Invalid header!')
     asins = data['ASIN'].tolist()
     database.spec_db('ai_highlights')['problems'].delete_many({'ASIN': {'$in': asins}})
