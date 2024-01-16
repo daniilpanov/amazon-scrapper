@@ -35,6 +35,7 @@ params = {
     'mediaType': ['all_contents', 'media_reviews_only'],
     'pageNumber': list(range(1, 11)),
 }
+requests_counter = 0
 params_len = 1
 for key in params:
     params_len *= len(params[key])
@@ -96,37 +97,41 @@ def process_data(asin, seed, process_data_res):
 
 
 def send_request(webdriver, asin, seed):
-    if seed < params_len:
-        current_params = {
-            'scope': 'reviewsAjax3',
-            'reftag': 'cm_cr_arp_d_viewopt_srt',
-            'pageSize': 13,
-            'asin': asin,
-        }
-        s = seed
-        for i in params:
-            length = len(params[i])
-            current_params[i] = params[i][s % length]
-            s //= length
+    if seed >= params_len:
+        return True
 
-        ajax = f"$.post(\"{url}\", " \
-               + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
-               + ", null, 'text');"
+    global requests_counter
 
-        try:
-            res = webdriver.execute_script("return " + ajax)
-            if not res or 'BAAAAAAD ASIN!' in res:
-                logger.warning(f'Broken result! ASIN: {asin}, SEED: {seed}')
-                log(f'broken result. ASIN: {asin}')
-                return False
-        except (JavascriptException, RetryException, TimeoutException) as e:
-            logger.error('Exception', exc_info=True, stack_info=True)
-            log(e)
-            log('something went wrong. send this ASIN to the end of a queue')
+    current_params = {
+        'scope': 'reviewsAjax{}'.format(requests_counter),
+        'reftag': 'cm_cr_arp_d_viewopt_srt',
+        'pageSize': 13,
+        'asin': asin,
+    }
+    requests_counter += 1
+    s = seed
+    for i in params:
+        length = len(params[i])
+        current_params[i] = params[i][s % length]
+        s //= length
+
+    ajax = f"$.post(\"{url}\", " \
+           + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
+           + ", null, 'text');"
+
+    try:
+        res = webdriver.execute_script("return " + ajax)
+        if not res or 'BAAAAAAD ASIN!' in res:
+            logger.warning(f'Broken result! ASIN: {asin}, SEED: {seed}')
+            log(f'broken result. ASIN: {asin}')
             return False
+    except (JavascriptException, RetryException, TimeoutException) as e:
+        logger.error('Exception', exc_info=True, stack_info=True)
+        log(e)
+        log('something went wrong. send this ASIN to the end of a queue')
+        return False
 
-        process_data(asin, seed, res)
-    return True
+    process_data(asin, seed, res)
 
 
 def collect(asin):
