@@ -28,12 +28,11 @@ logger.addHandler(handler)
 
 
 params = {
-    'sortBy': ['helpful', 'recent'],
-    'reviewerType': ['all_reviews', 'avp_only_reviews'],
-    'filterByStar': ['all_stars', 'five_star', 'four_star', 'three_star', 'two_star', 'one_star'],
-    'formatType': ['all_formats', 'current_format'],
-    'mediaType': ['all_contents', 'media_reviews_only'],
-    'pageNumber': list(range(1, 11)),
+    'sortBy': ['', 'recent'],
+    'reviewerType': ['', 'avp_only_reviews'],
+    'filterByStar': ['', 'five_star', 'four_star', 'three_star', 'two_star', 'one_star'],
+    'formatType': ['', 'current_format'],
+    'mediaType': ['', 'media_reviews_only'],
 }
 requests_counter = 0
 params_len = 1
@@ -75,7 +74,7 @@ def process_data(asin, seed, process_data_res):
                 data_with_quantity = item[2]
                 break
         if not data_with_quantity:
-            logger.warning(f'{asin} has noone review [params={seed}]')
+            logger.warning(f'{asin} has none review [params={seed}]')
             return False
 
         res = []
@@ -96,7 +95,7 @@ def process_data(asin, seed, process_data_res):
         return False
 
 
-def send_request(webdriver, asin, seed):
+def send_request(webdriver, asin, seed, page):
     if seed >= params_len:
         return True
 
@@ -107,6 +106,7 @@ def send_request(webdriver, asin, seed):
         'reftag': 'cm_cr_arp_d_viewopt_srt',
         'pageSize': 13,
         'asin': asin,
+        'pageNumber': page,
     }
     requests_counter += 1
     s = seed
@@ -118,6 +118,7 @@ def send_request(webdriver, asin, seed):
     ajax = f"$.post(\"{url}\", " \
            + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
            + ", null, 'text');"
+    log(ajax)
 
     try:
         res = webdriver.execute_script("return " + ajax)
@@ -131,7 +132,7 @@ def send_request(webdriver, asin, seed):
         log('something went wrong. send this ASIN to the end of a queue')
         return False
 
-    process_data(asin, seed, res)
+    return process_data(asin, seed, res)
 
 
 def collect(asin):
@@ -139,7 +140,7 @@ def collect(asin):
         return True
     log('loading webdriver')
     ev = Event()
-    webdriver = base_chrome_init(goto='https://amazon.com/product-reviews/B08JPS4554')
+    webdriver = base_chrome_init(goto=f'https://amazon.com/product-reviews/{asin}')
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
 
     try:
