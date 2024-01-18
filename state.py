@@ -1,5 +1,4 @@
 from threading import Thread, Event
-from time import sleep
 
 from database import db
 

@@ -321,7 +321,7 @@ class RetryException(Exception):
     pass
 
 
-def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False):
+def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False, logs=False):
     opts = Options()
     if extension:
         opts.add_extension(os.path.abspath(extension))
@@ -335,7 +335,10 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
         opts.add_argument('--disable-dev-shm-usage')
     opts.add_argument('start-maximized')
     opts.add_argument('disable-infobars')
-    opts.add_experimental_option('excludeSwitches', ['ignore-certificate-errors', 'enable-automation'])
+    switches = ['ignore-certificate-errors', 'enable-automation']
+    if not logs:
+        switches.append('enable-logging')
+    opts.add_experimental_option('excludeSwitches', switches)
     opts.add_argument('--disable-blink-features=AutomationControlled')
     opts.add_argument('user-agent={}'.format(
         UserAgent(software_names=(SoftwareName.CHROME.value,),

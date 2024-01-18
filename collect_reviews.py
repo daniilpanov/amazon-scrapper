@@ -18,7 +18,7 @@ from functions import RetryException, user_emulate, base_chrome_init
 
 import logging
 
-from helpers import log, parse_args
+from helpers import log, parse_args, send_bot_msg
 
 logger = logging.getLogger('reviews')
 logger.setLevel(logging.DEBUG)
@@ -53,7 +53,7 @@ def write_data(asin, seed, write_data_res):
         'content', 'rating', 'helpful', 'options',
         'scrap_datetime',
     ])
-    # database.write_reviews(df)
+    database.write_reviews(df)
     state.write_asin(asin, seed)
 
 
@@ -125,7 +125,6 @@ def send_request(webdriver, asin, seed, page, keywords=''):
     ajax = f"$.post(\"{url}\", " \
            + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
            + ", null, 'text');"
-    log(ajax)
 
     try:
         res = webdriver.execute_script("return " + ajax)
@@ -142,7 +141,7 @@ def send_request(webdriver, asin, seed, page, keywords=''):
     return process_data(asin, seed, res)
 
 
-def collect(asin, keywords=''):
+def collect(asin, keywords='', user=None):
     if state.get_asin(asin) == -1:
         return True
     log('loading webdriver')
@@ -158,6 +157,8 @@ def collect(asin, keywords=''):
             webdriver.get_element(f'a[href*="/gp/{asin}"]').click()
         except NoSuchElementException:
             log(f'ASIN {asin} not found!')
+            if user:
+                send_bot_msg(user, f'ASIN {asin} not found on amazon search. retry')
             return False
     webdriver.wait_for_loading()
     prefix = webdriver.current_url.split(f'/dp/{asin}')[0].strip()
@@ -177,6 +178,7 @@ def collect(asin, keywords=''):
             reviews_count_part = reviews_count_text[1].split('with')
             if len(reviews_count_part) == 2:
                 reviews_count = int(reviews_count_part[0].strip().replace(',', '').replace(' ', ''))
+    print('count:', reviews_count)
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
 
@@ -195,7 +197,7 @@ def collect(asin, keywords=''):
         try:
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
-                    response = send_request(webdriver, asin, params_seed, i)
+                    response = send_request(webdriver, asin, params_seed, i, keywords)
                     if first:
                         webdriver.execute_script(f'$.get("https://www.amazon.com/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace("https://amazon.com", "").replace("https://www.amazon.com", ""))}")')
                         first = False
@@ -240,16 +242,12 @@ def close(ev, uemu, wd):
         pass
 
 
-if __name__ == '__main__':
-    import sys
-    params_dict = parse_args(sys.argv)
-    params_dict.setdefault('asin', 'B07H9L1RW9')
-
+def start_reviews_collect(params_dict):
     res = False
     c = 99
     try:
         while not res and c > 0:
-            res = collect(params_dict['asin'])
+            res = collect(params_dict['asin'], params_dict.get('keywords', ''))
             c -= 1
     except KeyError:
         log('No ASIN error!')
@@ -268,3 +266,9 @@ if __name__ == '__main__':
     finally:
         if 'id' in params_dict:
             requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
+    return res
+
+
+if __name__ == '__main__':
+    import sys
+    start_reviews_collect(parse_args(sys.argv))
