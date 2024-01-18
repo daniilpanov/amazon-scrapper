@@ -12,7 +12,7 @@ def updating_process(ev: Event):
         for key in values:
             value = int(values[key])
             asin, _type = key.split('_', 1)
-            if value >= 959:
+            if value > 96:
                 value = -1
             db()['__state'].update_one({'type': _type, 'asin': asin}, {'$set': {'state': value}}, True)
         ev.clear()
@@ -29,6 +29,8 @@ def get_asin(asin, _type='reviews'):
 
 def write_asin(asin, value, _type='reviews'):
     global values_for_setup
+    if value != -1:
+        value = max(value, values_for_setup.get(asin + '_' + _type, 0))
     values_for_setup[asin + '_' + _type] = value
     update_event.set()
 

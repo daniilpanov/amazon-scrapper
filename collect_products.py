@@ -35,7 +35,7 @@ def collect(products_info_list):
         webdriver.activate_jquery()
 
         if product_info_write(el, webdriver.get_page_source()):
-            state.write_asin(el, 960, 'products')
+            state.write_asin(el, -1, 'products')
             collected.add(el)
 
     webdriver.driver.quit()

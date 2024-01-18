@@ -1,4 +1,5 @@
 import re
+import urllib
 from builtins import Exception
 from json import JSONDecoder, JSONEncoder
 from threading import Thread, Event
@@ -52,7 +53,7 @@ def write_data(asin, seed, write_data_res):
         'content', 'rating', 'helpful', 'options',
         'scrap_datetime',
     ])
-    database.write_reviews(df)
+    # database.write_reviews(df)
     state.write_asin(asin, seed)
 
 
@@ -89,24 +90,30 @@ def process_data(asin, seed, process_data_res):
                 continue
             res.append(parser.parse_reviews(asin, item[2].strip()))
         write_data(asin, seed, res)
-        return True
+        return bool(res) - (not bool(res))
     except Exception as ex:
         log(ex)
         return False
 
 
-def send_request(webdriver, asin, seed, page):
+def send_request(webdriver, asin, seed, page, keywords=''):
     if seed >= params_len:
         return True
 
     global requests_counter
 
     current_params = {
-        'scope': 'reviewsAjax{}'.format(requests_counter),
-        'reftag': 'cm_cr_arp_d_viewopt_srt',
-        'pageSize': 13,
-        'asin': asin,
+        'filterByAge': '',
         'pageNumber': page,
+        'filterByLanguage': '',
+        'filterByKeyword': keywords,
+        'shouldAppend': 'undefined',
+        'deviceType': 'desktop',
+        'canShowIntHeader': 'undefined',
+        'reftag': 'cm_cr_arp_d_viewopt_srt',
+        'pageSize': 10,
+        'asin': asin,
+        'scope': 'reviewsAjax{}'.format(requests_counter),
     }
     requests_counter += 1
     s = seed
@@ -135,70 +142,104 @@ def send_request(webdriver, asin, seed, page):
     return process_data(asin, seed, res)
 
 
-def collect(asin):
+def collect(asin, keywords=''):
     if state.get_asin(asin) == -1:
         return True
     log('loading webdriver')
     ev = Event()
-    webdriver = base_chrome_init(goto=f'https://amazon.com/product-reviews/{asin}')
+    webdriver = base_chrome_init(False, goto=f'https://amazon.com/')
+    webdriver.change_loc()
+    webdriver.get(webdriver.current_url + f's?k={asin}')
+    try:
+        webdriver.get_element(f'a[href*="/dp/{asin}"]').click()
+    except:
+        webdriver.get_element(f'a[href*="/gp/{asin}"]').click()
+        return False
+    webdriver.wait_for_loading()
+    prefix = webdriver.current_url.split(f'/dp/{asin}')[0].strip()
+    if len(prefix) == len(webdriver.current_url):
+        prefix = webdriver.current_url.split(f'/gp/{asin}')[0].strip()
+    if not prefix.startswith('https://www.amazon.com'):
+        if not prefix.startswith('/'):
+            prefix = '/' + prefix
+        prefix = 'https://www.amazon.com/' + prefix
+    webdriver.get(f'{prefix}/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+
+    reviews_count_element = webdriver.get_element('[data-hook="cr-filter-info-review-rating-count"]')
+    reviews_count = 0
+    if reviews_count_element:
+        reviews_count_text = reviews_count_element.text.split('total ratings, ')
+        if len(reviews_count_text) == 2:
+            reviews_count_part = reviews_count_text[1].split('with')
+            if len(reviews_count_part) == 2:
+                reviews_count = int(reviews_count_part[0].strip().replace(',', '').replace(' ', ''))
+
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
 
     try:
         webdriver.activate_jquery()
         user_emulate_thread.start()
+        webdriver.activate_jquery()
 
         index = state.get_asin(asin)
         log(f'current asin: {asin} with index {index}')
         if index == -1:
             return True
         log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-        for params_seed in range(index, params_len):
-            try:
-                if not send_request(webdriver, asin, params_seed):
-                    logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
-                    log(f'Skip {asin}')
-                    return False
-            except Exception as e:
-                if 'Bad ASIN' not in str(e):
-                    raise e
-                logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
-                log(f'Skip {asin}')
-                return False
-        return True
+        params_seed = None
+        first = True
+        try:
+            for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
+                for i in range(1, 11):
+                    response = send_request(webdriver, asin, params_seed, i)
+                    if first:
+                        webdriver.execute_script(f'$.get("https://www.amazon.com/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords={keywords}&k=&keywords={keywords}&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace("https://amazon.com", "").replace("https://www.amazon.com", ""))}")')
+                        first = False
+                    if response == -1:
+                        break
+                    if not response:
+                        logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
+                        log(f'Skip {asin}')
+                        return False
+            state.write_asin(asin, -1, 'reviews')
+            return True
+        except Exception as e:
+            if 'Bad ASIN' not in str(e):
+                raise e
+            logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
+            log(f'Skip {asin}')
+            return False
     except (InvalidSessionIdException, RetryException) as e:
         logger.error(f'Error!', exc_info=True, stack_info=True)
         log('ERROR: invalid session. ASIN will be collected later')
-        try:
-            ev.set()
-            if user_emulate_thread.is_alive():
-                user_emulate_thread.join()
-        except:
-            pass
-        try:
-            webdriver.driver.close()
-        except:
-            pass
+        close(ev, user_emulate_thread, webdriver)
         sleep(10)
         return False
     except KeyboardInterrupt:
         log('Script stopped')
+        close(ev, user_emulate_thread, webdriver)
         return False
     finally:
-        try:
-            ev.set()
-            if user_emulate_thread.is_alive():
-                user_emulate_thread.join()
-        except:
-            pass
-        try:
-            webdriver.driver.close()
-        except:
-            pass
+        close(ev, user_emulate_thread, webdriver)
+
+
+def close(ev, uemu, wd):
+    try:
+        ev.set()
+        if uemu.is_alive():
+            uemu.join()
+    except:
+        pass
+    try:
+        wd.driver.close()
+    except:
+        pass
 
 
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
+    params_dict.setdefault('asin', 'B07H9L1RW9')
 
     res = False
     c = 99
@@ -221,4 +262,5 @@ if __name__ == '__main__':
                     'uid': params_dict['user'],
                 })
     finally:
-        requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
+        if 'id' in params_dict:
+            requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})

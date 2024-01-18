@@ -121,27 +121,7 @@ class WebDriver:
         self.activate_jquery()
         try:
             # переход к необходимой локации - US (UM)
-            self.execute_script(
-                '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
-                '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
-            )
-            self.execute_script(
-                '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
-                '{actionSource: "glow",'
-                'countryCode: "UM",'
-                'deviceType: "web",'
-                'distinct: "UM",'
-                'locationType: "COUNTRY",'
-                'pageType: "Detail",'
-                'storeContext: "hpc"}'
-                ')'
-            )
-            self.execute_script(
-                '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
-                '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
-            )
             if with_zip:
-                sleep(3)
                 self.execute_script(
                     '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
                     '{actionSource: "glow",'
@@ -150,6 +130,26 @@ class WebDriver:
                     'pageType: "Gateway",'
                     'storeContext: "generic",'
                     f'zipCode: "{with_zip}"' + '}'
+                    ')'
+                )
+                self.execute_script(
+                    '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+                    '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
+                )
+            else:
+                self.execute_script(
+                    '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
+                    '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
+                )
+                self.execute_script(
+                    '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+                    '{actionSource: "glow",'
+                    'countryCode: "UM",'
+                    'deviceType: "web",'
+                    'distinct: "UM",'
+                    'locationType: "COUNTRY",'
+                    'pageType: "Detail",'
+                    'storeContext: "hpc"}'
                     ')'
                 )
                 self.execute_script(
