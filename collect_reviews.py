@@ -9,7 +9,7 @@ import requests
 
 from pandas import DataFrame
 from bs4 import BeautifulSoup
-from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
+from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException, NoSuchElementException
 
 import database
 import parser
@@ -147,14 +147,18 @@ def collect(asin, keywords=''):
         return True
     log('loading webdriver')
     ev = Event()
-    webdriver = base_chrome_init(False, goto=f'https://amazon.com/')
+    webdriver = base_chrome_init(goto=f'https://amazon.com/')
     webdriver.change_loc()
     webdriver.get(webdriver.current_url + f's?k={asin}')
+    sleep(.5)
     try:
         webdriver.get_element(f'a[href*="/dp/{asin}"]').click()
-    except:
-        webdriver.get_element(f'a[href*="/gp/{asin}"]').click()
-        return False
+    except NoSuchElementException:
+        try:
+            webdriver.get_element(f'a[href*="/gp/{asin}"]').click()
+        except NoSuchElementException:
+            log(f'ASIN {asin} not found!')
+            return False
     webdriver.wait_for_loading()
     prefix = webdriver.current_url.split(f'/dp/{asin}')[0].strip()
     if len(prefix) == len(webdriver.current_url):
@@ -193,7 +197,7 @@ def collect(asin, keywords=''):
                 for i in range(1, 11):
                     response = send_request(webdriver, asin, params_seed, i)
                     if first:
-                        webdriver.execute_script(f'$.get("https://www.amazon.com/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords={keywords}&k=&keywords={keywords}&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace("https://amazon.com", "").replace("https://www.amazon.com", ""))}")')
+                        webdriver.execute_script(f'$.get("https://www.amazon.com/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace("https://amazon.com", "").replace("https://www.amazon.com", ""))}")')
                         first = False
                     if response == -1:
                         break
