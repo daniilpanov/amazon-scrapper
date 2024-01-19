@@ -5,7 +5,7 @@ from functions import base_chrome_init
 from helpers import get_all_asins_from_text, parse_args
 
 
-def get_asins(url, wd):
+def get_asins(url, wd, excluded=None):
     wd.get(url)
     soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
     links_a = soup.select('div.a-cardui[id*="asin-index"]')
@@ -16,7 +16,7 @@ def get_asins(url, wd):
         reviews_lnk = link.select_one('a[href*="product-reviews"]')
         reviews_info = reviews_lnk.text.replace('\u2009', '\n').split('\n')
         reviews_count = int(reviews_info[1].strip().replace(',', '').replace(' ', ''))
-        if reviews_count < 700:
+        if reviews_count < 700 or excluded and excluded in link.find('a')['href']:
             continue
         i += 1
         yield 'https://amazon.com/dp/' + get_all_asins_from_text(link.find('a')['href'])[0]
@@ -67,7 +67,7 @@ if __name__ == '__main__':
             'uid': params_dict.get('user', '1428909514'),
         })
         # search asins
-        result = list(get_asins(url, wd))
+        result = list(get_asins(url, wd, params_dict['asin']))
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
             'uid': params_dict.get('user', '1428909514'),
