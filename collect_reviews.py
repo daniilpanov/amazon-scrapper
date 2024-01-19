@@ -146,20 +146,21 @@ def collect(asin, keywords='', user=None):
         return True
     log('loading webdriver')
     ev = Event()
-    webdriver = base_chrome_init(goto=f'https://amazon.com/')
+    webdriver = base_chrome_init(False, goto=f'https://amazon.com/')
     webdriver.change_loc()
     webdriver.get(webdriver.current_url + f's?k={asin}')
     sleep(.5)
-    try:
-        webdriver.get_element(f'a[href*="/dp/{asin}"]').click()
-    except NoSuchElementException:
+    for selector in ['/dp/', '%2Fdp%2F', '/gp/', '%2Fgp%2F']:
         try:
-            webdriver.get_element(f'a[href*="/gp/{asin}"]').click()
+            webdriver.get_element(f'a[href*="{selector}{asin}"]').click()
+            break
         except NoSuchElementException:
-            log(f'ASIN {asin} not found!')
-            if user:
-                send_bot_msg(user, f'ASIN {asin} not found on amazon search. retry')
-            return False
+            pass
+    else:
+        log(f'ASIN {asin} not found!')
+        if user:
+            send_bot_msg(user, f'ASIN {asin} not found on amazon search. retry')
+        return False
     webdriver.wait_for_loading()
     prefix = webdriver.current_url.split(f'/dp/{asin}')[0].strip()
     if len(prefix) == len(webdriver.current_url):
@@ -244,10 +245,11 @@ def close(ev, uemu, wd):
 
 def start_reviews_collect(params_dict):
     res = False
-    c = 99
+    # c = 99
+    c = 1
     try:
         while not res and c > 0:
-            res = collect(params_dict['asin'], params_dict.get('keywords', ''))
+            res = collect(params_dict['asin'], params_dict.get('keywords', ''), params_dict.get('user'))
             c -= 1
     except KeyError:
         log('No ASIN error!')
