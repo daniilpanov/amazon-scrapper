@@ -386,9 +386,18 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
 def collect_asins_nearby(msg: types.Message):
     asin = msg.text.replace('/collect_asins_nearby', '').strip()
     if asin:
-        payload_manager.add_asins_nearby_task(asin, msg.from_user.id)
+        payload_manager.add_asins_nearby_task(asin, msg.from_user.id, True)
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
     return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_asins_nearby)
+
+
+@cmdreg
+def collect_top5(msg: types.Message):
+    asin = msg.text.replace('/collect_top5', '').strip()
+    if asin:
+        payload_manager.add_asins_nearby_task(asin, msg.from_user.id, False)
+        return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
+    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_top5)
 
 
 @cmdreg
