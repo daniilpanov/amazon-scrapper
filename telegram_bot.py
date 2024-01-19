@@ -432,6 +432,9 @@ def get_all(msg: types.Message, **kwargs):
 
     def decrement():
         nonlocal count
+        log('OK!')
+        log(count)
+        log(kwargs)
         count -= 1
         if not count:
             _export_asins(kwargs['asins'], msg.from_user.id)
