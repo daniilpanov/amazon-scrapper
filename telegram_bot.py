@@ -300,7 +300,8 @@ def set_category(msg: types.Message, **kwargs):
 def _set_category(user_id, asins, cat_name, cat_group=None):
     if not cat_group:
         cat_group = 'categories'
-    data = list([{'Category': cat_name, 'ASIN': asin} for asin in get_all_asins_from_text(asins)])
+    data = list([{'Category': cat_name, 'ASIN': asin}
+                 for asin in (get_all_asins_from_text(asins) if type(asins) is str else asins)])
     if not data:
         return send_msg(user_id, f'Category is empty')
     try:
