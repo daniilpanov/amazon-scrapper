@@ -12,17 +12,20 @@ processes_waiters = ThreadPoolExecutor(2)
 alive = True
 
 
-def add_reviews_tasks(asins, user_id):
+def add_reviews_tasks(asins, user_id, callback=None):
     for asin in asins:
-        processes_waiters.submit(add_task, 'collect_reviews', asin=asin, user=str(user_id))
+        processes_waiters.submit(add_task, 'collect_reviews', asin=asin, user=str(user_id), callback=None)
 
 
-def add_products_task(asins, list_name, user_id):
+def add_products_task(asins, list_name, user_id, callback=None):
     good_asins = set()
     for asin in asins:
         if state.get_asin(asin, 'products') > -1:
             good_asins.add(asin)
-    processes_waiters.submit(add_task, 'collect_products', list_name=list_name, asins=''.join(good_asins), user=str(user_id))
+    processes_waiters.submit(
+        add_task, 'collect_products', list_name=list_name,
+        asins=''.join(good_asins), user=str(user_id), callback=callback,
+    )
 
 
 def add_deals_task(name, user_id):
@@ -56,6 +59,8 @@ def add_task(script, *args, stdin=None, stdout=None, stderr=None, **kwargs):
     processes[_id] = proc
     # Ожидание завершения процесса
     proc.wait()
+    if 'callback' in kwargs:
+        kwargs['callback']()
 
 
 def end_task(_id, hard_kill=True, exc=True):

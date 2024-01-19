@@ -401,6 +401,45 @@ def collect_top5(msg: types.Message):
 
 
 @cmdreg
+def get_all(msg: types.Message, **kwargs):
+    if msg.text == '/get_all':
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Please enter the ASINs list'),
+            get_all,
+        )
+    if 'asins' not in kwargs:
+        asins = get_all_asins_from_text(msg.text)
+        if not asins:
+            return bot.register_next_step_handler(
+                send_msg(msg.from_user.id, f'List name: {msg.text}. Enter the ASINs:'),
+                get_all, list=msg.text,
+            )
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Enter the list name:'),
+            get_all, asins=asins,
+        )
+    if 'list' not in kwargs:
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Enter the collection suffix (or \'-\' sign for defaults):'),
+            get_all, asins=kwargs['asins'], list=msg.text,
+        )
+    collection = 'categories'
+    if msg.text != '-':
+        collection += '_' + msg.text
+    _set_category(msg.from_user.id, kwargs['asins'], kwargs['list'], collection)
+    count = len(kwargs['asins']) + 1
+
+    def decrement():
+        nonlocal count
+        count -= 1
+        if not count:
+            _export_asins(kwargs['asins'], msg.from_user.id)
+
+    payload_manager.add_products_task(kwargs['asins'], kwargs['list'], msg.from_user.id, callback=decrement)
+    payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, callback=decrement)
+
+
+@cmdreg
 def update_department_collection(msg: types.Message):
     dep_name = msg.text.replace('/update_department_collection', '').strip()
     payload_manager.add_departments_task(dep_name, msg.from_user.id)
