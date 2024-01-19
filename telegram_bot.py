@@ -428,7 +428,7 @@ def get_all(msg: types.Message, **kwargs):
     if msg.text != '-':
         collection += '_' + msg.text
     _set_category(msg.from_user.id, kwargs['asins'], kwargs['list'], collection)
-    count = 2
+    count = len(kwargs['asins'] + 1)
 
     def decrement():
         nonlocal count

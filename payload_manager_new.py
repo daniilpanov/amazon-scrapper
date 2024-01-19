@@ -14,7 +14,7 @@ alive = True
 
 def add_reviews_tasks(asins, user_id, callback=None):
     for asin in asins:
-        processes_waiters.submit(add_task, 'collect_reviews', asin=asin, user=str(user_id), callback=None)
+        processes_waiters.submit(add_task, 'collect_reviews', asin=asin, user=str(user_id), callback=callback)
 
 
 def add_products_task(asins, list_name, user_id, callback=None):
