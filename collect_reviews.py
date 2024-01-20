@@ -242,8 +242,7 @@ def close(ev, uemu, wd):
 
 def start_reviews_collect(params_dict):
     res = False
-    # c = 99
-    c = 1
+    c = 99
     try:
         while not res and c > 0:
             res = collect(params_dict['asin'], params_dict.get('keywords', ''), params_dict.get('user'))
