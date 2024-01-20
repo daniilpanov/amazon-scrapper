@@ -157,10 +157,7 @@ def collect(asin, keywords='', user=None):
         except NoSuchElementException:
             pass
     else:
-        log(f'ASIN {asin} not found!')
-        if user:
-            send_bot_msg(user, f'ASIN {asin} not found on amazon search. retry')
-        return False
+        webdriver.get(f'https://amazon.com/dp/{asin}/ref=sr_1_1_sspa')
     webdriver.wait_for_loading()
     prefix = webdriver.current_url.split(f'/dp/{asin}')[0].strip()
     if len(prefix) == len(webdriver.current_url):
