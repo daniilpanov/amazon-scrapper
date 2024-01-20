@@ -146,7 +146,7 @@ def collect(asin, keywords='', user=None):
         return True
     log('loading webdriver')
     ev = Event()
-    webdriver = base_chrome_init(False, goto=f'https://amazon.com/')
+    webdriver = base_chrome_init(goto=f'https://amazon.com/')
     webdriver.change_loc()
     webdriver.get(webdriver.current_url + f's?k={asin}')
     sleep(.5)
