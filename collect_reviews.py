@@ -1,7 +1,7 @@
 import re
 import urllib
 from builtins import Exception
-from json import JSONDecoder, JSONEncoder
+from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from threading import Thread, Event
 from time import sleep
 
@@ -61,10 +61,12 @@ def process_data(asin, seed, process_data_res):
     try:
         process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
         try:
-            raw = list(map(
-                lambda s: jsd.decode(s.strip()),
-                [i for i in process_data_res.splitlines() if i.strip() and '&&&' != i.strip()],
-            ))
+            raw = []
+            for s in [i for i in process_data_res.splitlines() if i.strip() and '&&&' != i.strip()]:
+                try:
+                    raw.append(jsd.decode(s.strip()))
+                except JSONDecodeError:
+                    pass
         except Exception as e:
             logger.error(f'Exception on div revs of [{asin}] [seed={seed}]', exc_info=True)
             log(e)
