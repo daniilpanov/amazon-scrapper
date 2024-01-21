@@ -149,17 +149,7 @@ def collect(asin, keywords='', user=None):
         return True
     log('loading webdriver')
     ev = Event()
-    webdriver = base_chrome_init(False, extension='TunnelBear VPN 3.6.2.0.crx', goto=f'https://amazon.com/')
-    print('ok1')
-    ActionChains(webdriver) \
-        .key_down(Keys.CONTROL) \
-        .key_down(Keys.SHIFT) \
-        .send_keys("u") \
-        .key_up(Keys.CONTROL) \
-        .key_up(Keys.SHIFT) \
-        .perform()
-    sleep(100)
-    print('ok2')
+    webdriver = base_chrome_init(goto=f'https://amazon.com/')
     webdriver.change_loc()
     webdriver.get(webdriver.current_url + f's?k={asin}')
     sleep(.5)
