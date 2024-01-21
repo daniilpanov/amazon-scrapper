@@ -1,7 +1,7 @@
 import re
 import urllib
 from builtins import Exception
-from json import JSONDecoder, JSONEncoder
+from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from threading import Thread, Event
 from time import sleep
 
@@ -62,10 +62,12 @@ def process_data(asin, seed, process_data_res):
     try:
         process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
         try:
-            raw = list(map(
-                lambda s: jsd.decode(s.strip()),
-                [i for i in process_data_res.splitlines() if i.strip() and '&&&' != i.strip()],
-            ))
+            raw = []
+            for s in [i for i in process_data_res.splitlines() if i.strip() and '&&&' != i.strip()]:
+                try:
+                    raw.append(jsd.decode(s.strip()))
+                except JSONDecodeError:
+                    pass
         except Exception as e:
             logger.error(f'Exception on div revs of [{asin}] [seed={seed}]', exc_info=True)
             log(e)
@@ -161,16 +163,14 @@ def collect(asin, keywords='', user=None):
     webdriver.change_loc()
     webdriver.get(webdriver.current_url + f's?k={asin}')
     sleep(.5)
-    try:
-        webdriver.get_element(f'a[href*="/dp/{asin}"]').click()
-    except NoSuchElementException:
+    for selector in ['/dp/', '%2Fdp%2F', '/gp/', '%2Fgp%2F']:
         try:
-            webdriver.get_element(f'a[href*="/gp/{asin}"]').click()
+            webdriver.get_element(f'a[href*="{selector}{asin}"]').click()
+            break
         except NoSuchElementException:
-            log(f'ASIN {asin} not found!')
-            if user:
-                send_bot_msg(user, f'ASIN {asin} not found on amazon search. retry')
-            return False
+            pass
+    else:
+        webdriver.get(f'https://amazon.com/dp/{asin}/ref=sr_1_1_sspa')
     webdriver.wait_for_loading()
     prefix = webdriver.current_url.split(f'/dp/{asin}')[0].strip()
     if len(prefix) == len(webdriver.current_url):
@@ -258,7 +258,7 @@ def start_reviews_collect(params_dict):
     c = 99
     try:
         while not res and c > 0:
-            res = collect(params_dict['asin'], params_dict.get('keywords', ''))
+            res = collect(params_dict['asin'], params_dict.get('keywords', ''), params_dict.get('user'))
             c -= 1
     except KeyError:
         log('No ASIN error!')
