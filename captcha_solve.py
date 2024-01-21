@@ -1,9 +1,11 @@
-
+from selenium.common import NoSuchElementException
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 
+from functions import WebDriver
 
-def init(api_key: str, driver: BaseCase, _id):
+
+def init(api_key: str, driver: WebDriver, _id):
     driver.driver.get('chrome-extension://{}/popup.html'.format(_id))
     driver.sleep(1)
     driver.send_keys('//*[@placeholder]', api_key, By.XPATH)
@@ -17,19 +19,19 @@ def init(api_key: str, driver: BaseCase, _id):
     return driver
 
 
-def solve(driver: BaseCase):
+def solve(driver: WebDriver):
     try:
-        driver.get_element('iframe[title="reCAPTCHA"]', timeout=1)
+        driver.get_element('iframe[title="reCAPTCHA"]')
     except NoSuchElementException:
         return True
     driver.switch_to_frame('iframe[title="reCAPTCHA"]')
     res = False
     while True:
         try:
-            if 'style' in driver.get_element('.recaptcha-checkbox-checkmark', timeout=1).get_attribute('outerHTML'):
+            if 'style' in driver.get_element('.recaptcha-checkbox-checkmark').get_attribute('outerHTML'):
                 res = True
                 break
-            if driver.get_element('.rc-anchor-error-msg', timeout=1).text:
+            if driver.get_element('.rc-anchor-error-msg').text:
                 break
             driver.sleep(1)
         except NoSuchElementException:

@@ -29,12 +29,12 @@ def get_bsr(asin, wd):
     asin = asins[0]
 
     wd.get(f'https://amazon.com/dp/{asin}')
-    el = wd.get_element('[data-feature-name="detailBullets"]')
+    el = wd.get_element('#prodDetails')
     soup = BeautifulSoup(el.get_attribute('innerHTML'), features='html.parser')
-    details = soup.find_all(attrs={'class': 'detail-bullet-list'})
+    details = soup.select('[id*="productDetails_detailBullets"] tr')
     for det in details:
         if 'Best Sellers Rank' in det.text:
-            bsrs = det.find_all('ul')
+            bsrs = det.select('td > span > span')
             min_place = None
             lnk = None
 
@@ -57,25 +57,30 @@ def get_bsr(asin, wd):
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
+    params_dict['asin'] = 'B0BGV79FHT'
     try:
         wd = base_chrome_init('https://amazon.com')
         wd.change_loc()
         # get department url
         url = get_bsr(params_dict['asin'], wd)
-        requests.post('http://localhost:8080/send_msg', {
-            'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
-            'uid': params_dict.get('user', '1428909514'),
-        })
+        # requests.post('http://localhost:8080/send_msg', {
+        #     'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
+        #     'uid': params_dict.get('user', '1428909514'),
+        # })
         # search asins
         result = list(get_asins(url, wd, params_dict['asin'], params_dict.get('limit', True)))
-        requests.post('http://localhost:8080/send_msg', {
-            'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
-            'uid': params_dict.get('user', '1428909514'),
-        })
+        print(url)
+        print(result)
+        # requests.post('http://localhost:8080/send_msg', {
+        #     'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
+        #     'uid': params_dict.get('user', '1428909514'),
+        # })
     except Exception as e:
-        requests.post('http://localhost:8080/send_msg', {
-            'msg': f'Error on collecting nearby asins: {params_dict["asin"]}\n' + str(e) + '\n',
-            'uid': params_dict['user'],
-        })
+        pass
+        # requests.post('http://localhost:8080/send_msg', {
+        #     'msg': f'Error on collecting nearby asins: {params_dict["asin"]}\n' + str(e) + '\n',
+        #     'uid': params_dict['user'],
+        # })
     finally:
-        requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
+        pass
+        # requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
