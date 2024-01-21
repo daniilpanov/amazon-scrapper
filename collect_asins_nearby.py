@@ -63,24 +63,20 @@ if __name__ == '__main__':
         wd.change_loc()
         # get department url
         url = get_bsr(params_dict['asin'], wd)
-        # requests.post('http://localhost:8080/send_msg', {
-        #     'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
-        #     'uid': params_dict.get('user', '1428909514'),
-        # })
+        requests.post('http://localhost:8080/send_msg', {
+            'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
+            'uid': params_dict.get('user', '1428909514'),
+        })
         # search asins
         result = list(get_asins(url, wd, params_dict['asin'], params_dict.get('limit', True)))
-        print(url)
-        print(result)
-        # requests.post('http://localhost:8080/send_msg', {
-        #     'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
-        #     'uid': params_dict.get('user', '1428909514'),
-        # })
+        requests.post('http://localhost:8080/send_msg', {
+            'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
+            'uid': params_dict.get('user', '1428909514'),
+        })
     except Exception as e:
-        pass
-        # requests.post('http://localhost:8080/send_msg', {
-        #     'msg': f'Error on collecting nearby asins: {params_dict["asin"]}\n' + str(e) + '\n',
-        #     'uid': params_dict['user'],
-        # })
+        requests.post('http://localhost:8080/send_msg', {
+            'msg': f'Error on collecting nearby asins: {params_dict["asin"]}\n' + str(e) + '\n',
+            'uid': params_dict['user'],
+        })
     finally:
-        pass
-        # requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
+        requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
