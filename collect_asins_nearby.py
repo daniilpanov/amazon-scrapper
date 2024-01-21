@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from selenium.common import NoSuchElementException
 
 from functions import base_chrome_init
 from helpers import get_all_asins_from_text, parse_args
@@ -29,12 +30,20 @@ def get_bsr(asin, wd):
     asin = asins[0]
 
     wd.get(f'https://amazon.com/dp/{asin}')
-    el = wd.get_element('#prodDetails')
-    soup = BeautifulSoup(el.get_attribute('innerHTML'), features='html.parser')
-    details = soup.select('[id*="productDetails_detailBullets"] tr')
+    try:
+        el = wd.get_element('[data-feature-name="detailBullets"]')
+        soup = BeautifulSoup(el.get_attribute('innerHTML'), features='html.parser')
+        details = soup.find_all(attrs={'class': 'detail-bullet-list'})
+        get_bsrs = lambda detail: detail.find_all('ul')
+    except NoSuchElementException:
+        el = wd.get_element('#prodDetails')
+        soup = BeautifulSoup(el.get_attribute('innerHTML'), features='html.parser')
+        details = soup.select('[id*="productDetails_detailBullets"] tr')
+        get_bsrs = lambda detail: detail.select('td > span > span')
+
     for det in details:
         if 'Best Sellers Rank' in det.text:
-            bsrs = det.select('td > span > span')
+            bsrs = get_bsrs(det)
             min_place = None
             lnk = None
 
@@ -48,6 +57,8 @@ def get_bsr(asin, wd):
                 if min_place is None or num < min_place:
                     min_place = num
                     lnk = bsr.find('a')
+            if not lnk:
+                continue
             url = lnk['href']
             if not url.startswith('https://'):
                 url = 'https://amazon.com' + url
