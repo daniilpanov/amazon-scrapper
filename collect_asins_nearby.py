@@ -68,7 +68,6 @@ def get_bsr(asin, wd):
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
-    params_dict['asin'] = 'B0BGV79FHT'
     try:
         wd = base_chrome_init('https://amazon.com')
         wd.change_loc()
