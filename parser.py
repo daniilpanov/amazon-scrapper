@@ -167,7 +167,7 @@ def parse_product(asin, html, tiny=False, domain='amazon.com'):
         pass
     price = bs.select_one('.a-price')
     if price:
-        price = float(price.text.split('$')[1].strip())
+        price = float(price.text.split('$')[1].strip().replace(',', ''))
     else:
         price = None
     return [
