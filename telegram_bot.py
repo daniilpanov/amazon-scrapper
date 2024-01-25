@@ -35,6 +35,9 @@ def cmdreg(func, name=None):
         receive_message(msg)
         if msg.text in ('/close', '/stop', '/quit', '/cancel', '/exit'):
             return send_msg(msg.from_user.id, 'Cancel')
+        if msg.text:
+            path = msg.text.split(' ', 1)
+            kwargs['args'] = path[1].strip() if len(path) > 1 else ''
         return func(msg, *args, **kwargs)
 
     CMDs[name or func.__name__] = wrapper
@@ -57,7 +60,7 @@ def auth(msg: types.Message):
 
 @cmdreg
 def get_asins_data(msg: types.Message, **kwargs):
-    asins_raw = msg.text.replace('/get_asins_data', '').strip()
+    asins_raw = kwargs['args']
     if asins_raw:
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
@@ -96,7 +99,7 @@ cmdreg(functools.partial(get_asins_data, domain='amazon.com.mx'), 'get_asins_dat
 
 @cmdreg
 def export_asins(msg: types.Message, **kwargs):
-    asins_raw = msg.text.replace('/export_asins', '').strip()
+    asins_raw = kwargs['args']
     if asins_raw:
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
@@ -198,7 +201,7 @@ def import_asins(msg: types.Message, **kwargs):
             send_msg(msg.from_user.id, 'Enter the collection ([database].[collection]):', parse_mode='HTML'),
             import_asins, document=doc,
         )
-    collection_raw = msg.text.replace('/import_asins', '').strip()
+    collection_raw = kwargs['args']
     if collection_raw:
         if 'document' in kwargs:
             return _import_asins(msg.from_user.id, kwargs['document'], collection_raw)
@@ -291,7 +294,7 @@ def _import_asins(user_id, document, location):
 
 @cmdreg
 def set_category(msg: types.Message, **kwargs):
-    text = msg.text.replace('/set_category', '').strip() or None
+    text = kwargs['args'] or None
     if 'cat_group' in kwargs:
         if 'category' in kwargs:
             return _set_category(msg.from_user.id, text, kwargs['category'], kwargs['cat_group'])
@@ -322,7 +325,7 @@ def _set_category(user_id, asins, cat_name, cat_group=None):
 
 @cmdreg
 def rename_category(msg: types.Message, **kwargs):
-    text = msg.text.replace('/rename_category', '').strip() or None
+    text = kwargs['args'] or None
     if 'cat_group' in kwargs:
         if 'cat_old' in kwargs:
             return _rename_category(msg.from_user.id, kwargs['cat_old'], text, kwargs['cat_group'])
@@ -348,7 +351,7 @@ def _rename_category(user_id, cat_old, cat_new, cat_group=None):
 
 @cmdreg
 def delete_asins(msg: types.Message, **kwargs):
-    asins_raw = msg.text.replace('/delete_asins', '').strip()
+    asins_raw = kwargs['args']
     if asins_raw:
         for args in (
             (get_all_asins_from_text(asins_raw), msg.from_user.id),
@@ -393,7 +396,7 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
 
 @cmdreg
 def collect_asins_nearby(msg: types.Message, **kwargs):
-    asin = msg.text.replace('/collect_asins_nearby', '').strip()
+    asin = kwargs['args']
     if asin:
         payload_manager.add_asins_nearby_task(asin, msg.from_user.id, True, kwargs['domain'])
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
@@ -408,7 +411,7 @@ cmdreg(functools.partial(collect_asins_nearby, domain='amazon.com.mx'), 'collect
 
 @cmdreg
 def collect_top5(msg: types.Message, **kwargs):
-    asin = msg.text.replace('/collect_top5', '').strip()
+    asin = kwargs['args']
     if asin:
         payload_manager.add_asins_nearby_task(asin, msg.from_user.id, False, kwargs['domain'])
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
@@ -472,7 +475,7 @@ cmdreg(functools.partial(get_all, domain='amazon.com.mx'), 'get_all_mx')
 
 @cmdreg
 def update_department_collection(msg: types.Message, **kwargs):
-    dep_name = msg.text.replace('/update_department_collection', '').strip()
+    dep_name = kwargs['args']
     payload_manager.add_departments_task(dep_name, msg.from_user.id)
     return send_msg(msg.from_user.id, f'Start collecting departments [{dep_name or "all deps."}]')
 
