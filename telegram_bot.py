@@ -28,10 +28,11 @@ PASSWORD = '12345'
 CMDs = {}
 
 
-def cmdreg(func, name=None):
+def cmdreg(func, name=None, **const_kwargs):
     global CMDs
 
     def wrapper(msg: types.Message, *args, **kwargs):
+        kwargs = {**const_kwargs, **kwargs}
         kwargs.setdefault('domain', 'amazon.com')
         receive_message(msg)
         if msg.text in ('/close', '/stop', '/quit', '/cancel', '/exit'):
@@ -97,7 +98,7 @@ def get_asins_data(msg: types.Message, **kwargs):
     )
 
 
-cmdreg(functools.partial(get_asins_data, domain='amazon.com.mx'), 'get_asins_data_mx')
+cmdreg(get_asins_data, 'get_asins_data_mx', domain='amazon.com.mx')
 
 
 @cmdreg
@@ -467,7 +468,7 @@ def get_all(msg: types.Message, **kwargs):
     )
 
 
-cmdreg(functools.partial(get_all, domain='amazon.com.mx'), 'get_all_mx')
+cmdreg(get_all, 'get_all_mx', domain='amazon.com.mx')
 
 
 @cmdreg
@@ -554,7 +555,7 @@ def run_bottle():
         except:
             return bottle.HTTPResponse(status=500)
 
-    bottle.run(host='0.0.0.0', port=8080, debug=True)
+    bottle.run(host='0.0.0.0', port=8080, debug=settings.ENVIRONMENT != 'product')
 
 
 if __name__ == '__main__':
@@ -569,20 +570,23 @@ if __name__ == '__main__':
             os.remove('CHANGELOG')
         else:
             changelog = input('Enter the CHANGELOG: ') or None
+    else:
+        changelog = None
     if os.path.exists('auth_users.data'):
         with open('auth_users.data') as f:
             for user in f:
                 auth_users.add(int(user))
-                bot.send_message(user, 'Hello! Bot is alive!')
-                if changelog:
-                    bot.send_message(user, 'CHANGELOG:\n' + changelog)
+                if settings.ENVIRONMENT == 'product':
+                    bot.send_message(user, 'Hello! Bot is alive!')
+                    if changelog:
+                        bot.send_message(user, 'CHANGELOG:\n' + changelog)
     try:
         bot.infinity_polling()
     finally:
         payload_manager.alive = False
         payload_manager.processes_waiters.shutdown(cancel_futures=True)
-        if settings.ENVIRONMENT == 'product':
-            with open('auth_users.data', 'w') as f:
-                for user in auth_users:
-                    f.write(str(user) + '\n')
+        with open('auth_users.data', 'w') as f:
+            for user in auth_users:
+                if settings.ENVIRONMENT == 'product':
                     bot.send_message(user, 'Bot stopped. We will notify you when the bot is alive')
+                f.write(str(user) + '\n')
