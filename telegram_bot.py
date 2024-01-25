@@ -347,7 +347,7 @@ def _rename_category(user_id, cat_old, cat_new, cat_group=None):
 
 
 @cmdreg
-def delete_asins(msg: types.Message):
+def delete_asins(msg: types.Message, **kwargs):
     asins_raw = msg.text.replace('/delete_asins', '').strip()
     if asins_raw:
         for args in (
@@ -471,13 +471,13 @@ cmdreg(functools.partial(get_all, domain='amazon.com.mx'), 'get_all_mx')
 
 
 @cmdreg
-def update_department_collection(msg: types.Message):
+def update_department_collection(msg: types.Message, **kwargs):
     dep_name = msg.text.replace('/update_department_collection', '').strip()
     payload_manager.add_departments_task(dep_name, msg.from_user.id)
     return send_msg(msg.from_user.id, f'Start collecting departments [{dep_name or "all deps."}]')
 
 
-def unknown(msg: types.Message):
+def unknown(msg: types.Message, **kwargs):
     return send_msg(msg.from_user.id, 'Unknown command')
 
 
@@ -491,7 +491,7 @@ def buttons():
 
 
 @cmdreg
-def cmd(msg: types.Message):
+def cmd(msg: types.Message, **kwargs):
     return bot.send_message(msg.from_user.id, 'All commands:\n/' + '\n/'.join(CMDs.keys()), reply_markup=buttons(),
                             parse_mode='HTML')
 
