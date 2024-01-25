@@ -12,19 +12,22 @@ processes_waiters = ThreadPoolExecutor(2)
 alive = True
 
 
-def add_reviews_tasks(asins, user_id, callback=None):
+def add_reviews_tasks(asins, user_id, callback=None, domain=None):
     for asin in asins:
-        processes_waiters.submit(add_task, 'collect_reviews', asin=asin, user=str(user_id), callback=callback)
+        processes_waiters.submit(
+            add_task, 'collect_reviews', asin=asin,
+            user=str(user_id), callback=callback, domain=domain,
+        )
 
 
-def add_products_task(asins, list_name, user_id, callback=None):
+def add_products_task(asins, list_name, user_id, callback=None, domain=None):
     good_asins = set()
     for asin in asins:
         if state.get_asin(asin, 'products') > -1:
             good_asins.add(asin)
     processes_waiters.submit(
         add_task, 'collect_products', list_name=list_name,
-        asins=''.join(good_asins), user=str(user_id), callback=callback,
+        asins=''.join(good_asins), user=str(user_id), callback=callback, domain=domain,
     )
 
 
@@ -32,8 +35,8 @@ def add_deals_task(name, user_id):
     processes_waiters.submit(add_task, 'collect_all_deals', sheet_name=name, user=user_id)
 
 
-def add_asins_nearby_task(asin, user_id, limit):
-    processes_waiters.submit(add_task, 'collect_asins_nearby', asin=asin, user=user_id, limit=limit)
+def add_asins_nearby_task(asin, user_id, limit, domain):
+    processes_waiters.submit(add_task, 'collect_asins_nearby', asin=asin, user=user_id, limit=limit, domain=domain)
 
 
 def add_departments_task(department, user_id):

@@ -1,4 +1,5 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
+import functools
 import json
 import os
 from io import StringIO
@@ -26,17 +27,18 @@ PASSWORD = '12345'
 CMDs = {}
 
 
-def cmdreg(func):
+def cmdreg(func, name=None):
     global CMDs
 
     def wrapper(msg: types.Message, *args, **kwargs):
+        kwargs.setdefault('domain', 'amazon.com')
         receive_message(msg)
         if msg.text in ('/close', '/stop', '/quit', '/cancel', '/exit'):
             return send_msg(msg.from_user.id, 'Cancel')
         return func(msg, *args, **kwargs)
 
-    CMDs[func.__name__] = wrapper
-    bot.register_message_handler(callback=wrapper, commands=[func.__name__], func=auth)
+    CMDs[name or func.__name__] = wrapper
+    bot.register_message_handler(callback=wrapper, commands=[name or func.__name__], func=auth)
     return wrapper
 
 
@@ -60,8 +62,8 @@ def get_asins_data(msg: types.Message, **kwargs):
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
             if 'list_name' in kwargs:
-                payload_manager.add_reviews_tasks(asins, msg.from_user.id)
-                payload_manager.add_products_task(asins, kwargs['list_name'], msg.from_user.id)
+                payload_manager.add_reviews_tasks(asins, msg.from_user.id, domain=kwargs['domain'])
+                payload_manager.add_products_task(asins, kwargs['list_name'], msg.from_user.id, domain=kwargs['domain'])
                 return send_msg(
                     msg.from_user.id,
                     f'Process started. We\'ll notify you when it is completed. List name: {kwargs["list_name"]}',
@@ -72,8 +74,8 @@ def get_asins_data(msg: types.Message, **kwargs):
                 get_asins_data, **kwargs,
             )
         if 'asins' in kwargs:
-            payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id)
-            payload_manager.add_products_task(kwargs['asins'], asins_raw, msg.from_user.id)
+            payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, domain=kwargs['domain'])
+            payload_manager.add_products_task(kwargs['asins'], asins_raw, msg.from_user.id, domain=kwargs['domain'])
             return send_msg(
                 msg.from_user.id,
                 f'Process started. We\'ll notify you when it is completed. List name: {asins_raw}',
@@ -83,7 +85,13 @@ def get_asins_data(msg: types.Message, **kwargs):
             msg.from_user.id,
             f'List name: {asins_raw}. Enter the ASINs list:'), get_asins_data, **kwargs,
         )
-    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the ASINs list:'), get_asins_data)
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Enter the ASINs list:'),
+        get_asins_data, **kwargs,
+    )
+
+
+cmdreg(functools.partial(get_asins_data, domain='amazon.com.mx'), 'get_asins_data_mx')
 
 
 @cmdreg
@@ -384,21 +392,33 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
 
 
 @cmdreg
-def collect_asins_nearby(msg: types.Message):
+def collect_asins_nearby(msg: types.Message, **kwargs):
     asin = msg.text.replace('/collect_asins_nearby', '').strip()
     if asin:
-        payload_manager.add_asins_nearby_task(asin, msg.from_user.id, True)
+        payload_manager.add_asins_nearby_task(asin, msg.from_user.id, True, kwargs['domain'])
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
-    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_asins_nearby)
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '),
+        collect_asins_nearby, **kwargs,
+    )
+
+
+cmdreg(functools.partial(collect_asins_nearby, domain='amazon.com.mx'), 'collect_asins_nearby_mx')
 
 
 @cmdreg
-def collect_top5(msg: types.Message):
+def collect_top5(msg: types.Message, **kwargs):
     asin = msg.text.replace('/collect_top5', '').strip()
     if asin:
-        payload_manager.add_asins_nearby_task(asin, msg.from_user.id, False)
+        payload_manager.add_asins_nearby_task(asin, msg.from_user.id, False, kwargs['domain'])
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
-    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '), collect_top5)
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '),
+        collect_top5, **kwargs,
+    )
+
+
+cmdreg(functools.partial(collect_top5, domain='amazon.com.mx'), 'collect_top5_mx')
 
 
 @cmdreg
@@ -406,23 +426,23 @@ def get_all(msg: types.Message, **kwargs):
     if msg.text == '/get_all':
         return bot.register_next_step_handler(
             send_msg(msg.from_user.id, 'Please enter the ASINs list'),
-            get_all,
+            get_all, **kwargs,
         )
     if 'asins' not in kwargs:
         asins = get_all_asins_from_text(msg.text)
         if not asins:
             return bot.register_next_step_handler(
                 send_msg(msg.from_user.id, f'List name: {msg.text}. Enter the ASINs:'),
-                get_all, list=msg.text,
+                get_all, list=msg.text, **kwargs,
             )
         return bot.register_next_step_handler(
             send_msg(msg.from_user.id, 'Enter the list name:'),
-            get_all, asins=asins,
+            get_all, asins=asins, **kwargs,
         )
     if 'list' not in kwargs:
         return bot.register_next_step_handler(
             send_msg(msg.from_user.id, 'Enter the collection suffix (or \'-\' sign for defaults):'),
-            get_all, asins=kwargs['asins'], list=msg.text,
+            get_all, list=msg.text, **kwargs,
         )
     collection = 'categories'
     if msg.text != '-':
@@ -436,8 +456,18 @@ def get_all(msg: types.Message, **kwargs):
         if not count:
             _export_asins(kwargs['asins'], msg.from_user.id)
 
-    payload_manager.add_products_task(kwargs['asins'], kwargs['list'], msg.from_user.id, callback=decrement)
-    payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, callback=decrement)
+    payload_manager.add_products_task(
+        kwargs['asins'], kwargs['list'],
+        msg.from_user.id, callback=decrement,
+        domain=kwargs['domain'],
+    )
+    payload_manager.add_reviews_tasks(
+        kwargs['asins'], msg.from_user.id,
+        callback=decrement, domain=kwargs['domain'],
+    )
+
+
+cmdreg(functools.partial(get_all, domain='amazon.com.mx'), 'get_all_mx')
 
 
 @cmdreg
@@ -512,7 +542,6 @@ def run_bottle():
                 return bottle.HTTPResponse(status=500)
         except Exception as e:
             return bottle.HTTPResponse(status=500, body=str(e))
-
 
     @bottle.route('/end_task', method='POST')
     def end_task():
