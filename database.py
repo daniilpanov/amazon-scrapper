@@ -95,10 +95,10 @@ def write_reviews(reviews):
         return True
 
 
-def write_product_html(asin, html):
+def write_product_html(asin, html, domain='amazon.com'):
     try:
         return db()['raw_product_card_htmls'].insert_one({
-            'asin': asin, 'product_url': f'https://amazon.com/dp/{asin}',
+            'asin': asin, 'product_url': f'https://{domain}/dp/{asin}',
             'HTML_text': html,
             'scrap_datetime': datetime.datetime.now(pytz.UTC),
         })

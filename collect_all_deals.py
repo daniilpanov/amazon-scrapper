@@ -16,6 +16,9 @@ import parser
 from helpers import get_all_asins_from_text, log, parse_args
 
 
+domain = 'amazon.com'
+
+
 class Level:
     name: str | None
     link: str | None
@@ -29,8 +32,8 @@ class Level:
 
     def __init__(self, name, link: str, items=None, asin=None, description=None, img=None, ready=False, all_items_preloaded=False):
         self.name = name
-        if link and not link.strip().startswith('https://amazon.com') and not link.strip().startswith('https://www.amazon.com'):
-            link = 'https://amazon.com' + link
+        if link and not link.strip().startswith(f'https://{domain}') and not link.strip().startswith(f'https://www.{domain}'):
+            link = f'https://{domain}' + link
         self.link = link
         self.asin = asin
         self.description = description
@@ -116,7 +119,7 @@ class Level:
         sleep(.1)
         wd.wait_for_loading()
         # парсим tiny набор данных - title, description, image_url
-        parsed_data = parser.parse_product(self.asin, wd.get_page_source(), True)
+        parsed_data = parser.parse_product(self.asin, wd.get_page_source(), True, domain)
         if not parsed_data:  # если возникла ошибка - возвращаем False
             return False
         self.name, self.description, self.image_url = parsed_data
@@ -209,7 +212,7 @@ class XSheet:
 
 ######################################################################
 def search_deals_link(wd: WebDriver):
-    wd.get('https://amazon.com')
+    wd.get(f'https://{domain}')
     try:
         link = wd.find_text('See all deals', timeout=1)
         return link.get_attribute('href')
@@ -363,9 +366,9 @@ def get_all_deals_from_category(wd: WebDriver, cat_level: Level, xsheet: XSheet)
 
 def collect_all_info(xsheet: XSheet):
     log('[1] Init chrome')
-    wd = base_chrome_init(goto='https://amazon.com')
+    wd = base_chrome_init(goto=domain)
     log('[1] Change loc')
-    wd.change_loc()
+    wd.change_loc(domain=domain)
     wd.wait_for_loading()
     # ищем ссылку на all deals
     if not xsheet.deals_tree.link:
@@ -469,8 +472,12 @@ def start(name=None, tg_note_users_ids: list[str] | None = None):
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
+    domain = params_dict.get('domain', 'amazon.com')
     try:
-        start(params_dict.get('sheet_name', 'TMP'), params_dict.get('user', '1456674317,1428909514').split(','))
+        start(
+            params_dict.get('sheet_name', 'TMP'),
+            params_dict.get('user', '1456674317,1428909514').split(','),
+        )
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'Deals collected: {params_dict.get("sheet_name")}',
             'uid': params_dict['user'],

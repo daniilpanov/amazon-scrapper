@@ -11,6 +11,9 @@ from functions import WebDriver, base_chrome_init
 from helpers import log, parse_args, send_bot_msg, path
 
 
+domain = 'amazon.com'
+
+
 class Level:
     name: str | None
     link: str | None
@@ -25,9 +28,9 @@ class Level:
             is_last_group=None, ready: bool = False, all_items_preloaded: bool = False,
     ):
         self.name = name
-        if (link and not link.strip().startswith('https://amazon.com')
-                and not link.strip().startswith('https://www.amazon.com')):
-            link = 'https://amazon.com' + link
+        if (link and not link.strip().startswith(f'https://{domain}')
+                and not link.strip().startswith(f'https://www.{domain}')):
+            link = f'https://{domain}' + link
         self.link = link
         self.is_last_group = is_last_group
         self.ready = ready
@@ -197,11 +200,11 @@ def recursive_tree(tree: Level, wd: WebDriver, xsh: XSheet, name_only=None):
 
 def collect_all_info(xsheet: XSheet, dep_name=None):
     log('[1] Init chrome')
-    wd = base_chrome_init(goto='https://amazon.com')
+    wd = base_chrome_init(goto=f'https://{domain}')
     log('[1] Change loc')
-    wd.change_loc()
+    wd.change_loc(domain=domain)
     wd.wait_for_loading()
-    wd.get(xsheet.set_link('https://amazon.com/gp/bestsellers'))
+    wd.get(xsheet.set_link(f'https://{domain}/gp/bestsellers'))
     recursive_tree(xsheet.departments_tree, wd, xsheet, dep_name)
     xsheet.save()
     log('[1] Tree collected:', xsheet.departments_tree)
@@ -226,7 +229,7 @@ def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = Tr
     xsh = XSheet(sheet_name)
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
-        collect_all_info(xsh, dep_name)
+        collect_all_info(xsh, dep_name, domain)
     if tg_note_user_id:
         log('[0] Write all info')
         for item in xsh.departments_tree:
@@ -246,10 +249,14 @@ def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = Tr
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
+    domain = params_dict.get('domain', 'amazon.com')
     try:
         params_dict.setdefault('dep_name', None)
         params_dict.setdefault('user', '1428909514')
-        start(params_dict['dep_name'] or 'all departments', params_dict['dep_name'], params_dict['user'])
+        start(
+            params_dict['dep_name'] or 'all departments',
+            params_dict['dep_name'], params_dict['user'],
+        )
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:
         send_bot_msg(

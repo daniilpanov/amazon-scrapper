@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from pandas import DataFrame
 
 
-def parse_reviews(asin, html):
+def parse_reviews(asin, html, domain='amazon.com'):
     item_parser = BeautifulSoup(html, features='html.parser')
     if not item_parser or not item_parser.find(attrs={'data-hook': 'review'}) \
             or item_parser.find('div', class_='a-divider-section') \
@@ -84,7 +84,7 @@ def parse_reviews(asin, html):
     # product_url,asin,date_info,name,title,content,rating,helpful,options
     return {
         'review_id': review_id,
-        'product_url': 'https://www.amazon.com/dp/' + asin,
+        'product_url': f'https://www.{domain}/dp/{asin}',
         'asin': asin,
         'date': review_date,
         'country': review_country,
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     res.to_csv('output_' + fn)
 
 
-def parse_product(asin, html, tiny=False):
+def parse_product(asin, html, tiny=False, domain='amazon.com'):
     bs = BeautifulSoup(html, features='html.parser')
     if not bs:
         print('NO BS! ASIN:', asin)
@@ -171,7 +171,7 @@ def parse_product(asin, html, tiny=False):
     else:
         price = None
     return [
-        asin, f'https://amazon.com/dp/{asin}',
+        asin, f'https://{domain}/dp/{asin}',
         title, descr, pic, datetime.datetime.now(pytz.UTC),
         features, top5, price,
     ]

@@ -115,7 +115,7 @@ class WebDriver:
                     break
         return _id
 
-    def change_loc(self, with_zip=90005, retry=True):
+    def change_loc(self, with_zip=90005, retry=True, domain='amazon.com'):
         sleep(.5)
         url = self.current_url
         self.activate_jquery()
@@ -123,7 +123,7 @@ class WebDriver:
             # переход к необходимой локации - US (UM)
             if with_zip:
                 self.execute_script(
-                    '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+                    f'$.post("https://www.{domain}/portal-migration/hz/glow/address-change?actionSource=glow",'
                     '{actionSource: "glow",'
                     'deviceType: "web",'
                     'locationType: "LOCATION_INPUT",'
@@ -133,16 +133,16 @@ class WebDriver:
                     ')'
                 )
                 self.execute_script(
-                    '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+                    f'$.get("https://www.{domain}/portal-migration/hz/glow/condo-refresh-html'
                     '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
                 )
             else:
                 self.execute_script(
-                    '$.post("https://www.amazon.com/portal-migration/hz/glow/get-rendered-address-selections'
+                    f'$.post("https://www.{domain}/portal-migration/hz/glow/get-rendered-address-selections'
                     '?deviceType=desktop&pageType=Detail&storeContext=hpc&actionSource=desktop-modal")'
                 )
                 self.execute_script(
-                    '$.post("https://www.amazon.com/portal-migration/hz/glow/address-change?actionSource=glow",'
+                    f'$.post("https://www.{domain}/portal-migration/hz/glow/address-change?actionSource=glow",'
                     '{actionSource: "glow",'
                     'countryCode: "UM",'
                     'deviceType: "web",'
@@ -153,7 +153,7 @@ class WebDriver:
                     ')'
                 )
                 self.execute_script(
-                    '$.get("https://www.amazon.com/portal-migration/hz/glow/condo-refresh-html'
+                    f'$.get("https://www.{domain}/portal-migration/hz/glow/condo-refresh-html'
                     '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D")'
                 )
             self.refresh()
@@ -165,7 +165,7 @@ class WebDriver:
         except JavascriptException as e:
             if retry and '$ is not defined' in e.msg:
                 sleep(1)
-                return self.change_loc(with_zip, False)
+                return self.change_loc(with_zip, False, domain)
             return False
 
     def get_page_source(self):

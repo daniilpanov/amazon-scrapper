@@ -20,6 +20,7 @@ import payload_manager_new as payload_manager
 import state
 from helpers import get_all_asins_from_text, log
 from state import chunk
+import settings
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc')
 auth_users = set()
@@ -37,7 +38,9 @@ def cmdreg(func, name=None):
             return send_msg(msg.from_user.id, 'Cancel')
         if msg.text:
             path = msg.text.split(' ', 1)
-            kwargs['args'] = path[1].strip() if len(path) > 1 else ''
+            log(path)
+            kwargs['args'] = path[-1].strip() if path[-1][0] != '/' else ''
+            log(kwargs['args'])
         return func(msg, *args, **kwargs)
 
     CMDs[name or func.__name__] = wrapper
@@ -406,9 +409,6 @@ def collect_asins_nearby(msg: types.Message, **kwargs):
     )
 
 
-cmdreg(functools.partial(collect_asins_nearby, domain='amazon.com.mx'), 'collect_asins_nearby_mx')
-
-
 @cmdreg
 def collect_top5(msg: types.Message, **kwargs):
     asin = kwargs['args']
@@ -419,9 +419,6 @@ def collect_top5(msg: types.Message, **kwargs):
         send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '),
         collect_top5, **kwargs,
     )
-
-
-cmdreg(functools.partial(collect_top5, domain='amazon.com.mx'), 'collect_top5_mx')
 
 
 @cmdreg
@@ -565,12 +562,13 @@ if __name__ == '__main__':
     bot.register_message_handler(callback=unknown, func=lambda _: True)
     bottle_thr = Thread(target=run_bottle, daemon=True)
     bottle_thr.start()
-    if os.path.exists('CHANGELOG'):
-        with open('CHANGELOG') as f:
-            changelog = f.read()
-        os.remove('CHANGELOG')
-    else:
-        changelog = input('Enter the CHANGELOG: ') or None
+    if settings.ENVIRONMENT == 'product':
+        if os.path.exists('CHANGELOG'):
+            with open('CHANGELOG') as f:
+                changelog = f.read()
+            os.remove('CHANGELOG')
+        else:
+            changelog = input('Enter the CHANGELOG: ') or None
     if os.path.exists('auth_users.data'):
         with open('auth_users.data') as f:
             for user in f:
@@ -583,7 +581,8 @@ if __name__ == '__main__':
     finally:
         payload_manager.alive = False
         payload_manager.processes_waiters.shutdown(cancel_futures=True)
-        with open('auth_users.data', 'w') as f:
-            for user in auth_users:
-                f.write(str(user) + '\n')
-                bot.send_message(user, 'Bot stopped. We will notify you when the bot is alive')
+        if settings.ENVIRONMENT == 'product':
+            with open('auth_users.data', 'w') as f:
+                for user in auth_users:
+                    f.write(str(user) + '\n')
+                    bot.send_message(user, 'Bot stopped. We will notify you when the bot is alive')

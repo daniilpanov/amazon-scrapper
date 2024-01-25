@@ -3,6 +3,7 @@ __pycache__
 */__pycache__
 tmp__
 venv
+*.env
 *.csv
 states/*
 downloaded_files/*

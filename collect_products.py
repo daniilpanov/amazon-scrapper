@@ -17,20 +17,22 @@ formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+domain = 'amazon.com'
+
 
 def collect(products_info_list):
     products_info_list = list([asin for asin in products_info_list if state.get_asin(asin, 'products') != -1])
     if not products_info_list:
         return -1
-    webdriver = base_chrome_init(goto='https://amazon.com')
-    webdriver.change_loc()
+    webdriver = base_chrome_init(goto=f'https://{domain}')
+    webdriver.change_loc(domain=domain)
     collected = set()
 
     for el in products_info_list:
         if state.get_asin(el, 'products') == -1:
             collected.add(el)
             continue
-        webdriver.get('https://amazon.com/dp/' + el)
+        webdriver.get(f'https://{domain}/dp/' + el)
         captcha_solve(webdriver)
         webdriver.activate_jquery()
 
@@ -43,9 +45,9 @@ def collect(products_info_list):
 
 
 def product_info_write(asin, html):
-    db.write_product_html(asin, html)
+    db.write_product_html(asin, html, domain)
     try:
-        data = parse_product(asin, html)
+        data = parse_product(asin, html, domain=domain)
         db.write_product_parsed(*data)
         return True
     except Exception as e:
@@ -56,6 +58,7 @@ def product_info_write(asin, html):
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
+    domain = params_dict.get('domain', 'amazon.com')
     asins = chunk(params_dict.get('asins', ''))
     res = False
     c = 99

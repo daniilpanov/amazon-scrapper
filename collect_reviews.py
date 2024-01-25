@@ -10,7 +10,6 @@ import requests
 from pandas import DataFrame
 from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException, NoSuchElementException
-from selenium.webdriver import Keys, ActionChains
 
 import database
 import parser
@@ -41,7 +40,7 @@ params_len = 1
 for key in params:
     params_len *= len(params[key])
 
-url = 'https://www.amazon.com/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt'
+url = '/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt'
 
 jsd = JSONDecoder()
 jse = JSONEncoder()
@@ -58,7 +57,7 @@ def write_data(asin, seed, write_data_res):
     state.write_asin(asin, seed)
 
 
-def process_data(asin, seed, process_data_res):
+def process_data(asin, seed, process_data_res, domain):
     try:
         process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
         try:
@@ -91,7 +90,7 @@ def process_data(asin, seed, process_data_res):
                     or item_parser.find('div', class_='a-divider-section') \
                     or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
                 continue
-            res.append(parser.parse_reviews(asin, item[2].strip()))
+            res.append(parser.parse_reviews(asin, item[2].strip(), domain))
         write_data(asin, seed, res)
         return bool(res) - (not bool(res))
     except Exception as ex:
@@ -99,7 +98,7 @@ def process_data(asin, seed, process_data_res):
         return False
 
 
-def send_request(webdriver, asin, seed, page, keywords=''):
+def send_request(webdriver, asin, seed, page, keywords='', domain='amazon.com'):
     if seed >= params_len:
         return True
 
@@ -125,7 +124,7 @@ def send_request(webdriver, asin, seed, page, keywords=''):
         current_params[i] = params[i][s % length]
         s //= length
 
-    ajax = f"$.post(\"{url}\", " \
+    ajax = f"$.post(\"https://www.{domain}{url}\", " \
            + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
            + ", null, 'text');"
 
@@ -141,16 +140,16 @@ def send_request(webdriver, asin, seed, page, keywords=''):
         log('something went wrong. send this ASIN to the end of a queue')
         return False
 
-    return process_data(asin, seed, res)
+    return process_data(asin, seed, res, domain)
 
 
-def collect(asin, keywords='', user=None):
+def collect(asin, keywords, user, domain):
     if state.get_asin(asin) == -1:
         return True
     log('loading webdriver')
     ev = Event()
-    webdriver = base_chrome_init(goto=f'https://amazon.com/')
-    webdriver.change_loc()
+    webdriver = base_chrome_init(goto=f'https://{domain}/')
+    webdriver.change_loc(domain=domain)
     webdriver.get(webdriver.current_url + f's?k={asin}')
     sleep(.5)
     for selector in ['/dp/', '%2Fdp%2F', '/gp/', '%2Fgp%2F']:
@@ -160,15 +159,15 @@ def collect(asin, keywords='', user=None):
         except NoSuchElementException:
             pass
     else:
-        webdriver.get(f'https://amazon.com/dp/{asin}/ref=sr_1_1_sspa')
+        webdriver.get(f'https://{domain}/dp/{asin}/ref=sr_1_1_sspa')
     webdriver.wait_for_loading()
     prefix = webdriver.current_url.split(f'/dp/{asin}')[0].strip()
     if len(prefix) == len(webdriver.current_url):
         prefix = webdriver.current_url.split(f'/gp/{asin}')[0].strip()
-    if not prefix.startswith('https://www.amazon.com'):
+    if not prefix.startswith(f'https://www.{domain}'):
         if not prefix.startswith('/'):
             prefix = '/' + prefix
-        prefix = 'https://www.amazon.com/' + prefix
+        prefix = f'https://www.{domain}/' + prefix
     webdriver.get(f'{prefix}/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
 
     reviews_count_element = webdriver.get_element('[data-hook="cr-filter-info-review-rating-count"]')
@@ -198,9 +197,9 @@ def collect(asin, keywords='', user=None):
         try:
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
-                    response = send_request(webdriver, asin, params_seed, i, keywords)
+                    response = send_request(webdriver, asin, params_seed, i, keywords, domain)
                     if first:
-                        webdriver.execute_script(f'$.get("https://www.amazon.com/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace("https://amazon.com", "").replace("https://www.amazon.com", ""))}")')
+                        webdriver.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
                         first = False
                     if response == -1:
                         break
@@ -248,7 +247,10 @@ def start_reviews_collect(params_dict):
     c = 99
     try:
         while not res and c > 0:
-            res = collect(params_dict['asin'], params_dict.get('keywords', ''), params_dict.get('user'))
+            res = collect(
+                params_dict['asin'], params_dict.get('keywords', ''),
+                params_dict.get('user'), params_dict['domain'],
+            )
             c -= 1
     except KeyError:
         log('No ASIN error!')
@@ -272,4 +274,6 @@ def start_reviews_collect(params_dict):
 
 if __name__ == '__main__':
     import sys
-    start_reviews_collect(parse_args(sys.argv))
+    p = parse_args(sys.argv)
+    p.setdefault('domain', 'amazon.com')
+    start_reviews_collect(p)

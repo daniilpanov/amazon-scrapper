@@ -6,7 +6,7 @@ from functions import base_chrome_init
 from helpers import get_all_asins_from_text, parse_args
 
 
-def get_asins(url, wd, excluded=None, limit=True):
+def get_asins(url, wd, excluded=None, limit=True, domain='amazon.com'):
     wd.get(url)
     soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
     links_a = soup.select('div.a-cardui[id*="asin-index"]')
@@ -20,16 +20,16 @@ def get_asins(url, wd, excluded=None, limit=True):
         if limit and reviews_count < 700 or excluded and excluded in link.find('a')['href']:
             continue
         i += 1
-        yield 'https://amazon.com/dp/' + get_all_asins_from_text(link.find('a')['href'])[0]
+        yield f'https://{domain}/dp/' + get_all_asins_from_text(link.find('a')['href'])[0]
 
 
-def get_bsr(asin, wd):
+def get_bsr(asin, wd, domain):
     asins = get_all_asins_from_text(asin)
     if not asins:
         return asin
     asin = asins[0]
 
-    wd.get(f'https://amazon.com/dp/{asin}')
+    wd.get(f'https://{domain}/dp/{asin}')
     try:
         el = wd.get_element('[data-feature-name="detailBullets"]')
         soup = BeautifulSoup(el.get_attribute('innerHTML'), features='html.parser')
@@ -61,24 +61,25 @@ def get_bsr(asin, wd):
                 continue
             url = lnk['href']
             if not url.startswith('https://'):
-                url = 'https://amazon.com' + url
+                url = f'https://{domain}' + url
             return url
 
 
 if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
+    params_dict.setdefault('domain', 'amazon.com')
     try:
-        wd = base_chrome_init('https://amazon.com')
-        wd.change_loc()
+        wd = base_chrome_init(f'https://{params_dict["domain"]}')
+        wd.change_loc(domain=params_dict['domain'])
         # get department url
-        url = get_bsr(params_dict['asin'], wd)
+        url = get_bsr(params_dict['asin'], wd, params_dict['domain'])
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
             'uid': params_dict.get('user', '1428909514'),
         })
         # search asins
-        result = list(get_asins(url, wd, params_dict['asin'], params_dict.get('limit', True)))
+        result = list(get_asins(url, wd, params_dict['asin'], params_dict.get('limit', True), params_dict['domain']))
         requests.post('http://localhost:8080/send_msg', {
             'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
             'uid': params_dict.get('user', '1428909514'),
