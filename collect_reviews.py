@@ -157,7 +157,7 @@ def collect(asin, keywords, user, domain):
         webdriver.get(webdriver.get_element('link[rel="canonical"]').get_attribute('href')
                       + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
     except Exception as e:
-        helpers.send_bot_msg(user, f'WARNING: canonical link not found for ASIN {asin}; error: {e}')
+        send_bot_msg(user, f'WARNING: canonical link not found for ASIN {asin}; error: {e}')
 
     reviews_count_element = webdriver.get_element('[data-hook="cr-filter-info-review-rating-count"]')
     reviews_count = 0
@@ -244,15 +244,15 @@ def start_reviews_collect(params_dict):
     else:
         if 'user' in params_dict:
             if res or c == 99:
-                requests.post('http://localhost:8080/send_msg', {
-                    'msg': f'Reviews of ASIN {params_dict["asin"]} collected!',
-                    'uid': params_dict['user'],
-                })
+                send_bot_msg(
+                    params_dict['user'],
+                    f'Reviews of ASIN {params_dict["asin"]} collected!',
+                )
             else:
-                requests.post('http://localhost:8080/send_msg', {
-                    'msg': f'Reviews of ASIN {params_dict["asin"]} did NOT collected.',
-                    'uid': params_dict['user'],
-                })
+                send_bot_msg(
+                    params_dict['user'],
+                    f'Reviews of ASIN {params_dict["asin"]} did NOT collected.',
+                )
     finally:
         if 'id' in params_dict:
             requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
