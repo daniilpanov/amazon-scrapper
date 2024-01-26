@@ -6,6 +6,29 @@ from bs4 import BeautifulSoup
 from pandas import DataFrame
 
 
+def month_to_int(month: str):
+    month = month.lower()
+    if month[0] == 'f':
+        r = 2
+    elif month[0] == 'j' and month[1] == 'u':
+        r = 6 + ('l' in month)
+    elif month[0] == 'a':
+        r = 4 + 4 * ('g' in month)
+    elif month[0] == 'm':
+        r = 3 + 2 * ('r' not in month)
+    elif month[0] == 's':
+        r = 9
+    elif month[0] == 'o':
+        r = 10
+    elif month[0] == 'n':
+        r = 11
+    elif month[0] == 'd':
+        r = 12
+    else:
+        r = 1
+    return r
+
+
 def parse_reviews(asin, html, domain='amazon.com'):
     item_parser = BeautifulSoup(html, features='html.parser')
     if not item_parser or not item_parser.find(attrs={'data-hook': 'review'}) \
@@ -16,12 +39,47 @@ def parse_reviews(asin, html, domain='amazon.com'):
     # Country & Date
     review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
     if review_date_raw:
-        review_date_raw = review_date_raw.text.strip()
-        review_date = review_date_raw.replace("\n", " ") \
-            .replace('Reviewed in the ', '').replace(',', '').replace('"', '')
-        rdc = review_date.split(' on ')
-        review_date = rdc[-1]
-        review_country = ' on '.join(rdc[:-1])
+        review_date_words = review_date_raw.text.strip().split(' ')
+        # parse date and country
+        first = True
+        review_country = ''
+        idx = 0
+        for word in review_date_words:
+            if word.istitle():
+                if first:
+                    first = False
+                else:
+                    review_country += word + ' '
+            elif review_country:
+                review_country = review_country.strip()
+                idx += 1
+                break
+            idx += 1
+        date_part = [rword.replace(',', '') for rword in review_date_words[idx:]]
+        year_like = list(filter(lambda x: x.isdigit() and len(x) == 4, date_part))
+        review_date_dict: dict[str, int | None] = {}
+        if len(year_like) == 1:
+            review_date_dict['year'] = year_like[0]
+        else:
+            review_date_dict['year'] = None
+        day_like = list(filter(lambda x: x.isdigit() and len(x) in (1, 2), date_part))
+        if len(day_like) == 1:
+            review_date_dict['day'] = day_like[0]
+        else:
+            review_date_dict['day'] = None
+        month_like = list(filter(lambda x: not x.isdigit() and len(x) > 2, date_part))
+        if len(month_like) == 1:
+            review_date_dict['month'] = month_to_int(month_like[0])
+        else:
+            review_date_dict['month'] = None
+        if all(review_date_dict.values()):
+            review_date = datetime.datetime(
+                review_date_dict['year'],
+                review_date_dict['month'],
+                review_date_dict['day'],
+            )
+        else:
+            review_date = None
     else:
         review_date = None
         review_country = None

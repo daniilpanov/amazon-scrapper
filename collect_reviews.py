@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException, NoSuchElementException
 
 import database
+import helpers
 import parser
 import state
 from functions import RetryException, user_emulate, base_chrome_init
@@ -150,34 +151,20 @@ def collect(asin, keywords, user, domain):
     ev = Event()
     webdriver = base_chrome_init(goto=f'https://{domain}/')
     webdriver.change_loc(domain=domain)
-    webdriver.get(webdriver.current_url + f's?k={asin}')
-    sleep(.5)
-    for selector in ['/dp/', '%2Fdp%2F', '/gp/', '%2Fgp%2F']:
-        try:
-            webdriver.get_element(f'a[href*="{selector}{asin}"]').click()
-            break
-        except NoSuchElementException:
-            pass
-    else:
-        webdriver.get(f'https://{domain}/dp/{asin}/ref=sr_1_1_sspa')
-    webdriver.wait_for_loading()
-    prefix = webdriver.current_url.split(f'/dp/{asin}')[0].strip()
-    if len(prefix) == len(webdriver.current_url):
-        prefix = webdriver.current_url.split(f'/gp/{asin}')[0].strip()
-    if not prefix.startswith(f'https://www.{domain}'):
-        if not prefix.startswith('/'):
-            prefix = '/' + prefix
-        prefix = f'https://www.{domain}/' + prefix
-    webdriver.get(f'{prefix}/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+    webdriver.get(webdriver.current_url
+                  + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+    try:
+        webdriver.get(webdriver.get_element('link[rel="canonical"]').get_attribute('href')
+                      + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+    except Exception as e:
+        helpers.send_bot_msg(user, f'WARNING: canonical link not found for ASIN {asin}; error: {e}')
 
     reviews_count_element = webdriver.get_element('[data-hook="cr-filter-info-review-rating-count"]')
     reviews_count = 0
     if reviews_count_element:
-        reviews_count_text = reviews_count_element.text.split('total ratings, ')
-        if len(reviews_count_text) == 2:
-            reviews_count_part = reviews_count_text[1].split('with')
-            if len(reviews_count_part) == 2:
-                reviews_count = int(reviews_count_part[0].strip().replace(',', '').replace(' ', ''))
+        reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
+        if len(reviews_count_part) == 2:
+            reviews_count = int(float(reviews_count_part[1].replace(',', '').replace(' ', '')))
     print('count:', reviews_count)
 
     user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)

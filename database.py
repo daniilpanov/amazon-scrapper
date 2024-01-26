@@ -76,7 +76,7 @@ def write_reviews(reviews):
         revs.append({
             'asin': row['asin'],
             'product_url': row['product_url'],
-            'date': datetime.datetime.strptime(row['date'], '%B %d %Y'),
+            'date': row['date'],
             'country': row['country'],
             'name': row['name'],
             'title': row['title'],
