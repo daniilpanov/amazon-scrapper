@@ -1,9 +1,12 @@
 import datetime
+import re
 
 import pandas as pd
 import pytz
 from bs4 import BeautifulSoup
 from pandas import DataFrame
+
+from helpers import log
 
 
 def month_to_int(month: str):
@@ -59,12 +62,12 @@ def parse_reviews(asin, html, domain='amazon.com'):
         year_like = list(filter(lambda x: x.isdigit() and len(x) == 4, date_part))
         review_date_dict: dict[str, int | None] = {}
         if len(year_like) == 1:
-            review_date_dict['year'] = year_like[0]
+            review_date_dict['year'] = int(year_like[0])
         else:
             review_date_dict['year'] = None
         day_like = list(filter(lambda x: x.isdigit() and len(x) in (1, 2), date_part))
         if len(day_like) == 1:
-            review_date_dict['day'] = day_like[0]
+            review_date_dict['day'] = int(day_like[0])
         else:
             review_date_dict['day'] = None
         month_like = list(filter(lambda x: not x.isdigit() and len(x) > 2, date_part))
@@ -106,11 +109,14 @@ def parse_reviews(asin, html, domain='amazon.com'):
     # Helpful votes
     helpful_votes = item_parser.find('span', {'data-hook': 'helpful-vote-statement'})
     if helpful_votes:
-        helpful_votes = helpful_votes.text.split(' ')[0]
-        if helpful_votes == 'One':
+        helpful_votes = re.findall(r'[0-9]+', helpful_votes.text)
+        if len(helpful_votes) == 1:
+            helpful_votes = int(helpful_votes[0])
+        elif not helpful_votes:
             helpful_votes = 1
         else:
-            helpful_votes = int(helpful_votes.replace(',', ''))
+            log(f'no helpful votes detected: {asin}')
+            helpful_votes = 0
     else:
         helpful_votes = 0
     # Options

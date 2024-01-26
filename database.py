@@ -124,5 +124,5 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
 
 
 if __name__ == '__main__':
-    ...
+    print(db('amazon_data')['__state'].delete_many({'asin': 'B08BDPQ7BN'}))
 

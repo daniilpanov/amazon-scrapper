@@ -244,8 +244,7 @@ def captcha_check(wd):
     try:
         # wd.get('https://amazon.com')
         wd.wait_for_loading()
-        return (wd.find_text('Enter the characters you see below', timeout=.5)
-                and wd.find_text('Type the characters you see in this image:', timeout=.5))
+        return wd.get_element('body > div > div[style*="width: 350px"]')
     except:
         return False
     finally:
@@ -260,7 +259,7 @@ def captcha_solve(wd: WebDriver):
     if not captcha_check(wd):
         return True
 
-    wd.click_link_text('Try different image')
+    wd.click('form a[onclick="window.location.reload()"]')
     wd.sleep(.25)
     if not captcha_check(wd):
         return True
@@ -335,6 +334,7 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
         opts.add_argument('--disable-dev-shm-usage')
     opts.add_argument('start-maximized')
     opts.add_argument('disable-infobars')
+    opts.add_argument('--log-level=3')
     switches = ['ignore-certificate-errors', 'enable-automation']
     if not logs:
         switches.append('enable-logging')
