@@ -149,7 +149,7 @@ def collect(asin, keywords, user, domain):
         return True
     log('loading webdriver')
     ev = Event()
-    webdriver = base_chrome_init(False, goto=f'https://{domain}/')
+    webdriver = base_chrome_init(goto=f'https://{domain}/')
     webdriver.change_loc(domain=domain)
     webdriver.get(webdriver.current_url
                   + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
