@@ -243,6 +243,9 @@ def ai_highlights_aspects_new_mapping(data: DataFrame):
     new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
     new_data = new_data.dropna(subset=new_data.columns)
     new_data['Aspect'] = new_data['Aspect'].str.strip()
+    database.db('ai_highlights')['aspects_new2'].delete_many({
+        '$or': list(new_data.drop('Value', axis=1).T.to_dict().values()),
+    })
     return new_data
 
 
