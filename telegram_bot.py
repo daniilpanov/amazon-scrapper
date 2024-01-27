@@ -12,7 +12,7 @@ import pandas as pd
 import telebot
 from bottle import request
 from pandas import DataFrame
-from pymongo import DeleteMany
+from pymongo import DeleteMany, UpdateOne
 from telebot import types
 from telebot.apihelper import ApiTelegramException
 
@@ -244,12 +244,12 @@ def ai_highlights_aspects_new_mapping(data: DataFrame):
     new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
     new_data = new_data.dropna(subset=new_data.columns)
     new_data['Aspect'] = new_data['Aspect'].str.strip()
+    _filter_arr = list(new_data.drop('Value', axis=1).T.to_dict().values())
+    _values_arr = list(new_data.T.to_dict().values())
     database.spec_db('ai_highlights')['aspects_new2'].bulk_write(
-        [DeleteMany({
-            '$or': list(new_data.drop('Value', axis=1).T.to_dict().values()),
-        })],
+        [UpdateOne(_f, {'$set': _v}, upsert=True) for _f, _v in zip(_filter_arr, _values_arr)],
     )
-    return new_data
+    return True
 
 
 def _import_asins(user_id, document, location):
@@ -286,6 +286,8 @@ def _import_asins(user_id, document, location):
                         raise Exception('Invalid header!')
         if df is None:
             df = pd.read_csv(StringIO(string), delimiter=delimiter, encoding='latin-1')
+        elif df is True:
+            return send_msg(user_id, f'Data inserted successfully to {location}!', parse_mode='HTML')
     except Exception as e:
         return send_msg(user_id, f'Error occurred: {str(e)}')
     db_col = location.split('.')
