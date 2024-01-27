@@ -220,7 +220,7 @@ def import_asins(msg: types.Message, **kwargs):
     )
 
 
-def ai_highlights_problems_mapping(data: DataFrame):
+def ai_highlights_problems_mapping(data: DataFrame, user_id):
     head = set(data.columns.str.strip())
     needle_head = {'ASIN', 'Aspects', 'Description Problem', 'Problem'}
     if head != needle_head:
@@ -230,7 +230,7 @@ def ai_highlights_problems_mapping(data: DataFrame):
     return data
 
 
-def ai_highlights_aspects_new_mapping(data: DataFrame):
+def ai_highlights_aspects_new_mapping(data: DataFrame, user_id):
     data.columns = data.columns.str.strip()
     head = set(data.columns)
     if 'asin' not in head or 'review_id' not in head:
@@ -248,19 +248,17 @@ def ai_highlights_aspects_new_mapping(data: DataFrame):
     _values_arr = list(new_data.T.to_dict().values())
     lim = 100
     count = 1
-    tasks = []
     for _f, _v in zip(_filter_arr, _values_arr):
-        tasks.append(UpdateOne(_f, {'$set': _v}, upsert=True))
+        print(f'Aspects writing {count * 100}:')
+        database.spec_db('ai_highlights')['aspects_new2'].update_one(_f, {'$set': _v}, upsert=True)
+        print('Wrote!')
         lim -= 1
         if lim <= 0:
             lim = 100
-            database.spec_db('ai_highlights')['aspects_new2'].bulk_write(tasks)
-            tasks = []
-            send_msg(user, f'Aspects wrote: {count} of {len(_values_arr)}')
+            send_msg(user_id, f'Aspects wrote: {count * 100} of {len(_values_arr)}')
             count += 1
-    if tasks:
-        database.spec_db('ai_highlights')['aspects_new2'].bulk_write(tasks)
-        send_msg(user, f'Aspects wrote: {len(_values_arr)} of {len(_values_arr)}')
+    if lim:
+        send_msg(user_id, f'Aspects wrote: {len(_values_arr)} of {len(_values_arr)}')
     return True
 
 
@@ -291,6 +289,7 @@ def _import_asins(user_id, document, location):
             if callable(locations_validator[location]):
                 df = locations_validator[location](
                     pd.read_csv(StringIO(string), delimiter=delimiter, encoding='latin-1'),
+                    user_id,
                 )
             else:
                 for rule in locations_validator[location]:
