@@ -249,11 +249,10 @@ def ai_highlights_aspects_new_mapping(data: DataFrame, user_id):
     lim = 100
     count = 1
     for _f, _v in zip(_filter_arr, _values_arr):
-        print(f'Aspects writing {count * 100}:')
         database.spec_db('ai_highlights')['aspects_new2'].update_one(_f, {'$set': _v}, upsert=True)
-        print('Wrote!')
         lim -= 1
         if lim <= 0:
+            print(f'Aspects wrote {count * 100}')
             lim = 100
             send_msg(user_id, f'Aspects wrote: {count * 100} of {len(_values_arr)}')
             count += 1
