@@ -255,8 +255,12 @@ def ai_highlights_aspects_new_mapping(data: DataFrame):
         if lim <= 0:
             lim = 100
             database.spec_db('ai_highlights')['aspects_new2'].bulk_write(tasks)
+            tasks = []
             send_msg(user, f'Aspects wrote: {count} of {len(_values_arr)}')
             count += 1
+    if tasks:
+        database.spec_db('ai_highlights')['aspects_new2'].bulk_write(tasks)
+        send_msg(user, f'Aspects wrote: {len(_values_arr)} of {len(_values_arr)}')
     return True
 
 
