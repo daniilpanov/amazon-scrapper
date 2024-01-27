@@ -246,9 +246,17 @@ def ai_highlights_aspects_new_mapping(data: DataFrame):
     new_data['Aspect'] = new_data['Aspect'].str.strip()
     _filter_arr = list(new_data.drop('Value', axis=1).T.to_dict().values())
     _values_arr = list(new_data.T.to_dict().values())
-    database.spec_db('ai_highlights')['aspects_new2'].bulk_write(
-        [UpdateOne(_f, {'$set': _v}, upsert=True) for _f, _v in zip(_filter_arr, _values_arr)],
-    )
+    lim = 100
+    count = 1
+    tasks = []
+    for _f, _v in zip(_filter_arr, _values_arr):
+        tasks.append(UpdateOne(_f, {'$set': _v}, upsert=True))
+        lim -= 1
+        if lim <= 0:
+            lim = 100
+            database.spec_db('ai_highlights')['aspects_new2'].bulk_write(tasks)
+            send_msg(user, f'Aspects wrote: {count} of {len(_values_arr)}')
+            count += 1
     return True
 
 
