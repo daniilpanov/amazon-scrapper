@@ -253,9 +253,10 @@ def ai_highlights_aspects_new_mapping(data: DataFrame, user_id):
     )
     result_df.drop_duplicates(subset=['review_id', 'Aspect'])
     c.delete_many({'asin': {'$in': all_asins}})
-    while c.find_one({'asin': {'$in': all_asins}}):
-        sleep(.5)
-    c.insert_many(list(result_df.T.to_dict().values()))
+    try:
+        c.insert_many(list(result_df.T.to_dict().values()), False)
+    except:
+        pass
     return True
 
 
