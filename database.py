@@ -1,4 +1,7 @@
 import datetime
+import re
+from json import JSONDecoder
+
 import certifi
 
 import pytz
@@ -124,5 +127,25 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
 
 
 if __name__ == '__main__':
-    print(db('amazon_data')['__state'].delete_many({'asin': 'B08BDPQ7BN'}))
+    if input('> _') == 'start_creating':
+        def remove_dups():
+            try:
+                print(spec_db('ai_highlights')['aspects_new2'].create_index(('review_id', 'Aspect'), unique=True))
+            except Exception as e:
+                key = re.findall(
+                    r'.*duplicate key error collection: ai_highlights.aspects_new2 index: review_id_1_Aspect_1 dup key: \{([^}]+)}.*',
+                    str(e),
+                )[0].strip().split(', ')
+                res = {}
+                for item in key:
+                    k, v = item.split(': ')
+                    v = v[1:-1]
+                    res[k] = v
+                for_delete = spec_db('ai_highlights')['aspects_new2'].find_one(res)
+                spec_db('ai_highlights')['aspects_new2'].delete_one(for_delete)
+                print('DELETED:', for_delete)
+                remove_dups()
+
+        remove_dups()
+
 
