@@ -244,12 +244,12 @@ def ai_highlights_aspects_new_mapping(data: DataFrame, user_id):
     new_data: DataFrame = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
     new_data = new_data.dropna(subset=new_data.columns)
     new_data['Aspect'] = new_data['Aspect'].str.strip()
-    all_asins = new_data['asin'].drop_duplicates().to_dict().values()
+    all_asins = list(new_data['asin'].drop_duplicates().to_dict().values())
     c = database.spec_db('ai_highlights')['aspects']
     result_df = pd.concat([new_data, pd.DataFrame(list(c.find({'asin': {'$in': all_asins}})))], ignore_index=True)
     result_df.drop_duplicates(subset=['review_id', 'Aspect'])
-    c.delete_many(all_asins)
-    c.insert_many(result_df.T.to_dict().values())
+    c.delete_many({"asin": {"$in": all_asins}})
+    c.insert_many(list(result_df.T.to_dict().values()))
     return True
 
 

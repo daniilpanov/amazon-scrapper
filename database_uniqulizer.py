@@ -18,5 +18,5 @@ if __name__ == '__main__':
         print('Duplicates dropped')
         c.delete_many({})
         print('Deleted old data')
-        c.insert_many(df.T.to_dict().values())
+        c.insert_many(list(df.T.to_dict().values()))
         print('Inserted uniqulized data')
