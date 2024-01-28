@@ -241,23 +241,15 @@ def ai_highlights_aspects_new_mapping(data: DataFrame, user_id):
         .split(';') if col in head
     )
     data = data.drop(cols_for_drop, axis=1)
-    new_data = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
+    new_data: DataFrame = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
     new_data = new_data.dropna(subset=new_data.columns)
     new_data['Aspect'] = new_data['Aspect'].str.strip()
-    _filter_arr = list(new_data.drop('Value', axis=1).T.to_dict().values())
-    _values_arr = list(new_data.T.to_dict().values())
-    lim = 100
-    count = 1
-    for _f, _v in zip(_filter_arr, _values_arr):
-        database.spec_db('ai_highlights')['aspects_new2'].update_one(_f, {'$set': _v}, upsert=True)
-        lim -= 1
-        if lim <= 0:
-            print(f'Aspects wrote {count * 100}')
-            lim = 100
-            send_msg(user_id, f'Aspects wrote: {count * 100} of {len(_values_arr)}')
-            count += 1
-    if lim:
-        send_msg(user_id, f'Aspects wrote: {len(_values_arr)} of {len(_values_arr)}')
+    all_asins = new_data['asin'].drop_duplicates().to_dict().values()
+    c = database.spec_db('ai_highlights')['aspects']
+    result_df = pd.concat([new_data, pd.DataFrame(list(c.find({'asin': {'$in': all_asins}})))], ignore_index=True)
+    result_df.drop_duplicates(subset=['review_id', 'Aspect'])
+    c.delete_many(all_asins)
+    c.insert_many(result_df.T.to_dict().values())
     return True
 
 
@@ -265,7 +257,7 @@ def _import_asins(user_id, document, location):
     locations_validator = {
         'ai_highlights.top_phrases': ['asin', 'phrase', 'count'],
         'ai_highlights.problems': ai_highlights_problems_mapping,
-        'ai_highlights.aspects_new2': ai_highlights_aspects_new_mapping,
+        'ai_highlights.aspects': ai_highlights_aspects_new_mapping,
         'amazon_data.customer_reviews': [
             'review_id', 'product_url', 'asin', 'date', 'country',
             'name', 'title', 'content', 'rating', 'helpful', 'options', 'scrap_datetime',
