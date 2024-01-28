@@ -4,6 +4,7 @@ import json
 import os
 from io import StringIO
 from threading import Thread
+from time import sleep
 
 import bottle
 import pandas
@@ -251,8 +252,10 @@ def ai_highlights_aspects_new_mapping(data: DataFrame, user_id):
         join='inner', ignore_index=True,
     )
     result_df.drop_duplicates(subset=['review_id', 'Aspect'])
-    c.delete_many({"asin": {"$in": all_asins}})
-    c.insert_many(list(result_df.T.to_dict().values()), False)
+    c.delete_many({'asin': {'$in': all_asins}})
+    while c.find_one({'asin': {'$in': all_asins}}):
+        sleep(.5)
+    c.insert_many(list(result_df.T.to_dict().values()))
     return True
 
 
