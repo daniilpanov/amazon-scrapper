@@ -246,7 +246,7 @@ def ai_highlights_aspects_new_mapping(data: DataFrame, user_id):
     new_data = new_data.dropna(subset=new_data.columns)
     new_data['Aspect'] = new_data['Aspect'].str.strip()
     all_asins = list(new_data['asin'].drop_duplicates().to_dict().values())
-    c = database.spec_db('ai_highlights')['aspects']
+    c = database.spec_db('ai_highlights')['aspects_color']
     result_df = pd.concat(
         [new_data, pd.DataFrame(list(c.find({'asin': {'$in': all_asins}})))],
         join='inner', ignore_index=True,
