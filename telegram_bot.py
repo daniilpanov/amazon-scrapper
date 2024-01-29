@@ -264,7 +264,7 @@ def _import_asins(user_id, document, location):
     locations_validator = {
         'ai_highlights.top_phrases': ['asin', 'phrase', 'count'],
         'ai_highlights.problems': ai_highlights_problems_mapping,
-        'ai_highlights.aspects': ai_highlights_aspects_new_mapping,
+        'ai_highlights.aspects_color': ai_highlights_aspects_new_mapping,
         'amazon_data.customer_reviews': [
             'review_id', 'product_url', 'asin', 'date', 'country',
             'name', 'title', 'content', 'rating', 'helpful', 'options', 'scrap_datetime',
@@ -378,7 +378,7 @@ def delete_asins(msg: types.Message, **kwargs):
             (get_all_asins_from_text(asins_raw), msg.from_user.id),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'raw_product_card_htmls'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card', 'amazon_data', 'products'),
-            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'aspects', 'ai_highlights'),
+            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'aspects_color', 'ai_highlights'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'top_phrases', 'ai_highlights'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'problems', 'ai_highlights'),
         ):
