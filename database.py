@@ -6,6 +6,7 @@ import pandas as pd
 import certifi
 
 import pytz
+from pandas import DataFrame
 from pymongo.database import Database
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient
@@ -128,5 +129,8 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
 
 
 if __name__ == '__main__':
-    ...
+    dab = db('amazon_data')
+    collections = [c[15:] for c in dab.list_collection_names() if c.startswith('categories_for_')]
+    df = DataFrame(columns=['Collection', 'ASIN', 'top5', ''])
+
 
