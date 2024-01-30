@@ -4,16 +4,12 @@ import json
 import os
 from io import StringIO
 from threading import Thread
-from time import sleep
 
 import bottle
-import pandas
 import pandas as pd
 
 import telebot
 from bottle import request
-from pandas import DataFrame
-from pymongo import DeleteMany, UpdateOne
 from telebot import types
 from telebot.apihelper import ApiTelegramException
 
@@ -221,7 +217,7 @@ def import_asins(msg: types.Message, **kwargs):
     )
 
 
-def ai_highlights_problems_mapping(data: DataFrame, user_id):
+def ai_highlights_problems_mapping(data: pd.DataFrame, user_id):
     head = set(data.columns.str.strip())
     needle_head = {'ASIN', 'Aspects', 'Description Problem', 'Problem'}
     if head != needle_head:
@@ -229,35 +225,6 @@ def ai_highlights_problems_mapping(data: DataFrame, user_id):
     asins = data['ASIN'].tolist()
     database.spec_db('ai_highlights')['problems'].delete_many({'ASIN': {'$in': asins}})
     return data
-
-
-def ai_highlights_aspects_new_mapping(data: DataFrame, user_id):
-    data.columns = data.columns.str.strip()
-    head = set(data.columns)
-    if 'asin' not in head or 'review_id' not in head:
-        raise Exception('Invalid header!')
-    cols_for_drop = list(
-        col for col in
-        'helpful;country;name;rating;date;scrap_datetime;title;description;product_url;options;_id;content;product_url'
-        .split(';') if col in head
-    )
-    data = data.drop(cols_for_drop, axis=1)
-    new_data: DataFrame = pandas.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
-    new_data = new_data.dropna(subset=new_data.columns)
-    new_data['Aspect'] = new_data['Aspect'].str.strip()
-    all_asins = list(new_data['asin'].drop_duplicates().to_dict().values())
-    c = database.spec_db('ai_highlights')['aspects_color']
-    result_df = pd.concat(
-        [new_data, pd.DataFrame(list(c.find({'asin': {'$in': all_asins}})))],
-        join='inner', ignore_index=True,
-    )
-    result_df.drop_duplicates(subset=['review_id', 'Aspect'])
-    c.delete_many({'asin': {'$in': all_asins}})
-    try:
-        c.insert_many(list(result_df.T.to_dict().values()), False)
-    except:
-        pass
-    return True
 
 
 def _import_asins(user_id, document, location):
@@ -327,6 +294,36 @@ def set_category(msg: types.Message, **kwargs):
         send_msg(msg.from_user.id, 'Enter the category name:'),
         set_category, cat_group=text,
     )
+
+
+def ai_highlights_aspects_new_mapping(data: pd.DataFrame, user_id):
+    data.columns = data.columns.str.strip()
+    head = set(data.columns)
+    if 'asin' not in head or 'review_id' not in head:
+        raise Exception('Invalid header!')
+    cols_for_drop = list(
+        col for col in
+        'helpful;country;name;rating;date;scrap_datetime;title;description;product_url;options;_id;content;product_url'
+        .split(';') if col in head
+    )
+    data = data.drop(cols_for_drop, axis=1)
+    new_data: pd.DataFrame = pd.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='Value')
+    new_data = new_data.dropna(subset=new_data.columns)
+    new_data['Aspect'] = new_data['Aspect'].str.strip()
+    all_asins = list(new_data['asin'].drop_duplicates().to_dict().values())
+    c = database.spec_db('ai_highlights')['aspects_color']
+    result_df = pd.concat([new_data, pd.DataFrame(list(c.find({'asin': {'$in': all_asins}})))], ignore_index=True)
+    result_df = result_df.drop(
+        [col for col in result_df.columns if col not in {'asin', 'review_id', 'Aspect', 'Value'}],
+        axis=1,
+    )
+    result_df = result_df.drop_duplicates(subset=['review_id', 'Aspect'])
+    c.delete_many({'asin': {'$in': all_asins}})
+    try:
+        c.insert_many(list(result_df.T.to_dict().values()), False)
+    except:
+        pass
+    return True
 
 
 def _set_category(user_id, asins, cat_name, cat_group=None):
