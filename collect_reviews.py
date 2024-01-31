@@ -236,7 +236,7 @@ def start_reviews_collect(params_dict):
         while not res and c > 0:
             res = collect(
                 params_dict['asin'], params_dict.get('keywords', ''),
-                params_dict.get('user'), params_dict['domain'],
+                params_dict.get('user'), params_dict.get('domain', 'amazon.com'),
             )
             c -= 1
     except KeyError:

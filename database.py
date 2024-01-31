@@ -2,6 +2,8 @@ import datetime
 import os
 import re
 from json import JSONDecoder
+
+import pandas
 import pandas as pd
 import certifi
 
@@ -129,8 +131,20 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
 
 
 if __name__ == '__main__':
-    dab = db('amazon_data')
-    collections = [c[15:] for c in dab.list_collection_names() if c.startswith('categories_for_')]
-    df = DataFrame(columns=['Collection', 'ASIN', 'top5', ''])
-
-
+    ...
+    # dab = db('amazon_data')
+    # dab['categories_all'].delete_many({})
+    #
+    # def d(group, cat=None):
+    #     r = DataFrame(list(dab[cat or ('categories_for_' + group)].find()))
+    #     r['relation_to_category'] = group
+    #     return r
+    #
+    # groups = [c[15:] for c in dab.list_collection_names() if c.startswith('categories_for_')]
+    # df = pandas.concat([
+    #     DataFrame(columns=['Category', 'ASIN', 'relation_to_category', 'relation_to_TOP5']),
+    #     *(d(group) for group in groups),
+    #     d('1', 'categories'),
+    # ], ignore_index=True).drop_duplicates('ASIN').drop('_id', axis=1)
+    # df['relation_to_TOP5'] = False
+    # dab['categories_all'].insert_many(list(df.T.to_dict().values()))
