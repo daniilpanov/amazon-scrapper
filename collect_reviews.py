@@ -9,10 +9,9 @@ import requests
 
 from pandas import DataFrame
 from bs4 import BeautifulSoup
-from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException, NoSuchElementException
+from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
 
 import database
-import helpers
 import parser
 import state
 from functions import RetryException, user_emulate, base_chrome_init
