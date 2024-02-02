@@ -109,14 +109,11 @@ def parse_reviews(asin, html, domain='amazon.com'):
     # Helpful votes
     helpful_votes = item_parser.find('span', {'data-hook': 'helpful-vote-statement'})
     if helpful_votes:
-        helpful_votes = re.findall(r'[0-9]+', helpful_votes.text)
-        if len(helpful_votes) == 1:
-            helpful_votes = int(helpful_votes[0])
-        elif not helpful_votes:
-            helpful_votes = 1
+        helpful_votes = ''.join(re.findall(r'[0-9]+', helpful_votes.text))
+        if helpful_votes:
+            helpful_votes = int(helpful_votes)
         else:
-            log(f'no helpful votes detected: {asin}')
-            helpful_votes = 0
+            helpful_votes = 1
     else:
         helpful_votes = 0
     # Options
