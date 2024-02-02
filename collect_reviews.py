@@ -13,7 +13,6 @@ from selenium.common import JavascriptException, InvalidSessionIdException, Time
 
 import database
 import parser
-import state
 from functions import RetryException, user_emulate, base_chrome_init
 
 import logging
@@ -32,7 +31,8 @@ params = {
     'sortBy': ['', 'recent'],
     'reviewerType': ['', 'avp_only_reviews'],
     'filterByStar': ['', 'five_star', 'four_star', 'three_star', 'two_star', 'one_star'],
-    'formatType': ['', 'current_format'],
+    # 'formatType': ['', 'current_format'],
+    'formatType': [''],
     'mediaType': ['', 'media_reviews_only'],
 }
 requests_counter = 0
@@ -54,7 +54,6 @@ def write_data(asin, seed, write_data_res):
         'scrap_datetime',
     ])
     database.write_reviews(df)
-    state.write_asin(asin, seed)
 
 
 def process_data(asin, seed, process_data_res, domain):
@@ -143,9 +142,7 @@ def send_request(webdriver, asin, seed, page, keywords='', domain='amazon.com'):
     return process_data(asin, seed, res, domain)
 
 
-def collect(asin, keywords, user, domain):
-    if state.get_asin(asin) == -1:
-        return True
+def collect(asin, keywords, user, domain, index=0):
     log('loading webdriver')
     ev = Event()
     webdriver = base_chrome_init(goto=f'https://{domain}/')
@@ -173,10 +170,8 @@ def collect(asin, keywords, user, domain):
         user_emulate_thread.start()
         webdriver.activate_jquery()
 
-        index = state.get_asin(asin)
-        log(f'current asin: {asin} with index {index}')
         if index == -1:
-            return True
+            return -1
         log('COLLECTING REVIEWS FOR ASIN', asin + ':')
         params_seed = None
         first = True
@@ -192,27 +187,26 @@ def collect(asin, keywords, user, domain):
                     if not response:
                         logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
                         log(f'Skip {asin}')
-                        return False
-            state.write_asin(asin, -1, 'reviews')
-            return True
+                        return index
+            close(ev, user_emulate_thread, webdriver)
+            return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
                 raise e
             logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
             log(f'Skip {asin}')
-            return False
+            close(ev, user_emulate_thread, webdriver)
+            return index
     except (InvalidSessionIdException, RetryException) as e:
         logger.error(f'Error!', exc_info=True, stack_info=True)
         log('ERROR: invalid session. ASIN will be collected later')
         close(ev, user_emulate_thread, webdriver)
         sleep(10)
-        return False
+        return index
     except KeyboardInterrupt:
         log('Script stopped')
         close(ev, user_emulate_thread, webdriver)
-        return False
-    finally:
-        close(ev, user_emulate_thread, webdriver)
+        return index
 
 
 def close(ev, uemu, wd):
@@ -230,9 +224,9 @@ def close(ev, uemu, wd):
 
 def start_reviews_collect(params_dict):
     res = False
-    c = 99
+    c = 15
     try:
-        while not res and c > 0:
+        while res > -1 and c > 0:
             res = collect(
                 params_dict['asin'], params_dict.get('keywords', ''),
                 params_dict.get('user'), params_dict.get('domain', 'amazon.com'),
@@ -242,7 +236,7 @@ def start_reviews_collect(params_dict):
         log('No ASIN error!')
     else:
         if 'user' in params_dict:
-            if res or c == 99:
+            if res == -1 or c == 15:
                 send_bot_msg(
                     params_dict['user'],
                     f'Reviews of ASIN {params_dict["asin"]} collected!',
@@ -250,7 +244,7 @@ def start_reviews_collect(params_dict):
             else:
                 send_bot_msg(
                     params_dict['user'],
-                    f'Reviews of ASIN {params_dict["asin"]} did NOT collected.',
+                    f'Reviews of ASIN {params_dict["asin"]} did NOT collected [max retry limit].',
                 )
     finally:
         if 'id' in params_dict:
