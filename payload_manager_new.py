@@ -1,3 +1,4 @@
+import os
 import signal
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -8,7 +9,7 @@ import state
 from helpers import log
 
 processes: dict[int, Popen] = {}
-processes_waiters = ThreadPoolExecutor(2)
+processes_waiters = ThreadPoolExecutor(os.cpu_count())
 alive = True
 
 

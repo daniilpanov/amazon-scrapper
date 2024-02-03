@@ -1,8 +1,8 @@
 import datetime
+import os
 
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
-
 
 
 def col(item):
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     df = pd.read_csv('rew_B079RLZSYL_top-phrases.csv', encoding='UTF-8')
     df = df.drop_duplicates()
     print(df)
-    with ProcessPoolExecutor(max_workers=2) as pool:
+    with ProcessPoolExecutor(max_workers=os.cpu_count() * 2) as pool:
         try:
             all_start_time = datetime.datetime.now()
             print('Phrases loaded, pool created:', all_start_time.isoformat())

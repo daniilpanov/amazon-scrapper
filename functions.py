@@ -237,6 +237,9 @@ class WebDriver:
         print(item)
         return self.driver.__getattribute__(item)
 
+    def full_close(self):
+        return chrome_close(self)
+
 
 def captcha_check(wd):
     # wd.wait_for_loading()
@@ -304,15 +307,20 @@ def user_emulate(wd, ev):
             action = ActionChains(wd.driver)
             wd.focus('body')
             for i in range(random.randint(20, 50)):
+                if ev.is_set():
+                    break
                 action.scroll_by_amount(0, random.randint(-4, 4) * 10).perform()
                 sleep(0.2)
             if not random.randint(0, 5):
+                if ev.is_set():
+                    break
                 action.send_keys(Keys.ARROW_LEFT).perform()
             sleep(random.randint(5, 15))
     except Exception as ex:
         print('User emulation is stopped due to an error:', ex)
         print('Reloading...')
-        sleep(20)
+        while not ev.is_set():
+            sleep(1)
         return user_emulate(wd, ev)
 
 

@@ -143,6 +143,8 @@ def send_request(webdriver, asin, seed, page, keywords='', domain='amazon.com'):
 
 
 def collect(asin, keywords, user, domain, index=0):
+    if index == -1:
+        return -1
     log('loading webdriver')
     ev = Event()
     webdriver = base_chrome_init(goto=f'https://{domain}/')
@@ -169,9 +171,6 @@ def collect(asin, keywords, user, domain, index=0):
         webdriver.activate_jquery()
         user_emulate_thread.start()
         webdriver.activate_jquery()
-
-        if index == -1:
-            return -1
         log('COLLECTING REVIEWS FOR ASIN', asin + ':')
         params_seed = None
         first = True
@@ -187,11 +186,14 @@ def collect(asin, keywords, user, domain, index=0):
                     if not response:
                         logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
                         log(f'Skip {asin}')
+                        close(ev, user_emulate_thread, webdriver)
                         return index
+                index += 1
             close(ev, user_emulate_thread, webdriver)
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
+                close(ev, user_emulate_thread, webdriver)
                 raise e
             logger.error(f'Skip {asin}; seed={params_seed}', exc_info=True, stack_info=True)
             log(f'Skip {asin}')
@@ -206,18 +208,15 @@ def collect(asin, keywords, user, domain, index=0):
     except KeyboardInterrupt:
         log('Script stopped')
         close(ev, user_emulate_thread, webdriver)
-        return index
+        raise
+    finally:
+        close(ev, user_emulate_thread, webdriver)
 
 
 def close(ev, uemu, wd):
+    wd.full_close()
     try:
         ev.set()
-        if uemu.is_alive():
-            uemu.join()
-    except:
-        pass
-    try:
-        wd.driver.close()
     except:
         pass
 
@@ -229,11 +228,14 @@ def start_reviews_collect(params_dict):
         while res > -1 and c > 0:
             res = collect(
                 params_dict['asin'], params_dict.get('keywords', ''),
-                params_dict.get('user'), params_dict.get('domain', 'amazon.com'),
+                params_dict.get('user'), params_dict.get('domain', 'amazon.com'), res,
             )
             c -= 1
     except KeyError:
         log('No ASIN error!')
+    except KeyboardInterrupt:
+        log('Stop task')
+        raise
     else:
         if 'user' in params_dict:
             if res == -1 or c == 15:
