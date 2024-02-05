@@ -315,7 +315,7 @@ def ai_highlights_aspects_new_mapping(data: pd.DataFrame, user_id):
         new_data: pd.DataFrame = pd.melt(data, ['review_id', 'asin'], var_name='Aspect', value_name='__Value__')
     new_data = new_data.dropna(subset=new_data.columns)
     if vname != 'Value':
-        new_data.rename({vname: 'Value'}, inplace=True)
+        new_data = new_data.rename({vname: 'Value'}, axis=1)
     new_data['Aspect'] = new_data['Aspect'].str.strip()
     all_asins = list(new_data['asin'].drop_duplicates().to_dict().values())
     c = database.spec_db('ai_highlights')['aspects_color']
