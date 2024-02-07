@@ -24,7 +24,7 @@ def collect(products_info_list):
     products_info_list = list([asin for asin in products_info_list if state.get_asin(asin, 'products') != -1])
     if not products_info_list:
         return -1
-    webdriver = base_chrome_init(False, goto=f'https://{domain}')
+    webdriver = base_chrome_init(goto=f'https://{domain}')
     webdriver.change_loc(domain=domain)
     collected = set()
 
