@@ -229,7 +229,7 @@ def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = Tr
     xsh = XSheet(sheet_name)
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
-        collect_all_info(xsh, dep_name, domain)
+        collect_all_info(xsh, dep_name)
     if tg_note_user_id:
         log('[0] Write all info')
         for item in xsh.departments_tree:

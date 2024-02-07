@@ -1,5 +1,4 @@
 # bot URL: https://t.me/nyle_bi_controller_bot
-import functools
 import json
 import os
 from io import StringIO

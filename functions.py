@@ -20,11 +20,10 @@ try:
     import tensorflow
     from captcha_solver.solve_captcha_with_model import CaptchaSolver
 
-    captchaAI = True
+    capsolver = CaptchaSolver('captcha_solver')
 except ImportError as e:
     print(colorama.Fore.RED, e, colorama.Fore.RESET)
-    CaptchaSolver = None
-    captchaAI = False
+    capsolver = None
 
 
 class WebDriver:
@@ -263,6 +262,7 @@ def captcha_solve(wd: WebDriver):
         return True
 
     wd.click('form a[onclick="window.location.reload()"]')
+    wd.wait_for_loading()
     wd.sleep(.25)
     if not captcha_check(wd):
         return True
@@ -271,19 +271,7 @@ def captcha_solve(wd: WebDriver):
     img_source = requests.get(captcha.get_attribute('src'))
     if not img_source:
         return False
-    if not os.path.exists(os.path.join('.', 'tmp__')):
-        os.makedirs('tmp__')
-    filepath = os.path.join('tmp__', 'captcha.jpg')
-    counter = 0
-    while os.path.exists(filepath):
-        filepath = os.path.join('tmp__', f'captcha{counter}.jpg')
-        counter += 1
-    file = open(filepath, 'wb')
-    file.write(img_source.content)
-    file.close()
-    solver = CaptchaSolver('captcha_solver')
-    text = solver.solve(filepath)
-    os.remove(filepath)
+    text = capsolver.solve_from_url(img_source)
     if not text:
         return False
     wd.type('#captchacharacters', text)
