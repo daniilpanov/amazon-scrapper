@@ -16,14 +16,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-try:
-    import tensorflow
-    from captcha_solver.solve_captcha_with_model import CaptchaSolver
-
-    capsolver = CaptchaSolver('captcha_solver')
-except ImportError as e:
-    print(colorama.Fore.RED, e, colorama.Fore.RESET)
-    capsolver = None
+import helpers
 
 
 class WebDriver:
@@ -271,7 +264,7 @@ def captcha_solve(wd: WebDriver):
     img_source = requests.get(captcha.get_attribute('src'))
     if not img_source:
         return False
-    text = capsolver.solve_from_url(img_source)
+    text = helpers.captcha_solve(img_source)
     if not text:
         return False
     wd.type('#captchacharacters', text)

@@ -43,6 +43,16 @@ def send_bot_msg(user, msg=None, files=None):
             pass
 
 
+def captcha_solve(url):
+    try:
+        result = requests.post('http://localhost:8090/solve/url', {'url': url})
+    except (ConnectionError, MaxRetryError, ConnectionRefusedError, NewConnectionError):
+        return None
+    if result.status_code == 200:
+        return result.content.decode('utf-8')
+    return None
+
+
 def path(*p: str, last_dir=False, filecontent: bool | str = ''):
     curr = ''
     dirs = p if last_dir else p[:-1]
