@@ -261,7 +261,7 @@ def captcha_solve(wd: WebDriver):
         return True
 
     captcha = wd.find_element(by=By.CSS_SELECTOR, value='img[src]')
-    img_source = requests.get(captcha.get_attribute('src'))
+    img_source = captcha.get_attribute('src')
     if not img_source:
         return False
     text = helpers.captcha_solve(img_source)
