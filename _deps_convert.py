@@ -24,11 +24,11 @@ def rec_get(cat: dict, parent: list[str] | None = None):
         rec_get(child, parents_copied)
 
 
-with open('all departments.json') as f:
+with open(input('Введите путь до JSON файла (обычно расположен в папке `tmp__`): ')) as f:
     d = jsd.decode(f.read())
 
 for item in d['items']:
     rec_get(item)
 
 df = pd.DataFrame(data)
-df.to_csv('test.csv', index=False)
+df.to_csv(input('Введите имя выходного файла [departments_output.csv]') or 'departments_output.csv', index=False)
