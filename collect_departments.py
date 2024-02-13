@@ -202,9 +202,8 @@ def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
     if not tree.all_items_preloaded:
         wd.get(tree.link)
         soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
-        view_tree = soup.find(role='tree')
-        group = view_tree.find(role='group')
-        tree.is_last_group = group is None or tree.name in group.text and not name_only
+        group = soup.find(role='tree').find(role='group')
+        tree.is_last_group = bool(group.select('[role="treeitem"] > span') if group else False)
         if not tree.is_last_group:
             links_a = group.find_all('a')
             for a_tag in links_a or []:
@@ -285,7 +284,8 @@ if __name__ == '__main__':
     domain = params_dict.get('domain', 'amazon.com')
     try:
         params_dict.setdefault('dep_name', None)
-        params_dict.setdefault('user', '1428909514')
+        # params_dict.setdefault('user', '1428909514')
+        params_dict.setdefault('user', '1456674317')
         start(
             params_dict['dep_name'] or 'all departments',
             params_dict['dep_name'], params_dict['user'], 10,
