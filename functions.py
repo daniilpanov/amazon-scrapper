@@ -226,7 +226,6 @@ class WebDriver:
         return self.driver.find_element(by, selector)
 
     def __getattr__(self, item):
-        print(item)
         return self.driver.__getattribute__(item)
 
     def full_close(self):

@@ -1,5 +1,7 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
+from time import sleep
 from typing import List
 
 import openpyxl
@@ -115,8 +117,11 @@ class XSheet:
     departments_tree: Level
     jsd: JSONDecoder
     jse: JSONEncoder
+    browsers: list[list[bool, WebDriver]]
+    threads_pool: ThreadPoolExecutor
+    workers: int
 
-    def __init__(self, name):
+    def __init__(self, name, workers=1):
         self.jsd = JSONDecoder()
         self.jse = JSONEncoder()
         self.departments_tree = self.load(name) or Level(name)
@@ -126,6 +131,25 @@ class XSheet:
         else:
             self.wb = openpyxl.Workbook()
         self.wb.active.title = name
+        self.browsers = []
+        self.workers = workers
+        self.threads_pool = ThreadPoolExecutor(workers)
+
+    def add_browser(self, wd: WebDriver):
+        self.browsers.append([True, wd])
+        return len(self.browsers) - 1
+
+    def get_browser(self):
+        for i in range(len(self.browsers)):
+            # Если браузер занят
+            if not self.browsers[i][0]:
+                continue
+            self.browsers[i][0] = False
+            return self.browsers[i][1], i
+        return None, -1
+
+    def return_browser(self, i):
+        self.browsers[i][0] = True
 
     def set_link(self, link):
         self.departments_tree.link = link
@@ -167,9 +191,13 @@ class XSheet:
         self.wb.save(os.path.abspath(path('tmp__', f'{self.name}.xlsx', filecontent=False)))
 
 
-def recursive_tree(tree: Level, wd: WebDriver, xsh: XSheet, name_only=None):
+def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
     if tree.ready:
         return
+    wd, wd_id = xsh.get_browser()
+    while not wd:
+        sleep(1)
+        wd, wd_id = xsh.get_browser()
     # if links are not collected
     if not tree.all_items_preloaded:
         wd.get(tree.link)
@@ -192,20 +220,20 @@ def recursive_tree(tree: Level, wd: WebDriver, xsh: XSheet, name_only=None):
     if tree.is_last_group is False:
         # RECURSIVE_CALL: load tree
         # full loading
+        if wd_id is not None:
+            xsh.return_browser(wd_id)
         for link in tree:
             if not name_only or name_only == link.name:
-                recursive_tree(link, wd, xsh)
+                xsh.threads_pool.submit(recursive_tree, link, xsh)
         xsh.save()
 
 
 def collect_all_info(xsheet: XSheet, dep_name=None):
-    log('[1] Init chrome')
-    wd = base_chrome_init(goto=f'https://{domain}')
-    log('[1] Change loc')
-    wd.change_loc(domain=domain)
-    wd.wait_for_loading()
-    wd.get(xsheet.set_link(f'https://{domain}/gp/bestsellers'))
-    recursive_tree(xsheet.departments_tree, wd, xsheet, dep_name)
+    log('[1] Get chrome')
+    wd, wd_id = xsheet.get_browser()
+    xsheet.set_link(f'https://{domain}/gp/bestsellers')
+    xsheet.return_browser(wd_id)
+    recursive_tree(xsheet.departments_tree, xsheet, dep_name)
     xsheet.save()
     log('[1] Tree collected:', xsheet.departments_tree)
     xsheet.departments_tree.ready = True
@@ -223,13 +251,18 @@ def write_info(xsh: XSheet, tree: Level, cat_names: list[str] | None = None):
     return True
 
 
-def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = True):
+def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = True, workers=1):
     if not sheet_name:
         sheet_name = str(hash(tg_note_user_id))
-    xsh = XSheet(sheet_name)
+    xsh = XSheet(sheet_name, workers)
+    for i in range(workers):
+        wd = base_chrome_init(goto=f'https://{domain}')
+        wd.change_loc(domain=domain)
+        xsh.add_browser(wd)
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
         collect_all_info(xsh, dep_name)
+    xsh.threads_pool.shutdown(True)
     if tg_note_user_id:
         log('[0] Write all info')
         for item in xsh.departments_tree:
@@ -255,7 +288,7 @@ if __name__ == '__main__':
         params_dict.setdefault('user', '1428909514')
         start(
             params_dict['dep_name'] or 'all departments',
-            params_dict['dep_name'], params_dict['user'],
+            params_dict['dep_name'], params_dict['user'], 10,
         )
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:
