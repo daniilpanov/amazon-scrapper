@@ -21,7 +21,7 @@ config = {
     'username': 'scrape_processing',
     'database': 'amazon_data',
     'password': 'gxYSEvBIDTgy6RIg',
-    'proxy': 'http://proxydb:StdInp0101@185.234.247.250:3128',
+    'proxy': 'http://proxydb:StdInp0101@195.201.194.213:3128',
     'url_prefix': 'mongodb+srv',
 }
 config_special = {'username': 'ai_operator', 'password': 'jEWVWuNrgrqTkn7w'}
