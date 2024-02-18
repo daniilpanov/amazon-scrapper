@@ -1,5 +1,5 @@
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
 from time import sleep
 from typing import List
@@ -118,7 +118,6 @@ class XSheet:
     jsd: JSONDecoder
     jse: JSONEncoder
     browsers: list[list[bool, WebDriver]]
-    threads_pool: ThreadPoolExecutor
     workers: int
 
     def __init__(self, name, workers=1):
@@ -133,7 +132,6 @@ class XSheet:
         self.wb.active.title = name
         self.browsers = []
         self.workers = workers
-        self.threads_pool = ThreadPoolExecutor(workers)
 
     def add_browser(self, wd: WebDriver):
         self.browsers.append([True, wd])
@@ -215,24 +213,31 @@ def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
                     tree.add_item(Level(name, a_tag['href']), True)
         tree.all_items_preloaded = True
         xsh.save()
+    if wd_id is not None:
+        xsh.return_browser(wd_id)
     # if links are already collected, or we have a links group
     if tree.is_last_group is False:
         # RECURSIVE_CALL: load tree
         # full loading
-        if wd_id is not None:
-            xsh.return_browser(wd_id)
-        for link in tree:
-            if not name_only or name_only == link.name:
-                xsh.threads_pool.submit(recursive_tree, link, xsh)
-        xsh.save()
+        return (link for link in tree if not name_only or name_only == link.name)
+
+
+def recursive_call(pool: ThreadPoolExecutor, trees, xsh):
+    futures = []
+    for tree in trees:
+        futures.append(pool.submit(recursive_tree, tree, xsh))
+    for future in as_completed(futures):
+        trees = future.result()
+        if trees:
+            recursive_call(pool, trees, xsh)
 
 
 def collect_all_info(xsheet: XSheet, dep_name=None):
     log('[1] Get chrome')
-    wd, wd_id = xsheet.get_browser()
     xsheet.set_link(f'https://{domain}/gp/bestsellers')
-    xsheet.return_browser(wd_id)
-    recursive_tree(xsheet.departments_tree, xsheet, dep_name)
+    with ThreadPoolExecutor(xsheet.workers) as pool:
+        recursive_tree(xsheet.departments_tree, xsheet, dep_name)
+        recursive_call(pool, xsheet.departments_tree.items, xsheet)
     xsheet.save()
     log('[1] Tree collected:', xsheet.departments_tree)
     xsheet.departments_tree.ready = True
@@ -250,18 +255,25 @@ def write_info(xsh: XSheet, tree: Level, cat_names: list[str] | None = None):
     return True
 
 
+def add_browser():
+    wd = base_chrome_init(goto=f'https://{domain}')
+    wd.change_loc(domain=domain)
+    return wd
+
+
 def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = True, workers=1):
     if not sheet_name:
         sheet_name = str(hash(tg_note_user_id))
     xsh = XSheet(sheet_name, workers)
-    for i in range(workers):
-        wd = base_chrome_init(goto=f'https://{domain}')
-        wd.change_loc(domain=domain)
-        xsh.add_browser(wd)
+
+    with ThreadPoolExecutor(os.cpu_count()) as pool:
+        for _ in range(workers):
+            fut = pool.submit(add_browser)
+            fut.add_done_callback(lambda res: xsh.add_browser(res.result()) if res.done() else None)
+
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
         collect_all_info(xsh, dep_name)
-    xsh.threads_pool.shutdown(True)
     if tg_note_user_id:
         log('[0] Write all info')
         for item in xsh.departments_tree:
@@ -288,7 +300,7 @@ if __name__ == '__main__':
         params_dict.setdefault('user', '1456674317')
         start(
             params_dict['dep_name'] or 'all departments',
-            params_dict['dep_name'], params_dict['user'], 10,
+            params_dict['dep_name'], params_dict['user'], 2,
         )
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:

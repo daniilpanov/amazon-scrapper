@@ -241,8 +241,8 @@ def captcha_check(wd):
         return wd.get_element('body > div > div[style*="width: 350px"]')
     except:
         return False
-    finally:
-        wd.sleep(3)
+    # finally:
+        # wd.sleep(3)
         # wd.get('https://amazon.com')
         # wd.get(url)
         # wd.wait_for_loading()
@@ -337,7 +337,9 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
     ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         wd.get(goto, False)
-        print('Result of solving captcha:', captcha_solve(wd))
+        while not captcha_solve(wd):
+            print('Result of solving captcha:', False)
+        print('Result of solving captcha:', True)
     if get_ext_id:
         return wd, ext_id
     return wd
