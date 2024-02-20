@@ -9,6 +9,7 @@ from openpyxl.utils.cell import get_column_letter
 import requests
 from bs4 import BeautifulSoup
 
+import settings
 from functions import WebDriver, base_chrome_init
 from helpers import log, parse_args, send_bot_msg, path
 
@@ -299,8 +300,12 @@ if __name__ == '__main__':
         # params_dict.setdefault('user', '1428909514')
         params_dict.setdefault('user', '1456674317')
         start(
+            # name of the list
             params_dict['dep_name'] or 'all departments',
-            params_dict['dep_name'], params_dict['user'], 2,
+            # name of the collecting department and TG user
+            params_dict['dep_name'], params_dict['user'],
+            # workers_number
+            settings.THREADS['departments'],
         )
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:

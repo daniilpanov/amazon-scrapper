@@ -575,7 +575,7 @@ def run_bottle():
         except:
             return bottle.HTTPResponse(status=500)
 
-    bottle.run(host='0.0.0.0', port=8080, debug=settings.ENVIRONMENT != 'product')
+    bottle.run(host='0.0.0.0', port=8080, debug=settings.ENVIRONMENT == 'dev')
 
 
 if __name__ == '__main__':

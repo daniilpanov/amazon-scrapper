@@ -32,10 +32,6 @@ def add_products_task(asins, list_name, user_id, callback=None, domain=None):
     )
 
 
-def add_deals_task(name, user_id):
-    processes_waiters.submit(add_task, 'collect_all_deals', sheet_name=name, user=user_id)
-
-
 def add_asins_nearby_task(asin, user_id, limit, domain):
     processes_waiters.submit(add_task, 'collect_asins_nearby', asin=asin, user=user_id, limit=limit, domain=domain)
 

@@ -21,7 +21,7 @@ domain = 'amazon.com'
 
 
 def collect(products_info_list):
-    products_info_list = list([asin for asin in products_info_list if state.get_asin(asin, 'products') != -1])
+    products_info_list = list(asin for asin in products_info_list if state.get_asin(asin, 'products') != -1)
     if not products_info_list:
         return -1
     webdriver = base_chrome_init(goto=f'https://{domain}')
