@@ -32,7 +32,7 @@ params = {
     'reviewerType': ['', 'avp_only_reviews'],
     'filterByStar': ['', 'five_star', 'four_star', 'three_star', 'two_star', 'one_star'],
     # 'formatType': ['', 'current_format'],
-    'formatType': [''],
+    'formatType': ['current_format'],
     'mediaType': ['', 'media_reviews_only'],
 }
 requests_counter = 0
