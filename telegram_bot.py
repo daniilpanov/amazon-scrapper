@@ -330,6 +330,24 @@ def set_category(msg: types.Message, **kwargs):
     )
 
 
+# @cmdreg
+# def set_category(msg: types.Message, **kwargs):
+#     category_name = kwargs['args'] or None
+#     if category_name:
+#
+#     if 'cat_group' in kwargs:
+#         if 'category' in kwargs:
+#             return _set_category(msg.from_user.id, text, kwargs['category'], kwargs['cat_group'])
+#         return bot.register_next_step_handler(
+#             send_msg(msg.from_user.id, 'Enter the ASINs list:'),
+#             set_category, category=text, cat_group=kwargs['cat_group'],
+#         )
+#     return bot.register_next_step_handler(
+#         send_msg(msg.from_user.id, 'Enter the category name:'),
+#         set_category, cat_group=text,
+#     )
+
+
 def ai_highlights_aspects_new_mapping(data: pd.DataFrame, user_id):
     data.columns = data.columns.str.strip()
     head = set(data.columns)
@@ -367,15 +385,13 @@ def ai_highlights_aspects_new_mapping(data: pd.DataFrame, user_id):
     return True
 
 
-def _set_category(user_id, asins, cat_name, cat_group=None):
-    if not cat_group:
-        cat_group = 'categories'
-    data = list([{'Category': cat_name, 'ASIN': asin}
+def _set_category(user_id, asins, cat_name, is_top_5: bool, cat_group=None):
+    data = list([{'Category': cat_name, 'ASIN': asin, 'relation_to_category': cat_group, 'relation_to_top5': is_top_5}
                  for asin in (get_all_asins_from_text(asins) if type(asins) is str else asins)])
     if not data:
         return send_msg(user_id, f'Category is empty')
     try:
-        database.db()[cat_group].insert_many(data)
+        database.db()['all_categories'].insert_many(data)
         return send_msg(user_id, f'Category {cat_name} saved to the amazon_data.' + cat_group)
     except Exception as e:
         return send_msg(user_id, f'An error occurred on saving category {cat_name} '
@@ -497,13 +513,10 @@ def get_all(msg: types.Message, **kwargs):
         )
     if 'list' not in kwargs:
         return bot.register_next_step_handler(
-            send_msg(msg.from_user.id, 'Enter the collection suffix (or \'-\' sign for defaults):'),
+            send_msg(msg.from_user.id, 'Enter the collection group or \'-\'):'),
             get_all, list=msg.text, **kwargs,
         )
-    collection = 'categories'
-    if msg.text != '-':
-        collection += '_' + msg.text
-    _set_category(msg.from_user.id, kwargs['asins'], kwargs['list'], collection)
+    _set_category(msg.from_user.id, kwargs['asins'], kwargs['list'], False, msg.text if msg.text != '-' else None)
     count = len(kwargs['asins']) + 1
 
     def decrement():
