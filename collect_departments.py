@@ -300,7 +300,7 @@ if __name__ == '__main__':
         params_dict.setdefault('user', '1456674317')
         start(
             params_dict['dep_name'] or 'all departments',
-            params_dict['dep_name'], params_dict['user'], 2,
+            params_dict['dep_name'], params_dict['user'], 20,
         )
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:

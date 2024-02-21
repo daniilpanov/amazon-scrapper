@@ -21,7 +21,7 @@ config = {
     'username': 'scrape_processing',
     'database': 'amazon_data',
     'password': 'gxYSEvBIDTgy6RIg',
-    'proxy': 'http://proxydb:StdInp0101@195.201.194.213:3128',
+    'proxy': 'http://proxydb:StdInp0101@95.216.25.100:3128',
     'url_prefix': 'mongodb+srv',
 }
 config_special = {'username': 'ai_operator', 'password': 'jEWVWuNrgrqTkn7w'}
@@ -131,8 +131,8 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
 
 
 if __name__ == '__main__':
-    ...
-    # dab = db('amazon_data')
+    dab = db('amazon_data')
+    dab['categories'].find()	
     # dab['categories_all'].delete_many({})
     #
     # def d(group, cat=None):
