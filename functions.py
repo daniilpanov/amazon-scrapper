@@ -163,23 +163,6 @@ class WebDriver:
     def get_page_source(self):
         return self.driver.page_source
 
-    def change_loc_like_user(self):
-        # nav-global-location-popover-link
-        # GLUXCountryValue
-        # li[aria-labelledby^="GLUXCountryList"] -> only with data-value='{\"stringVal\":\"UM\"}'
-        # GLUXConfirmClose
-        self.click('a#nav-global-location-popover-link', timeout=5)
-        self.click('#GLUXCountryValue', timeout=5)
-        try:
-            self.click("li[aria-labelledby^='GLUXCountryList'][data-value='{\"stringVal\":\"UM\"}']", timeout=2)
-        except:
-            self.click('#GLUXCountryValue', timeout=1)
-            self.execute_script("document.querySelector(\"li[aria-labelledby^='GLUXCountryList'] a[data-value='{"
-                                "\\\"stringVal\\\":\\\"UM\\\"}']\").click();")
-        self.click('#GLUXConfirmClose', timeout=4)
-        self.refresh()
-        self.wait_for_loading()
-
     def add_js_link(self, js_link):
         script_to_add_js = """function injectJS(link) {
                   var body_tag=document.getElementsByTagName("body")[0];
