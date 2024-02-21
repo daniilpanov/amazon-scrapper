@@ -17,7 +17,7 @@ from functions import RetryException, user_emulate, base_chrome_init
 
 import logging
 
-from helpers import log, parse_args, send_bot_msg
+from helpers import log, parse_args, send_bot_msg, end_task
 
 logger = logging.getLogger('reviews')
 logger.setLevel(logging.DEBUG)
@@ -250,7 +250,7 @@ def start_reviews_collect(params_dict):
                 )
     finally:
         if 'id' in params_dict:
-            requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
+            end_task(params_dict['_id'])
     return res
 
 
