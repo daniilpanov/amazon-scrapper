@@ -144,8 +144,8 @@ def write_aspects(asin, aspects):
 
 
 if __name__ == '__main__':
-    ...
-    # dab = db('amazon_data')
+    dab = db('amazon_data')
+    dab['categories'].find()	
     # dab['categories_all'].delete_many({})
     #
     # def d(group, cat=None):
