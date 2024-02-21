@@ -43,6 +43,16 @@ def send_bot_msg(user, msg=None, files=None):
             pass
 
 
+def end_task(_id):
+    try:
+        requests.post('http://localhost:8080/end_task', {'_id': _id})
+    except (ConnectionError, MaxRetryError, ConnectionRefusedError, NewConnectionError):
+        pass
+
+
+def get_html
+
+
 def captcha_solve(url):
     try:
         result = requests.post('http://localhost:8090/solve/url', {'url': url})

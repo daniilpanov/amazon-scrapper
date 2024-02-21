@@ -1,5 +1,6 @@
 import datetime
 import re
+from time import sleep
 
 import pandas as pd
 import pytz
@@ -181,6 +182,38 @@ if __name__ == '__main__':
             res.loc[len(res.index)] = d
 
     res.to_csv('output_' + fn)
+
+
+def parse_aspects(asin, html):
+    bs = BeautifulSoup(html, features='html.parser')
+    if not bs:
+        print('NO BS! ASIN:', asin)
+        return False
+    names_div = bs.find(id='aspect-button-group-0')
+    root_div = bs.find(attrs={'data-csa-c-slot-id': 'cr-product-insights-cards-popover'})
+    if not names_div or not root_div:
+        print('NO Aspects! ASIN:', asin)
+        return False
+    aspects_names = names_div.select('button > span')
+    aspects = []
+    for aspect in zip(aspects_names, root_div.children):
+        quantities = aspect[1].find('div').find_all('span')
+        positive = quantities[1].text.replace(',', '').split(' ')
+        for i in positive:
+            if i.isdigit():
+                positive = int(i)
+                break
+        else:
+            return False
+        negative = quantities[2].text.replace(',', '').split(' ')
+        for i in negative:
+            if i.isdigit():
+                negative = int(i)
+                break
+        else:
+            return False
+        aspects.append((aspect[0].text, positive, negative))
+    return aspects
 
 
 def parse_product(asin, html, tiny=False, domain='amazon.com'):

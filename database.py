@@ -21,7 +21,7 @@ config = {
     'username': 'scrape_processing',
     'database': 'amazon_data',
     'password': 'gxYSEvBIDTgy6RIg',
-    'proxy': 'http://proxydb:StdInp0101@195.201.194.213:3128',
+    'proxy': 'http://proxydb:StdInp0101@95.216.25.100:3128',
     'url_prefix': 'mongodb+srv',
 }
 config_special = {'username': 'ai_operator', 'password': 'jEWVWuNrgrqTkn7w'}
@@ -102,7 +102,7 @@ def write_reviews(reviews):
         return True
 
 
-def write_product_html(asin, html, domain='amazon.com'):
+def write_product_html(asin, html, domain='amazon.com', retry=True):
     try:
         return db()['raw_product_card_htmls'].insert_one({
             'asin': asin, 'product_url': f'https://{domain}/dp/{asin}',
@@ -110,7 +110,10 @@ def write_product_html(asin, html, domain='amazon.com'):
             'scrap_datetime': datetime.datetime.now(pytz.UTC),
         })
     except (BulkWriteError, DuplicateKeyError) as e:
-        return True
+        if not retry:
+            return False
+        db()['raw_product_card_htmls'].delete_one({'asin': asin})
+        return write_product_html(asin, html, domain, False)
 
 
 def write_product_parsed(asin, product_url, title, descr, picture_url, parse_datetime, features, top5phr, price):
@@ -126,7 +129,17 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
             'top_5_phrases': top5phr,
             'product_price': price,
         })
-    except (BulkWriteError, DuplicateKeyError) as e:
+    except (BulkWriteError, DuplicateKeyError):
+        return True
+
+
+def write_aspects(asin, aspects):
+    data = []
+    for aspect in aspects:
+        data.append({'ASIN': asin, 'Aspect': aspect[0], 'positive': aspect[1], 'negative': aspect[2]})
+    try:
+        return db()['amazon_aspects'].insert_many(data, False)
+    except (BulkWriteError, DuplicateKeyError):
         return True
 
 

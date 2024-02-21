@@ -3,7 +3,7 @@ import requests
 import database as db
 import state
 from functions import base_chrome_init, captcha_solve
-from helpers import parse_args, log
+from helpers import parse_args, log, send_bot_msg, end_task
 from parser import parse_product
 
 import logging
@@ -33,7 +33,6 @@ def collect(products_info_list):
             collected.add(el)
             continue
         webdriver.get(f'https://{domain}/dp/' + el)
-        captcha_solve(webdriver)
         webdriver.activate_jquery()
 
         if product_info_write(el, webdriver.get_page_source()):
@@ -61,7 +60,7 @@ if __name__ == '__main__':
     domain = params_dict.get('domain', 'amazon.com')
     asins = chunk(params_dict.get('asins', ''))
     res = False
-    c = 99
+    c = 15
     try:
         if asins:
             while not res and c > 0:
@@ -73,17 +72,16 @@ if __name__ == '__main__':
         pass
     else:
         if 'user' in params_dict:
-            if res or c == 99:
-                requests.post('http://localhost:8080/send_msg', {
-                    'msg': f'Product cards of list "{params_dict.get("list_name", params_dict["asins"])}"'
-                           ' collected!',
-                    'uid': params_dict['user'],
-                })
+            if res or c == 15:
+                send_bot_msg(
+                    params_dict['user'],
+                    f'Product cards of list "{params_dict.get("list_name", params_dict["asins"])}" collected!')
             else:
-                requests.post('http://localhost:8080/send_msg', {
-                    'msg': f'Product cards of list "{params_dict.get("list_name", params_dict["asins"])}"'
-                           ' did NOT collected.',
-                    'uid': params_dict['user'],
-                })
+                send_bot_msg(
+                    params_dict['user'],
+                    f'Product cards of list "{params_dict.get("list_name", params_dict["asins"])}"'
+                    ' did NOT collected.'
+                )
     finally:
-        requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})
+        if 'id' in params_dict:
+            end_task(params_dict['_id'])

@@ -95,7 +95,42 @@ def get_asins_data(msg: types.Message, **kwargs):
     )
 
 
-cmdreg(get_asins_data, 'get_asins_data_mx', domain='amazon.com.mx')
+@cmdreg
+def get_amazon_aspects(msg: types.Message, **kwargs):
+    asins_raw = kwargs['args']
+    if asins_raw:
+        asins = set(get_all_asins_from_text(asins_raw))
+        if asins:
+            if 'list_name' in kwargs:
+                payload_manager.add_amazon_aspects_task(kwargs['list_name'], asins, msg.from_user.id, domain=kwargs['domain'])
+                return send_msg(
+                    msg.from_user.id,
+                    f'Process started. We\'ll notify you when it is completed. List name: {kwargs["list_name"]}',
+                )
+            kwargs.update({'asins': asins})
+            return bot.register_next_step_handler(send_msg(
+                msg.from_user.id, 'Enter the list name:'),
+                get_amazon_aspects, **kwargs,
+            )
+        if 'asins' in kwargs:
+            payload_manager.add_amazon_aspects_task(asins_raw, kwargs['asins'], msg.from_user.id, domain=kwargs['domain'])
+            return send_msg(
+                msg.from_user.id,
+                f'Process started. We\'ll notify you when it is completed. List name: {asins_raw}',
+            )
+        kwargs.update({'list_name': asins_raw})
+        return bot.register_next_step_handler(send_msg(
+            msg.from_user.id,
+            f'List name: {asins_raw}. Enter the ASINs list:'),
+            get_amazon_aspects, **kwargs,
+        )
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Enter the ASINs list:'),
+        get_amazon_aspects, **kwargs,
+    )
+
+
+cmdreg(get_amazon_aspects, 'get_amazon_aspects_mx', domain='amazon.com.mx')
 
 
 @cmdreg
@@ -494,7 +529,7 @@ cmdreg(get_all, 'get_all_mx', domain='amazon.com.mx')
 @cmdreg
 def update_department_collection(msg: types.Message, **kwargs):
     dep_name = kwargs['args']
-    payload_manager.add_departments_task(dep_name, msg.from_user.id)
+    payload_manager.add_departments_task(dep_name, msg.from_user.id, kwargs['domain'])
     return send_msg(msg.from_user.id, f'Start collecting departments [{dep_name or "all deps."}]')
 
 

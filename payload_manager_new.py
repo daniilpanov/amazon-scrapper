@@ -32,16 +32,16 @@ def add_products_task(asins, list_name, user_id, callback=None, domain=None):
     )
 
 
-def add_deals_task(name, user_id):
-    processes_waiters.submit(add_task, 'collect_all_deals', sheet_name=name, user=user_id)
+def add_amazon_aspects_task(name, asins, user_id, domain):
+    processes_waiters.submit(add_task, 'collect_amazon_aspects', list_name=name, asins=asins, user=user_id, domain=domain)
 
 
 def add_asins_nearby_task(asin, user_id, limit, domain):
     processes_waiters.submit(add_task, 'collect_asins_nearby', asin=asin, user=user_id, limit=limit, domain=domain)
 
 
-def add_departments_task(department, user_id):
-    processes_waiters.submit(add_task, 'collect_departments', dep_name=department, user=user_id)
+def add_departments_task(department, user_id, domain):
+    processes_waiters.submit(add_task, 'collect_departments', dep_name=department, user=user_id, domain=domain)
 
 
 # Добавление процесса и ожидание завершения (ф-я запускается в отдельном потоке)
