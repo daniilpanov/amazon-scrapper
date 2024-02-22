@@ -32,13 +32,16 @@ def cmdreg(func, name=None, **const_kwargs):
         kwargs = {**const_kwargs, **kwargs}
         kwargs.setdefault('domain', 'amazon.com')
         receive_message(msg)
-        if msg.text in ('/close', '/stop', '/quit', '/cancel', '/exit'):
-            return send_msg(msg.from_user.id, 'Cancel')
         if msg.text:
-            path = msg.text.split(' ', 1)
-            log(path)
-            kwargs['args'] = path[-1].strip() if path[-1][0] != '/' else ''
-            log(kwargs['args'])
+            if msg.text in ('/close', '/stop', '/quit', '/cancel', '/exit'):
+                return send_msg(msg.from_user.id, 'Cancel')
+            if msg.text[0] == '/':
+                path = msg.text.split(' ', 1)
+                log(path)
+                kwargs['args'] = path[-1].strip() if path[-1][0] != '/' else ''
+                log(kwargs['args'])
+            else:
+                kwargs['args'] = msg.text
         return func(msg, *args, **kwargs)
 
     CMDs[name or func.__name__] = wrapper
@@ -318,34 +321,23 @@ def _import_asins(user_id, document, location):
 def set_category(msg: types.Message, **kwargs):
     text = kwargs['args'] or None
     if 'cat_group' in kwargs:
-        if 'category' in kwargs:
-            return _set_category(msg.from_user.id, text, kwargs['category'], kwargs['cat_group'])
+        return _set_category(msg.from_user.id, kwargs['asins'], kwargs['category'], text.strip() == '+', kwargs['cat_group'])
+    if 'category' in kwargs:
         return bot.register_next_step_handler(
-            send_msg(msg.from_user.id, 'Enter the ASINs list:'),
-            set_category, category=text, cat_group=kwargs['cat_group'],
+            send_msg(msg.from_user.id, 'If it is TOP 5 category, send "+" or something else if not'),
+            set_category, asins=kwargs['asins'], category=kwargs['category'], cat_group=text if text.strip() != '-' else None,
         )
-    return bot.register_next_step_handler(
-        send_msg(msg.from_user.id, 'Enter the category name:'),
-        set_category, cat_group=text,
-    )
-
-
-# @cmdreg
-# def set_category(msg: types.Message, **kwargs):
-#     category_name = kwargs['args'] or None
-#     if category_name:
-#
-#     if 'cat_group' in kwargs:
-#         if 'category' in kwargs:
-#             return _set_category(msg.from_user.id, text, kwargs['category'], kwargs['cat_group'])
-#         return bot.register_next_step_handler(
-#             send_msg(msg.from_user.id, 'Enter the ASINs list:'),
-#             set_category, category=text, cat_group=kwargs['cat_group'],
-#         )
-#     return bot.register_next_step_handler(
-#         send_msg(msg.from_user.id, 'Enter the category name:'),
-#         set_category, cat_group=text,
-#     )
+    if 'asins' in kwargs:
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Enter the categories group name:'),
+            set_category, asins=kwargs['asins'], category=text,
+        )
+    if text:
+        return bot.register_next_step_handler(
+            send_msg(msg.from_user.id, 'Enter the category name:'),
+            set_category, asins=text,
+        )
+    return bot.register_next_step_handler(send_msg(msg.from_user.id, 'Enter the ASINs list:'), set_category)
 
 
 def ai_highlights_aspects_new_mapping(data: pd.DataFrame, user_id):
@@ -392,10 +384,9 @@ def _set_category(user_id, asins, cat_name, is_top_5: bool, cat_group=None):
         return send_msg(user_id, f'Category is empty')
     try:
         database.db()['all_categories'].insert_many(data)
-        return send_msg(user_id, f'Category {cat_name} saved to the amazon_data.' + cat_group)
+        return send_msg(user_id, f'Category {cat_name} saved')
     except Exception as e:
-        return send_msg(user_id, f'An error occurred on saving category {cat_name} '
-                                 f'to the amazon_data.{cat_group}:\n{e}')
+        return send_msg(user_id, f'An error occurred on saving category {cat_name}\n{e}')
 
 
 @cmdreg
