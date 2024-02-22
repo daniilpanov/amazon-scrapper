@@ -378,7 +378,7 @@ def ai_highlights_aspects_new_mapping(data: pd.DataFrame, user_id):
 
 
 def _set_category(user_id, asins, cat_name, is_top_5: bool, cat_group=None):
-    data = list([{'Category': cat_name, 'ASIN': asin, 'relation_to_category': cat_group, 'relation_to_top5': is_top_5}
+    data = list([{'Category': cat_name, 'ASIN': asin, 'relation_to_category': cat_group, 'relation_to_TOP5': is_top_5}
                  for asin in (get_all_asins_from_text(asins) if type(asins) is str else asins)])
     if not data:
         return send_msg(user_id, f'Category is empty')
