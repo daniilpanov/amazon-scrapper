@@ -1,17 +1,14 @@
 import re
-import urllib
 from builtins import Exception
+from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecoder, JSONEncoder, JSONDecodeError
-from threading import Thread, Event
-from time import sleep
 
 from pandas import DataFrame
 from bs4 import BeautifulSoup
-from selenium.common import JavascriptException, InvalidSessionIdException, TimeoutException
 
 import database
 import parser
-from functions import RetryException, user_emulate, base_chrome_init
+from amazon_requests import Requests
 
 from helpers import log, parse_args, send_bot_msg, end_task
 
@@ -84,65 +81,37 @@ def process_data(asin, seed, process_data_res, domain):
         return False
 
 
-def send_request(webdriver, asin, seed, page, keywords='', domain='amazon.com'):
+def send_request(sess: Requests, asin, seed, page, keywords='', domain='amazon.com'):
     if seed >= params_len:
         return True
 
-    global requests_counter
-
-    current_params = {
-        'filterByAge': '',
-        'pageNumber': page,
-        'filterByLanguage': '',
-        'filterByKeyword': keywords,
-        'shouldAppend': 'undefined',
-        'deviceType': 'desktop',
-        'canShowIntHeader': 'undefined',
-        'reftag': 'cm_cr_arp_d_viewopt_srt',
-        'pageSize': 10,
-        'asin': asin,
-        'scope': 'reviewsAjax{}'.format(requests_counter),
-    }
-    requests_counter += 1
+    current_params = {}
     s = seed
     for i in params:
         length = len(params[i])
         current_params[i] = params[i][s % length]
         s //= length
 
-    ajax = f"$.post(\"https://www.{domain}{url}\", " \
-           + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
-           + ", null, 'text');"
-
     try:
-        res = webdriver.execute_script("return " + ajax)
+        res = sess.get_reviews(asin, page, current_params, keywords)
         if not res or 'BAAAAAAD ASIN!' in res:
+            print(res)
             log(f'broken result. ASIN: {asin}')
             return False
-    except (JavascriptException, RetryException, TimeoutException) as e:
+        return process_data(asin, seed, res, domain)
+    except Exception as e:
         log(e)
         log('something went wrong. send this ASIN to the end of a queue')
         return False
-
-    return process_data(asin, seed, res, domain)
 
 
 def collect(asin, keywords, user, domain, index=0):
     if index == -1:
         return -1
-    log('loading webdriver')
-    ev = Event()
-    webdriver = base_chrome_init(goto=f'https://{domain}/')
-    webdriver.change_loc(domain=domain)
-    webdriver.get(webdriver.current_url
-                  + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
-    try:
-        webdriver.get(webdriver.get_element('link[rel="canonical"]').get_attribute('href')
-                      + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
-    except Exception as e:
-        send_bot_msg(user, f'WARNING: canonical link not found for ASIN {asin}; error: {e}')
-
-    reviews_count_element = webdriver.get_element('[data-hook="cr-filter-info-review-rating-count"]')
+    log('loading Requests')
+    sess = Requests(domain)
+    soup = BeautifulSoup(sess.get_reviews(asin), features='html.parser')
+    reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
     reviews_count = 0
     if reviews_count_element:
         reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
@@ -150,69 +119,38 @@ def collect(asin, keywords, user, domain, index=0):
             reviews_count = int(float(reviews_count_part[1].replace(',', '').replace(' ', '')))
     print('count:', reviews_count)
 
-    user_emulate_thread = Thread(target=user_emulate, args=(webdriver, ev), daemon=True)
-
     try:
-        webdriver.activate_jquery()
-        user_emulate_thread.start()
-        webdriver.activate_jquery()
         log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-        params_seed = None
-        first = True
+        sess.req(
+            f'/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin'
+            f'={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns='
+            f'&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl=https://{domain}'
+            f'/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews',
+            xmlhttp=True,
+        )
         try:
-            for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
-                for i in range(1, 11):
-                    response = send_request(webdriver, asin, params_seed, i, keywords, domain)
-                    if first:
-                        webdriver.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
-                        first = False
-                    if response == -1:
-                        break
-                    if not response:
-                        log(f'Skip {asin}')
-                        close(ev, user_emulate_thread, webdriver)
-                        return index
-                index += 1
-            close(ev, user_emulate_thread, webdriver)
+            with ThreadPoolExecutor() as pool:
+                for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
+                    for i in range(1, 11):
+                        pool.submit(send_request, sess, asin, params_seed, i, keywords, domain)
+                    index += 1
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
-                close(ev, user_emulate_thread, webdriver)
                 raise e
             log(f'Skip {asin}')
-            close(ev, user_emulate_thread, webdriver)
             return index
-    except (InvalidSessionIdException, RetryException) as e:
-        log('ERROR: invalid session. ASIN will be collected later')
-        close(ev, user_emulate_thread, webdriver)
-        sleep(10)
-        return index
     except KeyboardInterrupt:
         log('Script stopped')
-        close(ev, user_emulate_thread, webdriver)
         raise
-    finally:
-        close(ev, user_emulate_thread, webdriver)
-
-
-def close(ev, uemu, wd):
-    wd.full_close()
-    try:
-        ev.set()
-    except:
-        pass
 
 
 def start_reviews_collect(params_dict):
-    res = False
-    c = 15
     try:
-        while res > -1 and c > 0:
-            res = collect(
-                params_dict['asin'], params_dict.get('keywords', ''),
-                params_dict.get('user'), params_dict.get('domain', 'amazon.com'), res,
-            )
-            c -= 1
+        res = collect(
+            params_dict['asin'], params_dict.get('keywords', ''),
+            params_dict.get('user'), params_dict.get('domain', 'amazon.com'),
+        )
     except KeyError:
         log('No ASIN error!')
     except KeyboardInterrupt:
@@ -220,7 +158,7 @@ def start_reviews_collect(params_dict):
         raise
     else:
         if 'user' in params_dict:
-            if res == -1 or c == 15:
+            if res == -1:
                 send_bot_msg(
                     params_dict['user'],
                     f'Reviews of ASIN {params_dict["asin"]} collected!',

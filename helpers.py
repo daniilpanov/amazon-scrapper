@@ -50,13 +50,6 @@ def end_task(_id):
         pass
 
 
-def req(url, method='GET', params=None, cookies=None):
-    return requests.request(method, url, params=params or {}, cookies=cookies or {}, headers={
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Access-Control-Allow-Origin': '*', 'Origin': 'https://amazon.com', 'Referer': 'https://amazon.com/',
-    })
-
-
 def captcha_solve(url):
     try:
         result = requests.post('http://localhost:8090/solve/url', {'url': url})
