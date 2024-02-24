@@ -133,6 +133,8 @@ def collect(asin, keywords, user, domain, index=0):
                 for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                     for i in range(1, 11):
                         pool.submit(send_request, sess, asin, params_seed, i, keywords, domain)
+                        break
+                    break
                     index += 1
             return -1
         except Exception as e:
