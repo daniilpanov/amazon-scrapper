@@ -99,6 +99,22 @@ def get_asins_data(msg: types.Message, **kwargs):
 
 
 @cmdreg
+def get_products(msg: types.Message, **kwargs):
+    asins_raw = kwargs['args']
+    if asins_raw:
+        asins = set(get_all_asins_from_text(asins_raw))
+        payload_manager.add_products_task(asins, None, msg.from_user.id, domain=kwargs['domain'])
+        return send_msg(
+            msg.from_user.id,
+            f'Process started. We\'ll notify you when it is completed',
+        )
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Enter the ASINs list:'),
+        get_products, **kwargs,
+    )
+
+
+@cmdreg
 def get_amazon_aspects(msg: types.Message, **kwargs):
     asins_raw = kwargs['args']
     if asins_raw:
