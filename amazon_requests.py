@@ -7,15 +7,18 @@ class Requests:
     request: requests.Session
     reviews_request_counter: int = 1
 
-    def __init__(self, domain='amazon.com'):
-        #
-        wd = base_chrome_init(goto=f'https://{domain}')
-        wd.change_loc()
-        #
-        cookies = wd.get_cookies()
-        wd.quit()
-        #
+    def __init__(self, domain='amazon.com', **kwargs):
         self.request = requests.Session()
+        if 'session-id' in kwargs and 'session-id-time' in kwargs:
+            cookies = [{'name': 'session-id-time', 'value': kwargs['session-id-time'], 'domain': domain, 'path': '/'}, {'name': 'session-id', 'value': kwargs['session-id'], 'domain': domain, 'path': '/'}]
+        else:
+            #
+            wd = base_chrome_init(goto=f'https://{domain}')
+            wd.change_loc()
+            #
+            cookies = wd.get_cookies()
+            wd.quit()
+        #
         for cookie in cookies:
             self.request.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'], path=cookie['path'])
 
