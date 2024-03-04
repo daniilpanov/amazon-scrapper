@@ -309,6 +309,7 @@ if __name__ == '__main__':
         )
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:
+        # raise e
         send_bot_msg(
             params_dict['user'],
             f'Error on collecting departments: {params_dict["dep_name"]}\n' + str(e) + '\n',

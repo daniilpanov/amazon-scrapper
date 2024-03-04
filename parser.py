@@ -160,30 +160,6 @@ def parse_reviews(asin, html, domain='amazon.com'):
     }
 
 
-if __name__ == '__main__':
-    fn = input() or 'reviews-list.csv'
-    data = pd.read_csv(fn)
-    res = DataFrame(columns=[
-        'review_id',
-        'product_url',
-        'asin',
-        'date_info',
-        'name',
-        'title',
-        'content',
-        'rating',
-        'helpful',
-        'options',
-    ])
-
-    for index, item in data.iterrows():
-        d = parse_reviews(item['asin'], item['html'])
-        if d:
-            res.loc[len(res.index)] = d
-
-    res.to_csv('output_' + fn)
-
-
 def parse_aspects(asin, html):
     bs = BeautifulSoup(html, features='html.parser')
     if not bs:
