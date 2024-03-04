@@ -462,17 +462,6 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
             database.db(db_name)[collection].delete_many({'asin': {'$in': list(asins)}})
         except:
             database.spec_db(db_name)[collection].delete_many({'asin': {'$in': list(asins)}})
-        if _type is not None:
-            with open(os.path.join('states', f'collect-{_type}.state')) as f:
-                all_asins = set(chunk(f.read().strip()))
-            for asin in asins:
-                st = state.get_asin(asin, _type)
-                if st == -1:
-                    all_asins.remove(asin)
-                elif st > 0 and os.path.exists(os.path.join('states', f'collect-{_type}-{asin}.currstate')):
-                    os.remove(os.path.join('states', f'collect-{_type}-{asin}.currstate'))
-            with open(os.path.join('states', f'collect-{_type}.state'), 'w') as f:
-                f.write(''.join(all_asins))
         return True
     except Exception as e:
         send_msg(user_id, 'Error occurred: {}'.format(e), parse_mode='HTML')
