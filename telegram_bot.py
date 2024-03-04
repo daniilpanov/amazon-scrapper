@@ -464,7 +464,7 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
             database.spec_db(db_name)[collection].delete_many({'asin': {'$in': list(asins)}})
         return True
     except Exception as e:
-        send_msg(user_id, 'Error occurred: {}'.format(e), parse_mode='HTML')
+        send_msg(user_id, 'Error occurred: {}'.format(e))
         return False
 
 
