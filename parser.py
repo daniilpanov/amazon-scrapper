@@ -1,13 +1,7 @@
 import datetime
 import re
-from time import sleep
-
-import pandas as pd
 import pytz
 from bs4 import BeautifulSoup
-from pandas import DataFrame
-
-from helpers import log
 
 
 def month_to_int(month: str):

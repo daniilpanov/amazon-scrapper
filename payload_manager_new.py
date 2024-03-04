@@ -13,11 +13,12 @@ processes_waiters = ThreadPoolExecutor(os.cpu_count())
 alive = True
 
 
-def add_reviews_tasks(asins, user_id, callback=None, domain=None):
+def add_reviews_tasks(asins, user_id, callback=None, domain=None, current_format=True):
     for asin in asins:
         processes_waiters.submit(
             add_task, 'collect_reviews', asin=asin,
             user=str(user_id), callback=callback, domain=domain,
+            current_format=current_format,
         )
 
 

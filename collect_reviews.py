@@ -32,7 +32,6 @@ params = {
     'reviewerType': ['', 'avp_only_reviews'],
     'filterByStar': ['', 'five_star', 'four_star', 'three_star', 'two_star', 'one_star'],
     # 'formatType': ['', 'current_format'],
-    'formatType': ['current_format'],
     'mediaType': ['', 'media_reviews_only'],
 }
 requests_counter = 0
@@ -97,13 +96,14 @@ def process_data(asin, seed, process_data_res, domain):
         return False
 
 
-def send_request(webdriver, asin, seed, page, keywords='', domain='amazon.com'):
+def send_request(webdriver, asin, seed, page, keywords='', domain='amazon.com', current_format=True):
     if seed >= params_len:
         return True
 
     global requests_counter
 
     current_params = {
+        'formatType': 'current_format' if current_format else '',
         'filterByAge': '',
         'pageNumber': page,
         'filterByLanguage': '',
@@ -142,7 +142,7 @@ def send_request(webdriver, asin, seed, page, keywords='', domain='amazon.com'):
     return process_data(asin, seed, res, domain)
 
 
-def collect(asin, keywords, user, domain, index=0):
+def collect(asin, keywords, user, domain, index=0, current_format=True):
     if index == -1:
         return -1
     log('loading webdriver')
@@ -177,7 +177,7 @@ def collect(asin, keywords, user, domain, index=0):
         try:
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
-                    response = send_request(webdriver, asin, params_seed, i, keywords, domain)
+                    response = send_request(webdriver, asin, params_seed, i, keywords, domain, current_format)
                     if first:
                         webdriver.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
                         first = False
@@ -228,7 +228,8 @@ def start_reviews_collect(params_dict):
         while res > -1 and c > 0:
             res = collect(
                 params_dict['asin'], params_dict.get('keywords', ''),
-                params_dict.get('user'), params_dict.get('domain', 'amazon.com'), res,
+                params_dict.get('user'), params_dict.get('domain', 'amazon.com'),
+                res, params_dict.get('current_format', True),
             )
             c -= 1
     except KeyError:

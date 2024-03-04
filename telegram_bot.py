@@ -69,7 +69,7 @@ def get_asins_data(msg: types.Message, **kwargs):
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
             if 'list_name' in kwargs:
-                payload_manager.add_reviews_tasks(asins, msg.from_user.id, domain=kwargs['domain'])
+                payload_manager.add_reviews_tasks(asins, msg.from_user.id, domain=kwargs['domain'], current_format=kwargs.get('current_format', True))
                 payload_manager.add_products_task(asins, kwargs['list_name'], msg.from_user.id, domain=kwargs['domain'])
                 return send_msg(
                     msg.from_user.id,
@@ -81,7 +81,7 @@ def get_asins_data(msg: types.Message, **kwargs):
                 get_asins_data, **kwargs,
             )
         if 'asins' in kwargs:
-            payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, domain=kwargs['domain'])
+            payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, domain=kwargs['domain'], current_format=kwargs.get('current_format', True))
             payload_manager.add_products_task(kwargs['asins'], asins_raw, msg.from_user.id, domain=kwargs['domain'])
             return send_msg(
                 msg.from_user.id,
@@ -96,6 +96,9 @@ def get_asins_data(msg: types.Message, **kwargs):
         send_msg(msg.from_user.id, 'Enter the ASINs list:'),
         get_asins_data, **kwargs,
     )
+
+
+cmdreg(get_asins_data, 'get_asins_data_all', current_format=False)
 
 
 @cmdreg
