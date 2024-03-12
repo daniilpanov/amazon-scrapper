@@ -1,13 +1,7 @@
 import datetime
 import re
-from time import sleep
-
-import pandas as pd
 import pytz
 from bs4 import BeautifulSoup
-from pandas import DataFrame
-
-from helpers import log
 
 
 def month_to_int(month: str):
@@ -158,30 +152,6 @@ def parse_reviews(asin, html, domain='amazon.com'):
         'options': review_options,
         'scrap_datetime': parse_datetime,
     }
-
-
-if __name__ == '__main__':
-    fn = input() or 'reviews-list.csv'
-    data = pd.read_csv(fn)
-    res = DataFrame(columns=[
-        'review_id',
-        'product_url',
-        'asin',
-        'date_info',
-        'name',
-        'title',
-        'content',
-        'rating',
-        'helpful',
-        'options',
-    ])
-
-    for index, item in data.iterrows():
-        d = parse_reviews(item['asin'], item['html'])
-        if d:
-            res.loc[len(res.index)] = d
-
-    res.to_csv('output_' + fn)
 
 
 def parse_aspects(asin, html):

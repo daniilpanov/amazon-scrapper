@@ -69,7 +69,7 @@ def get_asins_data(msg: types.Message, **kwargs):
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
             if 'list_name' in kwargs:
-                payload_manager.add_reviews_tasks(asins, msg.from_user.id, domain=kwargs['domain'])
+                payload_manager.add_reviews_tasks(asins, msg.from_user.id, domain=kwargs['domain'], current_format=kwargs.get('current_format', True))
                 payload_manager.add_products_task(asins, kwargs['list_name'], msg.from_user.id, domain=kwargs['domain'])
                 return send_msg(
                     msg.from_user.id,
@@ -81,7 +81,7 @@ def get_asins_data(msg: types.Message, **kwargs):
                 get_asins_data, **kwargs,
             )
         if 'asins' in kwargs:
-            payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, domain=kwargs['domain'])
+            payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, domain=kwargs['domain'], current_format=kwargs.get('current_format', True))
             payload_manager.add_products_task(kwargs['asins'], asins_raw, msg.from_user.id, domain=kwargs['domain'])
             return send_msg(
                 msg.from_user.id,
@@ -95,6 +95,25 @@ def get_asins_data(msg: types.Message, **kwargs):
     return bot.register_next_step_handler(
         send_msg(msg.from_user.id, 'Enter the ASINs list:'),
         get_asins_data, **kwargs,
+    )
+
+
+cmdreg(get_asins_data, 'get_asins_data_all', current_format=False)
+
+
+@cmdreg
+def get_products(msg: types.Message, **kwargs):
+    asins_raw = kwargs['args']
+    if asins_raw:
+        asins = set(get_all_asins_from_text(asins_raw))
+        payload_manager.add_products_task(asins, None, msg.from_user.id, domain=kwargs['domain'])
+        return send_msg(
+            msg.from_user.id,
+            f'Process started. We\'ll notify you when it is completed',
+        )
+    return bot.register_next_step_handler(
+        send_msg(msg.from_user.id, 'Enter the ASINs list:'),
+        get_products, **kwargs,
     )
 
 
@@ -423,6 +442,7 @@ def delete_asins(msg: types.Message, **kwargs):
             (get_all_asins_from_text(asins_raw), msg.from_user.id),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'raw_product_card_htmls'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card', 'amazon_data', 'products'),
+            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card', 'amazon_data', 'amazon_aspects'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'aspects_color', 'ai_highlights'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'top_phrases', 'ai_highlights'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'problems', 'ai_highlights'),
@@ -443,20 +463,9 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
             database.db(db_name)[collection].delete_many({'asin': {'$in': list(asins)}})
         except:
             database.spec_db(db_name)[collection].delete_many({'asin': {'$in': list(asins)}})
-        if _type is not None:
-            with open(os.path.join('states', f'collect-{_type}.state')) as f:
-                all_asins = set(chunk(f.read().strip()))
-            for asin in asins:
-                st = state.get_asin(asin, _type)
-                if st == -1:
-                    all_asins.remove(asin)
-                elif st > 0 and os.path.exists(os.path.join('states', f'collect-{_type}-{asin}.currstate')):
-                    os.remove(os.path.join('states', f'collect-{_type}-{asin}.currstate'))
-            with open(os.path.join('states', f'collect-{_type}.state'), 'w') as f:
-                f.write(''.join(all_asins))
         return True
     except Exception as e:
-        send_msg(user_id, 'Error occurred: {}'.format(e), parse_mode='HTML')
+        send_msg(user_id, 'Error occurred: {}'.format(e))
         return False
 
 

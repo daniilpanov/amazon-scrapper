@@ -21,7 +21,7 @@ domain = 'amazon.com'
 
 
 def collect(products_info_list):
-    products_info_list = list(asin for asin in products_info_list if state.get_asin(asin, 'products') != -1)
+    # products_info_list = list(asin for asin in products_info_list if state.get_asin(asin, 'products') != -1)
     if not products_info_list:
         return -1
     webdriver = base_chrome_init(goto=f'https://{domain}')
@@ -29,9 +29,9 @@ def collect(products_info_list):
     collected = set()
 
     for el in products_info_list:
-        if state.get_asin(el, 'products') == -1:
-            collected.add(el)
-            continue
+        # if state.get_asin(el, 'products') == -1:
+        #     collected.add(el)
+        #     continue
         webdriver.get(f'https://{domain}/dp/' + el)
         webdriver.activate_jquery()
 
@@ -75,12 +75,13 @@ if __name__ == '__main__':
             if res or c == 15:
                 send_bot_msg(
                     params_dict['user'],
-                    f'Product cards of list "{params_dict.get("list_name", params_dict["asins"])}" collected!')
+                    f'Product cards of "{params_dict["list_name"]}" list collected!') \
+                    if 'list_name' in params_dict else f'Products {params_dict["asins"]} collected!'
             else:
                 send_bot_msg(
                     params_dict['user'],
-                    f'Product cards of list "{params_dict.get("list_name", params_dict["asins"])}"'
-                    ' did NOT collected.'
+                    f'Product cards of "{params_dict["list_name"]}" list are NOT collected.' \
+                    if 'list_name' in params_dict else f'Products {params_dict["asins"]} are NOT collected'
                 )
     finally:
         if 'id' in params_dict:

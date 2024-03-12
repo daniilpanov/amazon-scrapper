@@ -13,21 +13,23 @@ processes_waiters = ThreadPoolExecutor(os.cpu_count())
 alive = True
 
 
-def add_reviews_tasks(asins, user_id, callback=None, domain=None):
+def add_reviews_tasks(asins, user_id, callback=None, domain=None, current_format=True):
     for asin in asins:
         processes_waiters.submit(
             add_task, 'collect_reviews', asin=asin,
             user=str(user_id), callback=callback, domain=domain,
+            current_format=current_format,
         )
 
 
 def add_products_task(asins, list_name, user_id, callback=None, domain=None):
-    good_asins = set()
-    for asin in asins:
-        if state.get_asin(asin, 'products') > -1:
-            good_asins.add(asin)
+    # good_asins = set()
+    # for asin in asins:
+    #     if state.get_asin(asin, 'products') > -1:
+    #         good_asins.add(asin)
+    good_asins = set(asins)
     processes_waiters.submit(
-        add_task, 'collect_products', list_name=list_name,
+        add_task, 'collect_products', list_name=list_name or '',
         asins=''.join(good_asins), user=str(user_id), callback=callback, domain=domain,
     )
 
