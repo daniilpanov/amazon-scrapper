@@ -28,12 +28,16 @@ def month_to_int(month: str):
 
 
 def parse_reviews(asin, html, domain='amazon.com'):
-    item_parser = BeautifulSoup(html, features='html.parser')
-    if not item_parser or not item_parser.find(attrs={'data-hook': 'review'}) \
-            or item_parser.find('div', class_='a-divider-section') \
-            or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
-        return False
-    review_id = item_parser.find('div', attrs={'data-hook': 'review'})['id']
+    if type(html) is not str:
+        item_parser = html
+        review_id = html['id']
+    else:
+        item_parser = BeautifulSoup(html, features='lxml')
+        if not item_parser or not item_parser.find(attrs={'data-hook': 'review'}) \
+                or item_parser.find('div', class_='a-divider-section') \
+                or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
+            return False
+        review_id = item_parser.find('div', attrs={'data-hook': 'review'})['id']
     # Country & Date
     review_date_raw = item_parser.find('span', attrs={'data-hook': 'review-date'})
     if review_date_raw:

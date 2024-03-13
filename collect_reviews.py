@@ -157,7 +157,6 @@ def collect(asin, keywords, user, domain, index=0, current_format=True):
         user_emulate_thread.start()
         webdriver.activate_jquery()
         log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-        params_seed = None
         first = True
         try:
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):

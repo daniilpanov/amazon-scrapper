@@ -1,16 +1,24 @@
-import requests
+import random
+
+import aiohttp
+from random_user_agent.params import SoftwareName, OperatingSystem
+from random_user_agent.user_agent import UserAgent
 
 from functions import base_chrome_init
 
 
 class Requests:
-    request: requests.Session
+    request: aiohttp.ClientSession
+    cookies: dict | None = None
     reviews_request_counter: int = 1
+    domain: str
 
     def __init__(self, domain='amazon.com', **kwargs):
-        self.request = requests.Session()
+        self.domain = domain
         if 'session-id' in kwargs and 'session-id-time' in kwargs:
-            cookies = [{'name': 'session-id-time', 'value': kwargs['session-id-time'], 'domain': domain, 'path': '/'}, {'name': 'session-id', 'value': kwargs['session-id'], 'domain': domain, 'path': '/'}]
+            self.cookies = {'session-id-time': kwargs['session-id-time'], 'session-id': kwargs['session-id']}
+        elif Requests.cookies:
+            self.cookies = Requests.cookies
         else:
             #
             wd = base_chrome_init(goto=f'https://{domain}')
@@ -18,56 +26,70 @@ class Requests:
             #
             cookies = wd.get_cookies()
             wd.quit()
-        #
-        for cookie in cookies:
-            self.request.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'], path=cookie['path'])
+            Requests.cookies = {}
+            for cookie in cookies:
+                Requests.cookies[cookie['name']] = cookie['value']
+            self.cookies = Requests.cookies
+            self.request = aiohttp.ClientSession(cookies=self.cookies)
 
-    def req(self, path='', method='GET', params=None, cookies=None, headers=None, domain='amazon.com', xmlhttp=False, ref=None):
-        return self.request.request(
-            method, f'https://{domain}/{path}', params=params or {}, cookies=cookies or {},
-            headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                              'Chrome/121.0.0.0 Safari/537.36',
-                'Access-Control-Allow-Origin': '*', 'Origin': f'https://{domain}',
-                'Referer': ref or f'https://{domain}/',
-            } | ({
-                'Rtt': '100', 'Sec-Ch-Device-Memory': '8', 'X-Requested-With': 'XMLHttpRequest',
-                'Sec-Ch-Dpr': '1.25', 'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-                'Sec-Ch-Ua-Mobile': '?0', 'Sec-Ch-Ua-Platform': 'Windows',
-                'Sec-Ch-Ua-Platform-Version': '14.0.0', 'Sec-Ch-Viewport-Width': '810',
-                'Sec-Fetch-Dest': 'empty', 'Sec-Fetch-Mode': 'cors',
-                'Sec-Fetch-Site': 'same-origin', 'Viewport-Width': '810',
-            } if xmlhttp else {}) | (headers or {}),
-        )
+    async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None):
+        return await self.request.request(method, f'https://{self.domain}/{path}', params=params, headers={
+            'User-Agent': UserAgent(
+                100, software_names=[SoftwareName.CHROME.value],
+                operating_systems=[OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value],
+            ).get_random_user_agent(),
+            'Access-Control-Allow-Origin': '*',
+            'Origin': f'https://{self.domain}',
+            'Referer': ref or f'https://{self.domain}/',
+        } | ({
+            'Rtt': '100',
+            'Sec-Ch-Device-Memory': '8',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Sec-Ch-Dpr': '1.25',
+            'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': 'Windows',
+            'Sec-Ch-Ua-Platform-Version': '14.0.0',
+            'Sec-Ch-Viewport-Width': '810',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'Viewport-Width': '810',
+        } if xmlhttp else {}) | (headers or {}))
 
-    def get_html(self, path='', cookies=None, headers=None, domain='amazon.com'):
-        res = self.req(path, cookies=cookies, headers=headers, domain=domain)
-        if res.status_code == 200:
-            return res.text
+    async def get_html(self, path='', headers=None):
+        res = await self.req(path, headers=headers)
+        if res.status == 200:
+            return await res.text()
         return None
 
-    def get_reviews(self, asin, page=1, params=None, keywords='', **kwargs):
+    async def get_reviews(self, asin, page=1, params=None, keywords='', xmlhttp=True, **kwargs):
         curr_params = {
-                'filterByAge': '',
-                'pageNumber': page,
-                'filterByLanguage': '',
-                'filterByKeyword': keywords,
-                'shouldAppend': 'undefined',
-                'deviceType': 'desktop',
-                'canShowIntHeader': 'undefined',
-                'reftag': 'cm_cr_arp_d_viewopt_srt',
-                'pageSize': 10,
-                'asin': asin,
-                'scope': 'reviewsAjax{}'.format(self.reviews_request_counter),
-            }
+            'formatType': 'current_format' if kwargs.get('current_format') else '',
+            'filterByAge': '',
+            'pageNumber': page,
+            'filterByLanguage': '',
+            'filterByKeyword': keywords,
+            'shouldAppend': 'undefined',
+            'deviceType': 'desktop',
+            'canShowIntHeader': 'undefined',
+            'reftag': 'cm_cr_arp_d_viewopt_srt',
+            'pageSize': 10,
+            'asin': asin,
+            'scope': 'reviewsAjax{}'.format(self.reviews_request_counter),
+        }
         if not params:
             params = {}
         params |= curr_params
-        res = self.req(kwargs.get('canonical_link', f'/product-reviews/{asin}'), 'GET', params, domain=kwargs.get('domain', 'amazon.com'))
-        # res = self.req('/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt', 'POST', params, domain=kwargs.get('domain', 'amazon.com'), xmlhttp=True)
-        if res.status_code == 200:
+        if xmlhttp:
+            res = await self.req(
+                'hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt',
+                'POST', params, xmlhttp=True,
+            )
+        else:
+            res = await self.req(kwargs.get('canonical_link', f'product-reviews/{asin}'), 'GET', params)
+        if res.status == 200:
             self.reviews_request_counter += 1
-            return res.text
-        print('FAIL:', res, res.text)
+            return await res.text()
+        print('FAIL:', res, await res.text())
         return None
-
