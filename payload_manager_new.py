@@ -13,16 +13,16 @@ processes_waiters = ThreadPoolExecutor(os.cpu_count())
 alive = True
 
 
-def add_reviews_tasks(asins, user_id, callback=None, domain=None, current_format=True):
+def add_reviews_tasks(asins, user_id=None, callback=None, domain=None, current_format=True, keywords=''):
     for asin in asins:
         processes_waiters.submit(
             add_task, 'collect_reviews', asin=asin,
             user=str(user_id), callback=callback, domain=domain,
-            current_format=current_format,
+            current_format=current_format, keywords=keywords,
         )
 
 
-def add_products_task(asins, list_name, user_id, callback=None, domain=None):
+def add_products_task(asins, list_name=None, user_id=None, callback=None, domain=None):
     # good_asins = set()
     # for asin in asins:
     #     if state.get_asin(asin, 'products') > -1:
@@ -34,14 +34,14 @@ def add_products_task(asins, list_name, user_id, callback=None, domain=None):
     )
 
 
-def add_amazon_aspects_task(name, asins, user_id, domain):
+def add_amazon_aspects_task(name=None, asins=None, user_id=None, domain='amazon.com'):
     processes_waiters.submit(
         add_task, 'collect_amazon_aspects', list_name=name,
         asins=''.join(asins), user=user_id, domain=domain,
     )
 
 
-def add_asins_nearby_task(asin, user_id, limit, domain):
+def add_asins_nearby_task(asin, user_id=None, limit=None, domain=None):
     processes_waiters.submit(add_task, 'collect_asins_nearby', asin=asin, user=user_id, limit=limit, domain=domain)
 
 

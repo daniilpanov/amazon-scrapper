@@ -14,10 +14,12 @@ from telebot.apihelper import ApiTelegramException
 
 import database
 import payload_manager_new as payload_manager
-import state
+from functions import base_chrome_init
 from helpers import get_all_asins_from_text, log
-from state import chunk
 import settings
+
+import collect_asins_nearby as cmd_collect_asins_nearby
+import collect_amazon_aspects as cmd_collect_amazon_aspects
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc')
 auth_users = set()
@@ -576,6 +578,51 @@ def non_verification_user_msg(msg: types.Message):
 
 # ##BOTTLE REQUESTS## #
 def run_bottle():
+    @bottle.route('/cmd/reviews/collect', 'GET')
+    def bottle_reviews_collect():
+        asins = request.params.get('asins', '').split(',')
+        domain = request.params.get('domain', 'amazon.com')
+        keywords = request.params.get('keywords', '')
+        current_format = request.params.get('current_format', True)
+        if not asins or not all(map(lambda x: len(x) == 10, asins)):
+            return bottle.HTTPResponse(status=400)
+        payload_manager.add_reviews_tasks(asins, domain=domain, current_format=current_format, keywords=keywords)
+        return bottle.HTTPResponse(status=204)
+
+    @bottle.route('/cmd/products/collect', 'GET')
+    def bottle_products_collect():
+        asins = request.params.get('asins', '').split(',')
+        domain = request.params.get('domain', 'amazon.com')
+        if not asins or not all(map(lambda x: len(x) == 10, asins)):
+            return bottle.HTTPResponse(status=400)
+        payload_manager.add_products_task(asins, domain=domain)
+        return bottle.HTTPResponse(status=204)
+
+    @bottle.route('/cmd/amazon_aspects/collect', 'GET')
+    def bottle_amazon_aspects_collect():
+        asins = request.params.get('asins', '').split(',')
+        domain = request.params.get('domain', 'amazon.com')
+        if not asins or not all(map(lambda x: len(x) == 10, asins)):
+            return bottle.HTTPResponse(status=400)
+        payload_manager.add_amazon_aspects_task(asins=asins, domain=domain)
+
+    @bottle.route('/cmd/asins_nearby/collect', 'GET')
+    def bottle_asins_nearby_collect():
+        asin = request.params.get('asin')
+        if not asin:
+            return bottle.HTTPResponse(status=400)
+        domain = request.params.get('domain', 'amazon.com')
+        limited = request.params.get('limited', True)
+        unique_brands = request.params.get('unique_brands', False)
+        wd = base_chrome_init(f'https://{domain}')
+        wd.change_loc(domain=domain)
+        url = cmd_collect_asins_nearby.get_bsr(asin, wd, domain)
+        list_asins = list(cmd_collect_asins_nearby.get_asins(url, wd, asin, limited, domain, unique_brands, False))
+        return bottle.HTTPResponse(status=200, body=json.dumps({
+            'bsr_url': url,
+            'list_asins': list_asins,
+        }))
+
     @bottle.route('/send_msg', method='POST')
     def send_message():
         msg = request.forms.get('msg')

@@ -6,7 +6,7 @@ from functions import base_chrome_init
 from helpers import get_all_asins_from_text, parse_args
 
 
-def get_asins(url, wd, excluded=None, limit=True, domain='amazon.com'):
+def get_asins(url, wd, excluded=None, limit=True, domain='amazon.com', unique_brands=False, to_links=True):
     wd.get(url)
     soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
     links_a = soup.select('div.a-cardui[id*="asin-index"]')
@@ -20,7 +20,7 @@ def get_asins(url, wd, excluded=None, limit=True, domain='amazon.com'):
         if limit and reviews_count < 700 or excluded and excluded in link.find('a')['href']:
             continue
         i += 1
-        yield f'https://{domain}/dp/' + get_all_asins_from_text(link.find('a')['href'])[0]
+        yield (f'https://{domain}/dp/' if to_links else '') + get_all_asins_from_text(link.find('a')['href'])[0]
 
 
 def get_bsr(asin, wd, domain):
@@ -74,20 +74,22 @@ if __name__ == '__main__':
         wd.change_loc(domain=params_dict['domain'])
         # get department url
         url = get_bsr(params_dict['asin'], wd, params_dict['domain'])
-        requests.post('http://localhost:8080/send_msg', {
-            'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
-            'uid': params_dict.get('user', '1428909514'),
-        })
         # search asins
         result = list(get_asins(url, wd, params_dict['asin'], params_dict.get('limit', True), params_dict['domain']))
-        requests.post('http://localhost:8080/send_msg', {
-            'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
-            'uid': params_dict.get('user', '1428909514'),
-        })
+        if 'user' in params_dict:
+            requests.post('http://localhost:8080/send_msg', {
+                'msg': f'BSR URL: {url}\n(for [{params_dict["asin"]}])',
+                'uid': params_dict['user'],
+            })
+            requests.post('http://localhost:8080/send_msg', {
+                'msg': f'BSR products (for [{params_dict["asin"]}]):\n' + '\n'.join(result),
+                'uid': params_dict['user'],
+            })
     except Exception as e:
-        requests.post('http://localhost:8080/send_msg', {
-            'msg': f'Error on collecting nearby asins: {params_dict["asin"]}\n' + str(e) + '\n',
-            'uid': params_dict['user'],
-        })
+        if 'user' in params_dict:
+            requests.post('http://localhost:8080/send_msg', {
+                'msg': f'Error on collecting nearby asins: {params_dict["asin"]}\n' + str(e) + '\n',
+                'uid': params_dict['user'],
+            })
     finally:
         requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})

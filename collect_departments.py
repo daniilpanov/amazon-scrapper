@@ -297,23 +297,22 @@ if __name__ == '__main__':
     domain = params_dict.get('domain', 'amazon.com')
     try:
         params_dict.setdefault('dep_name', None)
-        # params_dict.setdefault('user', '1428909514')
-        params_dict.setdefault('user', '1456674317')
         start(
             # name of the list
             params_dict['dep_name'] or 'all departments',
             # name of the collecting department and TG user
-            params_dict['dep_name'], params_dict['user'],
+            params_dict['dep_name'], params_dict.get('user'),
             # workers_number
             settings.THREADS['departments'],
         )
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:
         # raise e
-        send_bot_msg(
-            params_dict['user'],
-            f'Error on collecting departments: {params_dict["dep_name"]}\n' + str(e) + '\n',
-        )
+        if 'user' in params_dict:
+            send_bot_msg(
+                params_dict['user'],
+                f'Error on collecting departments: {params_dict["dep_name"]}\n' + str(e) + '\n',
+            )
     finally:
         if '_id' in params_dict:
             requests.post('http://localhost:8080/end_task', {'_id': params_dict['_id']})

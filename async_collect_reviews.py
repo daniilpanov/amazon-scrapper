@@ -5,7 +5,6 @@ from builtins import Exception
 from json import JSONDecodeError
 from queue import Queue
 from threading import Thread
-from time import sleep
 
 from bs4 import BeautifulSoup
 from pandas import DataFrame
@@ -219,9 +218,9 @@ async def start_reviews_collect(params_dict):
 if __name__ == '__main__':
     import sys
     p = parse_args(sys.argv)
-    p.setdefault('asin', 'B094TDK36S')
     p.setdefault('domain', 'amazon.com')
     p.setdefault('current_format', False)
+    print(p)
     writer_thr.start()
     logger_thr.start()
     asyncio.run(start_reviews_collect(p))

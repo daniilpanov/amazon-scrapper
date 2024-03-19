@@ -1,10 +1,6 @@
-import random
-
 import aiohttp
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
-
-from functions import base_chrome_init
 
 
 class Requests:
@@ -13,24 +9,15 @@ class Requests:
     reviews_request_counter: int = 1
     domain: str
 
-    def __init__(self, domain='amazon.com', **kwargs):
+    def __init__(self, domain='amazon.com'):
         self.domain = domain
-        if 'session-id' in kwargs and 'session-id-time' in kwargs:
-            self.cookies = {'session-id-time': kwargs['session-id-time'], 'session-id': kwargs['session-id']}
-        elif Requests.cookies:
-            self.cookies = Requests.cookies
-        else:
-            #
-            wd = base_chrome_init(goto=f'https://{domain}')
-            wd.change_loc()
-            #
-            cookies = wd.get_cookies()
-            wd.quit()
-            Requests.cookies = {}
-            for cookie in cookies:
-                Requests.cookies[cookie['name']] = cookie['value']
-            self.cookies = Requests.cookies
-            self.request = aiohttp.ClientSession(cookies=self.cookies)
+
+    async def init(self):
+        if self.request:
+            await self.request.close()
+        self.request = aiohttp.ClientSession()
+        await self.req()
+        self.cookies = dict(self.request.cookie_jar)
 
     async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None):
         return await self.request.request(method, f'https://{self.domain}/{path}', params=params, headers={
