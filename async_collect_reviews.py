@@ -164,11 +164,16 @@ async def collect(asin, keywords, user, domain, index=0, current_format=True):
             xmlhttp=True,
         )
 
-        async def send_wrapper(s, a, _p, _i, k, d, cf):
+        async def send_wrapper(s, a, _p, _i, k, d, cf, retry=True):
+            if not s.request:
+                await asyncio.sleep(1)
+                return await send_wrapper(s, a, _p, _i, k, d, cf)
+
             res = await send_request(s, a, _p, _i, k, d, cf)
-            if not res:
+            if not res and retry:
                 await sess.init()
-            return await send_wrapper(s, a, _p, _i, k, d, cf)
+                return await send_wrapper(s, a, _p, _i, k, d, cf, False)
+            return res
 
         try:
             tasks = []
