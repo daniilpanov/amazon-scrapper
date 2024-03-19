@@ -47,7 +47,6 @@ def write_data(q: Queue):
 def logger(q: Queue):
     while True:
         data_res = q.get()
-        print(data_res)
         if not data_res:
             return
 
@@ -120,11 +119,11 @@ async def send_request(sess: Requests, asin, seed, page, keywords='', domain='am
         s //= length
 
     try:
-        res = await sess.get_reviews(asin, page, current_params, keywords, False, current_format=current_format)
+        res = await sess.get_reviews(asin, page, current_params, keywords, current_format=current_format)
         if not res or 'BAAAAAAD ASIN!' in res:
             log(f'broken result. ASIN: {asin}')
             return False
-        return process_data_from_page(asin, seed, res, domain)
+        return process_data(asin, seed, res, domain)
     except Exception as e:
         log(e)
         log('something went wrong. send this ASIN to the end of a queue')
@@ -136,12 +135,14 @@ async def collect(asin, keywords, user, domain, index=0, current_format=True):
         return -1
     log('loading Requests')
     sess = Requests(domain)
+    await sess.init()
 
     soup = BeautifulSoup(await sess.get_reviews(asin, params={
         'formatType': 'current_format' if current_format else '',
     }, xmlhttp=False), features='lxml')
     reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
     while not reviews_count_element:
+        await sess.init()
         soup = BeautifulSoup(await sess.get_reviews(asin, params={
             'formatType': 'current_format' if current_format else '',
         }, xmlhttp=False), features='lxml')
@@ -162,11 +163,18 @@ async def collect(asin, keywords, user, domain, index=0, current_format=True):
             f'/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews',
             xmlhttp=True,
         )
+
+        async def send_wrapper(s, a, _p, _i, k, d, cf):
+            res = await send_request(s, a, _p, _i, k, d, cf)
+            if not res:
+                await sess.init()
+            return await send_wrapper(s, a, _p, _i, k, d, cf)
+
         try:
             tasks = []
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
-                    tasks.append(send_request(sess, asin, params_seed, i, keywords, domain, current_format))
+                    tasks.append(send_wrapper(sess, asin, params_seed, i, keywords, domain, current_format))
                 index += 1
             await asyncio.gather(*tasks)
             await sess.request.close()
@@ -218,9 +226,9 @@ async def start_reviews_collect(params_dict):
 if __name__ == '__main__':
     import sys
     p = parse_args(sys.argv)
+    p.setdefault('asin', 'B08H4YYXYM')
     p.setdefault('domain', 'amazon.com')
     p.setdefault('current_format', False)
-    print(p)
     writer_thr.start()
     logger_thr.start()
     asyncio.run(start_reviews_collect(p))
