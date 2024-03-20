@@ -16,6 +16,26 @@ class Requests:
             await self.request.close()
         self.request = aiohttp.ClientSession()
         await self.req()
+        print(dict(self.request.cookie_jar))
+        await self.req(
+            'https://www.{domain}/portal-migration/hz/glow/address-change?actionSource=glow',
+            'POST',
+            {
+                'actionSource': 'glow',
+                'deviceType': 'web',
+                'locationType': 'LOCATION_INPUT',
+                'pageType': 'Gateway',
+                'storeContext': 'generic',
+                'zipCode': 90005,
+            },
+            xmlhttp=True,
+        )
+        await self.req(
+            'https://www.{domain}/portal-migration/hz/glow/condo-refresh-html'
+            '?triggerFeature=AddressList&deviceType=desktop&pageType=Detail&storeContext=hpc&locker=%7B%7D',
+            'GET', xmlhttp=True,
+        )
+        print(dict(self.request.cookie_jar))
 
     async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None, retry=True):
         try:

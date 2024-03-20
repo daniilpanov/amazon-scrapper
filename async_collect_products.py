@@ -1,13 +1,10 @@
-import requests
-
-import database as db
-import state
-from functions import base_chrome_init, captcha_solve
-from helpers import parse_args, log, send_bot_msg, end_task
-from parser import parse_product
-
+import asyncio
 import logging
 
+import amazon_requests
+import database as db
+from helpers import parse_args, log, send_bot_msg, end_task
+from parser import parse_product
 from state import chunk
 
 logger = logging.getLogger('products')
@@ -20,26 +17,24 @@ logger.addHandler(handler)
 domain = 'amazon.com'
 
 
-def collect(products_info_list):
+async def collect(products_info_list):
     # products_info_list = list(asin for asin in products_info_list if state.get_asin(asin, 'products') != -1)
     if not products_info_list:
         return -1
-    webdriver = base_chrome_init(goto=f'https://{domain}')
-    webdriver.change_loc(domain=domain)
+    sess = amazon_requests.Requests(domain)
+    await sess.init()
     collected = set()
 
     for el in products_info_list:
         # if state.get_asin(el, 'products') == -1:
         #     collected.add(el)
         #     continue
-        webdriver.get(f'https://{domain}/dp/' + el)
-        webdriver.activate_jquery()
+        html = await sess.get_html(f'dp/{el}')
 
-        if product_info_write(el, webdriver.get_page_source()):
-            state.write_asin(el, -1, 'products')
+        if product_info_write(el, html):
             collected.add(el)
 
-    webdriver.driver.quit()
+    await sess.request.close()
     return collected
 
 
@@ -53,17 +48,13 @@ def product_info_write(asin, html):
         return False
 
 
-if __name__ == '__main__':
-    import sys
-    params_dict = parse_args(sys.argv)
-    domain = params_dict.get('domain', 'amazon.com')
-    asins = chunk(params_dict.get('asins', ''))
+async def start(asins):
     res = False
     c = 15
     try:
         if asins:
             while not res and c > 0:
-                res = collect(asins)
+                res = await collect(asins)
                 c -= 1
         else:
             log('No ASINs error!')
@@ -80,8 +71,16 @@ if __name__ == '__main__':
                 send_bot_msg(
                     params_dict['user'],
                     f'Product cards of "{params_dict["list_name"]}" list are NOT collected.' \
-                    if 'list_name' in params_dict else f'Products {params_dict["asins"]} are NOT collected'
+                        if 'list_name' in params_dict else f'Products {params_dict["asins"]} are NOT collected'
                 )
     finally:
         if 'id' in params_dict:
             end_task(params_dict['_id'])
+
+
+if __name__ == '__main__':
+    import sys
+
+    params_dict = parse_args(sys.argv)
+    domain = params_dict.get('domain', 'amazon.com')
+    asyncio.run(start(chunk(params_dict.get('asins', 'B08H4YYXYM'))))

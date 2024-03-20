@@ -442,7 +442,6 @@ def delete_asins(msg: types.Message, **kwargs):
     if asins_raw:
         for args in (
             (get_all_asins_from_text(asins_raw), msg.from_user.id),
-            (get_all_asins_from_text(asins_raw), msg.from_user.id, 'raw_product_card_htmls'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card', 'amazon_data', 'products'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'product_card', 'amazon_data', 'amazon_aspects'),
             (get_all_asins_from_text(asins_raw), msg.from_user.id, 'aspects_color', 'ai_highlights'),

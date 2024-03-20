@@ -102,20 +102,6 @@ def write_reviews(reviews):
         return True
 
 
-def write_product_html(asin, html, domain='amazon.com', retry=True):
-    try:
-        return db()['raw_product_card_htmls'].insert_one({
-            'asin': asin, 'product_url': f'https://{domain}/dp/{asin}',
-            'HTML_text': html,
-            'scrap_datetime': datetime.datetime.now(pytz.UTC),
-        })
-    except (BulkWriteError, DuplicateKeyError) as e:
-        if not retry:
-            return False
-        db()['raw_product_card_htmls'].delete_one({'asin': asin})
-        return write_product_html(asin, html, domain, False)
-
-
 def write_product_parsed(asin, product_url, title, descr, picture_url, parse_datetime, features, top5phr, price):
     try:
         return db()['product_card'].insert_one({

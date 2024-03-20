@@ -15,19 +15,13 @@ def collect(products_aspects_list):
     collected = set()
 
     for el in products_aspects_list:
-        html = database.db('amazon_data')['raw_product_card_htmls'].find_one({'asin': el})
-        if html:
-            html = html['HTML_text']
-            if products_aspects_write(el, html):
-                collected.add(el)
-                continue
-
         wd.get(f'https://{domain}/dp/{el}')
         html = wd.get_page_source()
         if html and products_aspects_write(el, html):
             collected.add(el)
 
     return set(products_aspects_list) == collected
+
 
 def products_aspects_write(asin, html):
     aspects = parse_aspects(asin, html)

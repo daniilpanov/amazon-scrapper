@@ -33,7 +33,7 @@ logging_queue = Queue()
 def write_data(q: Queue):
     while True:
         data_res = q.get()
-        if not data_res:
+        if data_res is None:
             return
         df = DataFrame(data_res, columns=[
             'review_id', 'product_url', 'asin',
