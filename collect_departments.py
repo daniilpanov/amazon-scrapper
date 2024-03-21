@@ -1,7 +1,7 @@
+import asyncio
+import json
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from json import JSONDecoder, JSONEncoder, JSONDecodeError
-from time import sleep
+from json import JSONDecodeError
 from typing import List
 
 import openpyxl
@@ -9,8 +9,7 @@ from openpyxl.utils.cell import get_column_letter
 import requests
 from bs4 import BeautifulSoup
 
-import settings
-from functions import WebDriver, base_chrome_init
+import amazon_requests
 from helpers import log, parse_args, send_bot_msg, path
 
 
@@ -116,14 +115,9 @@ class XSheet:
     wb: openpyxl.Workbook
     current_row: int = 1
     departments_tree: Level
-    jsd: JSONDecoder
-    jse: JSONEncoder
-    browsers: list[list[bool, WebDriver]]
-    workers: int
+    session: amazon_requests.Requests
 
-    def __init__(self, name, workers=1):
-        self.jsd = JSONDecoder()
-        self.jse = JSONEncoder()
+    def __init__(self, name, session):
         self.departments_tree = self.load(name) or Level(name)
         p = path('tmp__', f'{name}.xlsx', filecontent=False)
         if os.path.exists(p):
@@ -131,24 +125,7 @@ class XSheet:
         else:
             self.wb = openpyxl.Workbook()
         self.wb.active.title = name
-        self.browsers = []
-        self.workers = workers
-
-    def add_browser(self, wd: WebDriver):
-        self.browsers.append([True, wd])
-        return len(self.browsers) - 1
-
-    def get_browser(self):
-        for i in range(len(self.browsers)):
-            # Если браузер занят
-            if not self.browsers[i][0]:
-                continue
-            self.browsers[i][0] = False
-            return self.browsers[i][1], i
-        return None, -1
-
-    def return_browser(self, i):
-        self.browsers[i][0] = True
+        self.session = session
 
     def set_link(self, link):
         self.departments_tree.link = link
@@ -160,14 +137,14 @@ class XSheet:
 
     def save(self):
         with open(path('tmp__', f'{self.name}.json', filecontent=False), 'w', encoding='utf-8') as f:
-            f.write(self.jse.encode(self.departments_tree.to_dict()))
+            f.write(json.dumps(self.departments_tree.to_dict()))
 
     def load(self, name):
         if not os.path.exists(f'tmp__/{name}.json'):
             return None
         with open(f'tmp__/{name}.json', encoding='utf-8') as f:
             try:
-                d = self.jsd.decode(f.read())
+                d = json.loads(f.read())
             except JSONDecodeError as e:
                 print(e)
                 return None
@@ -190,17 +167,14 @@ class XSheet:
         self.wb.save(os.path.abspath(path('tmp__', f'{self.name}.xlsx', filecontent=False)))
 
 
-def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
+async def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
     if tree.ready:
         return
-    wd, wd_id = xsh.get_browser()
-    while not wd:
-        sleep(1)
-        wd, wd_id = xsh.get_browser()
+    sess = xsh.session
     # if links are not collected
     if not tree.all_items_preloaded:
-        wd.get(tree.link)
-        soup = BeautifulSoup(wd.get_page_source(), features='html.parser')
+        html = await sess.get_html(tree.link)
+        soup = BeautifulSoup(html, features='lxml')
         group = soup.find(role='tree').find(role='group')
         tree.is_last_group = bool(group.select('[role="treeitem"] > span') if group else False)
         if not tree.is_last_group:
@@ -214,8 +188,6 @@ def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
                     tree.add_item(Level(name, a_tag['href']), True)
         tree.all_items_preloaded = True
         xsh.save()
-    if wd_id is not None:
-        xsh.return_browser(wd_id)
     # if links are already collected, or we have a links group
     if tree.is_last_group is False:
         # RECURSIVE_CALL: load tree
@@ -223,22 +195,21 @@ def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
         return (link for link in tree if not name_only or name_only == link.name)
 
 
-def recursive_call(pool: ThreadPoolExecutor, trees, xsh):
+async def recursive_call(trees, xsh):
     futures = []
     for tree in trees:
-        futures.append(pool.submit(recursive_tree, tree, xsh))
-    for future in as_completed(futures):
-        trees = future.result()
+        futures.append(recursive_tree(tree, xsh))
+    res = await asyncio.gather(*futures)
+    for trees in res:
         if trees:
-            recursive_call(pool, trees, xsh)
+            await recursive_call(trees, xsh)
 
 
-def collect_all_info(xsheet: XSheet, dep_name=None):
+async def collect_all_info(xsheet: XSheet, dep_name=None):
     log('[1] Get chrome')
     xsheet.set_link(f'https://{domain}/gp/bestsellers')
-    with ThreadPoolExecutor(xsheet.workers) as pool:
-        recursive_tree(xsheet.departments_tree, xsheet, dep_name)
-        recursive_call(pool, xsheet.departments_tree.items, xsheet)
+    await recursive_tree(xsheet.departments_tree, xsheet, dep_name)
+    await recursive_call(xsheet.departments_tree.items, xsheet)
     xsheet.save()
     log('[1] Tree collected:', xsheet.departments_tree)
     xsheet.departments_tree.ready = True
@@ -256,25 +227,16 @@ def write_info(xsh: XSheet, tree: Level, cat_names: list[str] | None = None):
     return True
 
 
-def add_browser():
-    wd = base_chrome_init(goto=f'https://{domain}')
-    wd.change_loc(domain=domain)
-    return wd
-
-
-def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = True, workers=1):
+async def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = True):
     if not sheet_name:
         sheet_name = str(hash(tg_note_user_id))
-    xsh = XSheet(sheet_name, workers)
-
-    with ThreadPoolExecutor(os.cpu_count()) as pool:
-        for _ in range(workers):
-            fut = pool.submit(add_browser)
-            fut.add_done_callback(lambda res: xsh.add_browser(res.result()) if res.done() else None)
+    sess = amazon_requests.Requests(domain)
+    xsh = XSheet(sheet_name, sess)
 
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
-        collect_all_info(xsh, dep_name)
+        await collect_all_info(xsh, dep_name)
+    await sess.request.close()
     if tg_note_user_id:
         log('[0] Write all info')
         for item in xsh.departments_tree:
@@ -297,14 +259,12 @@ if __name__ == '__main__':
     domain = params_dict.get('domain', 'amazon.com')
     try:
         params_dict.setdefault('dep_name', None)
-        start(
+        asyncio.run(start(
             # name of the list
             params_dict['dep_name'] or 'all departments',
             # name of the collecting department and TG user
             params_dict['dep_name'], params_dict.get('user'),
-            # workers_number
-            settings.THREADS['departments'],
-        )
+        ))
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:
         # raise e

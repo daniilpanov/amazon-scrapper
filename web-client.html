@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.3.js"
+            integrity="sha256-nQLuAZGRRcILA+6dMBOvcRh5Pe310sBpanc6+QBmyVM=" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <style>
+        table td {
+            border: 1px solid black;
+        }
+        .tab-content [class*="col-"] > div {
+            border-radius: 1em;
+            border: 1px solid black;
+            margin: 2em;
+            padding: 3em;
+            height: 100%;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+            crossorigin="anonymous"></script>
+    <title>AMAZON WEB MANAGEMENT</title>
+
+    <script>
+        let tasks_list = [];
+        function add_task(task_id) {
+            $.post("http://135.181.13.132/tasks/add", {
+
+            }).done(function () {
+
+            });
+        }
+        function delete_task(task_id) {
+            $.ajax({
+                url: "http://135.181.13.132/tasks/delete/" + String(task_id),
+                type: "DELETE",
+            });
+        }
+        function update() {
+            $.get("http://135.181.13.132/tasks/get").done(function () {
+
+            }).error(function () {
+
+            });
+        }
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            $("form[action]").submit(function (e) {
+                e.preventDefault();
+                const data = $(this).serialize();
+                const url = "http://135.181.13.132" + $(this).prop("action");
+                const method = $(this).prop("method") ?? "get";
+                $.ajax({
+                    method: method,
+                    url: url,
+                    data: JSON.stringify(data),
+                })
+                return false;
+            })
+        })
+    </script>
+</head>
+
+<body>
+<header>
+    <nav>
+        <div class="nav nav-tabs" id="nav-tab" role="tablist">
+            <button class="nav-link active" id="nav-bsr30-tab" data-bs-toggle="tab" data-bs-target="#nav-bsr30"
+                    type="button" role="tab" aria-controls="nav-bsr30" aria-selected="true">BSR 30</button>
+            <button class="nav-link" id="nav-reviews-tab" data-bs-toggle="tab" data-bs-target="#nav-reviews"
+                    type="button" role="tab" aria-controls="nav-reviews" aria-selected="false">Reviews
+            </button>
+            <button class="nav-link" id="nav-product-tab" data-bs-toggle="tab" data-bs-target="#nav-products"
+                    type="button" role="tab" aria-controls="nav-products" aria-selected="false">Products
+            </button>
+        </div>
+    </nav>
+</header>
+
+<main class="container-fluid">
+    <div class="row flex-nowrap">
+
+        <aside class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 bg-dark">
+            <div class="d-flex flex-column align-items-center align-items-sm-start px-3 pt-2 text-white min-vh-100">
+                <h3>Active tasks list</h3>
+                <ul id="tasks">
+                    <!-- li with data-bs-task-id -->
+                </ul>
+            </div>
+        </aside>
+
+        <div class="col-auto tab-content col-md-9 col-xl-10 px-sm-10 px-12" id="content">
+            <div class="tab-pane fade show active" id="nav-bsr30" role="tabpanel" aria-labelledby="nav-bsr30-tab">
+                <h2>Collect 30 ASINs from BSR</h2>
+                <form method="post" action="http://135.181.13.132/cmd/alias/get_all">
+                    <label>
+                        Task name (optional)
+                        <input type="text" class="form-control" placeholder="Task name">
+                    </label>
+                    <label>
+                        Category name
+                        <input type="text" name="category" class="form-control" placeholder="Category name" required>
+                    </label>
+                    <label>
+                        Client alias (optional)
+                        <input type="text" name="client_alias" class="form-control" placeholder="Client alias">
+                    </label>
+                    <label>
+                        BSR link (full URL)
+                        <input type="text" name="bsr_link" class="form-control" placeholder="BSR link" required>
+                    </label>
+                    <button type="submit" class="btn btn-success">Create task</button>
+                </form>
+            </div>
+
+            <div class="tab-pane fade" id="nav-reviews" role="tabpanel" aria-labelledby="nav-reviews-tab">
+                <h2>Reviews management</h2>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div>
+                            <h4>Collect reviews</h4>
+                            <form method="get" action="http://135.181.13.132/cmd/reviews/collect">
+                                <label>
+                                    Enter the ASINs (divide by any punctuation symbol):
+                                    <textarea name="asin" class="form-control" placeholder="ASINs or links list"></textarea>
+                                </label>
+                                <button type="submit" class="btn btn-success">Create task</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div>
+                            <h4>Count reviews</h4>
+                            <form method="get" action="http://135.181.13.132/cmd/reviews/count">
+                                <label>
+                                    Enter the ASIN:
+                                    <input type="text" name="asin" placeholder="ASIN or link">
+                                </label>
+                                <button type="submit" class="btn btn-success">Create task</button>
+                            </form>
+                            <div id="count-reviews-result">
+                                <!-- 30/100 or 21321/3423452 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="nav-products" role="tabpanel" aria-labelledby="nav-product-tab">
+                <h2>Products management</h2>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div>
+                            <h4>Get product info</h4>
+                            <div class="row">
+                                <form class="col-md-6" method="get" action="http://135.181.13.132/cmd/products/get">
+                                    <label>
+                                        Enter the ASIN:
+                                        <input type="text" class="form-control" name="asin" placeholder="ASIN or link">
+                                    </label>
+                                    <button type="submit">Get info</button>
+                                </form>
+
+                                <div class="col-md-6" id="product-info">
+                                    <table>
+                                        <tr>
+                                            <td>ASIN</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>URL</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Title</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Description</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Features</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Top 5 phrases</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Price</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Amazon Aspects</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Category [name | client]</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div>
+                            <h4>Collect products data</h4>
+                            <form method="get" action="http://135.181.13.132/cmd/products/collect">
+                                <label>
+                                    Enter the ASINs (divide by any punctuation symbol):
+                                    <textarea name="asin" class="form-control" placeholder="ASINs or links list"></textarea>
+                                </label>
+                                <button type="submit" class="btn btn-success">Create task</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div>
+                            <h4>Set category for ASINs</h4>
+                            <form method="post" action="http://135.181.13.132/cmd/category/set">
+                                <label>
+                                    Category name
+                                    <input type="text" class="form-control" name="category" placeholder="Category name">
+                                </label>
+                                <label>
+                                    Client alias
+                                    <input type="text" class="form-control" name="alias-client" placeholder="Client alias">
+                                </label>
+                                <label>
+                                    Enter the ASINs (divide by any punctuation symbol):
+                                    <textarea name="asin" class="form-control" placeholder="ASINs or links list"></textarea>
+                                </label>
+                                <button type="submit" class="btn btn-success">Set category</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+</body>
+</html>
