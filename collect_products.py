@@ -1,14 +1,10 @@
-import requests
-
 import database as db
-import state
-from functions import base_chrome_init, captcha_solve
-from helpers import parse_args, log, send_bot_msg, end_task
+from functions import base_chrome_init
+from helpers import parse_args, log, send_bot_msg, end_task, chunk_asins
 from parser import parse_product
 
 import logging
 
-from state import chunk
 
 logger = logging.getLogger('products')
 logger.setLevel(logging.DEBUG)
@@ -36,7 +32,6 @@ def collect(products_info_list):
         webdriver.activate_jquery()
 
         if product_info_write(el, webdriver.get_page_source()):
-            state.write_asin(el, -1, 'products')
             collected.add(el)
 
     webdriver.driver.quit()
@@ -57,7 +52,7 @@ if __name__ == '__main__':
     import sys
     params_dict = parse_args(sys.argv)
     domain = params_dict.get('domain', 'amazon.com')
-    asins = chunk(params_dict.get('asins', ''))
+    asins = chunk_asins(params_dict.get('asins', ''))
     res = False
     c = 15
     try:

@@ -26,26 +26,51 @@
 
     <script>
         let tasks_list = [];
-        function add_task(task_id) {
-            $.post("http://135.181.13.132/tasks/add", {
-
-            }).done(function () {
-
+        function add_task(task_alias, data) {
+            $.post("http://135.181.13.132/tasks/add/" + task_alias, {
+                method: "POST",
+                data: data,
+            }).success(function (data, status, jqXhr) {
+                tasks_list.push(data['id']);
+                const new_element = $("<li>");
+                new_element.prop("data-bs-task-id", data['id']).appendTo("#tasks");
             });
         }
         function delete_task(task_id) {
             $.ajax({
                 url: "http://135.181.13.132/tasks/delete/" + String(task_id),
                 type: "DELETE",
+            }).success(function () {
+                $("#tasks li[data-bs-task-id='" + String(task_id) + "']").remove();
+                tasks_list.splice(tasks_list.indexOf(task_id), 1)
             });
         }
         function update() {
-            $.get("http://135.181.13.132/tasks/get").done(function () {
-
+            $.get("http://135.181.13.132/tasks/get").success(function (data) {
+                let temp_tasks_list = [];
+                for (let i = 0; i < data.length; ++i) {
+                    temp_tasks_list.push(data["task_id"]);
+                    $("#tasks li[data-bs-task-id='" + String(data[i]["task_id"]) + "'] .progress")
+                        .css("width", String(data["progress"]) + "%");
+                    if (data["progress"] >= 100) {
+                        $("#tasks li[data-bs-task-id='" + String(data[i]["task_id"]) + "']").addClass("success");
+                    } else {
+                        $("#tasks li[data-bs-task-id='" + String(data[i]["task_id"]) + "']").removeClass("success");
+                    }
+                }
+                for (let i = 0; i < tasks_list.length; ++i) {
+                    if (temp_tasks_list.includes(tasks_list[i])) {
+                        continue;
+                    }
+                    $("#tasks li[data-bs-task-id='" + String(tasks_list[i]) + "']").remove();
+                    tasks_list.splice(tasks_list.indexOf(i), 1);
+                }
             }).error(function () {
 
             });
         }
+
+        let interval_update = setInterval(update, 5000);
     </script>
 
     <script>
@@ -97,7 +122,7 @@
         <div class="col-auto tab-content col-md-9 col-xl-10 px-sm-10 px-12" id="content">
             <div class="tab-pane fade show active" id="nav-bsr30" role="tabpanel" aria-labelledby="nav-bsr30-tab">
                 <h2>Collect 30 ASINs from BSR</h2>
-                <form method="post" action="http://135.181.13.132/cmd/alias/get_all">
+                <form method="post" action="/cmd/alias/get_all">
                     <label>
                         Task name (optional)
                         <input type="text" class="form-control" placeholder="Task name">
@@ -124,7 +149,7 @@
                     <div class="col-md-6">
                         <div>
                             <h4>Collect reviews</h4>
-                            <form method="get" action="http://135.181.13.132/cmd/reviews/collect">
+                            <form method="get" action="/cmd/reviews/collect">
                                 <label>
                                     Enter the ASINs (divide by any punctuation symbol):
                                     <textarea name="asin" class="form-control" placeholder="ASINs or links list"></textarea>
@@ -136,7 +161,7 @@
                     <div class="col-md-6">
                         <div>
                             <h4>Count reviews</h4>
-                            <form method="get" action="http://135.181.13.132/cmd/reviews/count">
+                            <form method="get" action="/cmd/reviews/count">
                                 <label>
                                     Enter the ASIN:
                                     <input type="text" name="asin" placeholder="ASIN or link">
@@ -158,7 +183,7 @@
                         <div>
                             <h4>Get product info</h4>
                             <div class="row">
-                                <form class="col-md-6" method="get" action="http://135.181.13.132/cmd/products/get">
+                                <form class="col-md-6" method="get" action="/cmd/products/get">
                                     <label>
                                         Enter the ASIN:
                                         <input type="text" class="form-control" name="asin" placeholder="ASIN or link">
@@ -213,7 +238,7 @@
                     <div class="col-md-6">
                         <div>
                             <h4>Collect products data</h4>
-                            <form method="get" action="http://135.181.13.132/cmd/products/collect">
+                            <form method="get" action="/cmd/products/collect">
                                 <label>
                                     Enter the ASINs (divide by any punctuation symbol):
                                     <textarea name="asin" class="form-control" placeholder="ASINs or links list"></textarea>
@@ -226,7 +251,7 @@
                     <div class="col-md-6">
                         <div>
                             <h4>Set category for ASINs</h4>
-                            <form method="post" action="http://135.181.13.132/cmd/category/set">
+                            <form method="post" action="/cmd/category/set">
                                 <label>
                                     Category name
                                     <input type="text" class="form-control" name="category" placeholder="Category name">

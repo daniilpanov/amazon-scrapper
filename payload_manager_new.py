@@ -5,7 +5,6 @@ from concurrent.futures import ThreadPoolExecutor
 from subprocess import Popen
 from time import sleep
 
-import state
 from helpers import log
 
 processes: dict[int, Popen] = {}

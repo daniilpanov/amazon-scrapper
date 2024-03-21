@@ -1,5 +1,6 @@
 import os.path
 import re
+from more_itertools import batched
 
 import colorama
 import requests
@@ -7,6 +8,10 @@ from urllib3.exceptions import NewConnectionError, MaxRetryError
 from requests.exceptions import ConnectionError
 
 DEBUG = True
+
+
+def chunk_asins(asins_raw):
+    return batched(asins_raw, 10)
 
 
 # Parse raw asins list from TG message or file or other
