@@ -37,6 +37,8 @@ class Task:
 
     def add_progress(self, value: int):
         self.progress += value / self.all * 100
+        if self.progress >= 100 and self.success is None:
+            self.success = True
 
 
 def add_task(script, alias=None, data=None):

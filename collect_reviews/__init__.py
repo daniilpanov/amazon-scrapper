@@ -1,9 +1,16 @@
+import os
+from concurrent.futures import ThreadPoolExecutor
+
 from helpers import get_all_asins_from_text
 from .async_collect_reviews import *
 
 
+threader = ThreadPoolExecutor(min(os.cpu_count(), 8))
+
+
 async def _run(ev, _id, asins, keywords='', domain='amazon.com', current_format=True):
-    return await asyncio.gather(*(collect(_id, asin, keywords, domain, 0, current_format) for asin in asins))
+    for asin in asins:
+        threader.submit(collect, _id, asin, keywords, domain, 0, current_format)
 
 
 def run(ev, _id, asins, keywords='', domain='amazon.com', current_format=True):
@@ -11,8 +18,5 @@ def run(ev, _id, asins, keywords='', domain='amazon.com', current_format=True):
     if type(asins) is str:
         asins = get_all_asins_from_text(asins)
     task.all = len(asins)
+    task.result = []
     asyncio.run(_run(ev, _id, asins, keywords, domain, current_format))
-    if task.success is None:
-        task.success = True
-    task.progress = 100
-    task.result = asins

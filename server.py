@@ -9,6 +9,7 @@ from starlette.middleware.cors import CORSMiddleware
 import amazon_requests
 import tasks
 from database import db
+from helpers import get_all_asins_from_text
 
 app = fastapi.FastAPI()
 app.add_middleware(
@@ -22,7 +23,6 @@ app.add_middleware(
 
 @app.post('/tasks/add/{script}')
 async def add_task_req(script: str, data=Body()):
-    print(data)
     data = json.loads(data)
     if data and 'alias' in data:
         alias = data['alias']
@@ -71,17 +71,22 @@ async def reviews_count_cmd(asin: str, current_format: bool = True):
 
 
 @app.post('/cmd/category/set')
-async def category_set_cmd(cat_name: str, client_name: str, asins: list, top5_asins: list):
-    top5_asins = set(top5_asins)
+async def category_set_cmd(data=Body()):
+    data = json.loads(data)
+    asins = data['asins']
+    if type(asins) is str:
+        asins = get_all_asins_from_text(asins)
+    top5_asins = set(data['top5_asins'])
     try:
         db('amazon_data')['all_categories'].insert_many([{
-            'Category': cat_name,
+            'Category': data['cat_name'],
             'ASIN': asin,
-            'relation_to_category': client_name,
+            'relation_to_category': data['client_name'],
             'relation_to_TOP5': asin in top5_asins,
         } for asin in asins])
         return fastapi.Response(status_code=fastapi.status.HTTP_204_NO_CONTENT)
     except Exception as e:
+        print(type(e))
         raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 

@@ -37,13 +37,7 @@ def write_data(q: Queue):
         data_res = q.get()
         if data_res is None:
             return
-        df = DataFrame(data_res, columns=[
-            'review_id', 'product_url', 'asin',
-            'date', 'country', 'name', 'title',
-            'content', 'rating', 'helpful', 'options',
-            'scrap_datetime',
-        ])
-        database.write_reviews(df)
+        database.write_reviews(data_res)
 
 
 def logger(q: Queue):
@@ -150,7 +144,10 @@ def send_request(sess: WebDriver, asin, seed, page, keywords='', domain='amazon.
         return False
 
 
-async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+    writer_thr.start()
+    logger_thr.start()
+
     if index == -1:
         return -1
     log('loading Requests')
@@ -180,6 +177,9 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
             res = send_request(s, a, _p, _i, k, d, cf)
             if not res and retry:
                 # await sess.init()
+                u = s.driver.current_url
+                s.get('https://' + d)
+                s.get(u)
                 return send_wrapper(s, a, _p, _i, k, d, cf, False)
             return res
 
@@ -189,7 +189,13 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
                     send_wrapper(webdriver, asin, params_seed, i, keywords, domain, current_format)
                 index += 1
             webdriver.full_close()
-            tasks.get_task(_id).add_progress(1)
+            task = tasks.get_task(_id)
+            task.add_progress(1)
+            task.result.append(asin)
+            data_queue.put(None)
+            logging_queue.put(None)
+            writer_thr.join()
+            logger_thr.join()
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
@@ -198,8 +204,16 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
             log(f'Skip {asin}')
             webdriver.full_close()
             tasks.get_task(_id).success = False
+            data_queue.put(None)
+            logging_queue.put(None)
+            writer_thr.join()
+            logger_thr.join()
             return index
     except KeyboardInterrupt:
         log('Script stopped')
         webdriver.full_close()
+        data_queue.put(None)
+        logging_queue.put(None)
+        writer_thr.join()
+        logger_thr.join()
         raise

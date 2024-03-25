@@ -11,7 +11,7 @@ DEBUG = True
 
 
 def chunk_asins(asins_raw):
-    return batched(asins_raw, 10)
+    return list(''.join(i) for i in batched(asins_raw, 10))
 
 
 # Parse raw asins list from TG message or file or other

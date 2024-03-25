@@ -79,21 +79,24 @@ def db(dbname=None) -> Database:
 
 def write_reviews(reviews):
     revs = []
-    for i, row in reviews.iterrows():
-        revs.append({
-            'asin': row['asin'],
-            'product_url': row['product_url'],
-            'date': row['date'],
-            'country': row['country'],
-            'name': row['name'],
-            'title': row['title'],
-            'description': row['content'],
-            'rating': row['rating'],
-            'helpful': row['helpful'],
-            'options': row['options'],
-            'review_id': row['review_id'],
-            'scrap_datetime': row['scrap_datetime'],
-        })
+    if type(reviews) is list:
+        revs = reviews
+    else:
+        for i, row in reviews.iterrows():
+            revs.append({
+                'asin': row['asin'],
+                'product_url': row['product_url'],
+                'date': row['date'],
+                'country': row['country'],
+                'name': row['name'],
+                'title': row['title'],
+                'description': row['content'],
+                'rating': row['rating'],
+                'helpful': row['helpful'],
+                'options': row['options'],
+                'review_id': row['review_id'],
+                'scrap_datetime': row['scrap_datetime'],
+            })
     if not revs:
         return False
     try:

@@ -63,7 +63,7 @@
 
     <script>
         function add_task(script, task_alias, data, callback=null) {
-            let url = "http://127.0.0.1:8080/tasks/add/" + script;
+            let url = "http://127.0.0.1:8830/tasks/add/" + script;
             data.alias = task_alias;
             $.post(url, JSON.stringify(data)).done(function (data, status, jqXhr) {
                 const new_element = $("<li>");
@@ -75,7 +75,7 @@
         }
         function delete_task(task_id) {
             $.ajax({
-                url: "http://127.0.0.1:8080/tasks/delete/" + String(task_id),
+                url: "http://127.0.0.1:8830/tasks/delete/" + String(task_id),
                 type: "DELETE",
             }).done(function () {
                 $("#tasks li[data-bs-task-id='" + String(task_id) + "']").remove();
@@ -87,12 +87,12 @@
             $("#task-content").addClass("show").addClass("active");
         }
         function update() {
-            $.get("http://127.0.0.1:8080/tasks/get").done(function (data) {
+            $.get("http://127.0.0.1:8830/tasks/get").done(function (data) {
                 $("ul#tasks").html(' ');
                 for (let i = 0; i < data.length; ++i) {
                     const root = $("<li>").attr("data-bs-task-id", data[i]["id"]).appendTo("#tasks");
                     const lnk = $("<a>").attr("href", "#").attr("data-bs-task-id", data[i]["id"]).click(function () {
-                        $.get("http://127.0.0.1:8080/tasks/get/" + $(this).attr("data-bs-task-id")).done(set_task_content);
+                        $.get("http://127.0.0.1:8830/tasks/get/" + $(this).attr("data-bs-task-id")).done(set_task_content);
                     }).text(data[i]["alias"]).appendTo(root);
                     $("<span>").addClass("text-progress").html("&emsp;" + String(data[i]["progress"] ?? 0) + "%").appendTo(lnk);
                     $("<button>").addClass("close").html("&times;").attr("data-bs-task-id", data[i]["id"]).click(function () {
@@ -121,7 +121,7 @@
                 for (let i in raw_data) {
                     data[raw_data[i].name] = raw_data[i].value;
                 }
-                const url = "http://127.0.0.1:8080" + $(this).attr("action");
+                const url = "http://127.0.0.1:8830" + $(this).attr("action");
                 $.post(url, JSON.stringify(data));
                 return false;
             });
@@ -151,7 +151,6 @@
                 const client_alias = data.client_alias;
                 const bsr_link = data.bsr_link;
                 const count = Boolean(Number(data.only_top5)) ? 5 : 30;
-                alert(JSON.stringify(data));
                 add_task("collect_departments", (task_name ?? "Get all") + "#bsr", {
                     bsr: bsr_link,
                     limit: limit,
@@ -159,9 +158,8 @@
                     count: count,
                 }, function (data) {
                     wait(function () {
-                        return $.get("http://127.0.0.1:8080/tasks/get/" + data)
+                        return $.get("http://127.0.0.1:8830/tasks/get/" + data)
                     }, function (data) {
-                        console.log(data);
                         add_task("collect_products", (task_name ?? "Get all") + "#products", {
                             asins: data["result"]["asins"],
                             collect_aspects: amazon_aspects,
@@ -170,19 +168,19 @@
                             asins: data["result"]["asins"],
                             current_format: true,
                         });
-                        $.post("http://127.0.0.1:8080/cmd/category/set", {
+                        $.post("http://127.0.0.1:8830/cmd/category/set", JSON.stringify({
                             cat_name: category,
                             client_name: client_alias,
                             asins: data["result"]["asins"],
                             top5_asins: data["result"]["asins"].slice(0, 5),
-                        })
+                        }))
                     })();
                 });
             });
             //
             $("form[action='/cmd/reviews/count']").submit(function (e) {
                 e.preventDefault();
-                $.get("http://127.0.0.1:8080/cmd/reviews/count", $(this).serialize()).done(function (data) {
+                $.get("http://127.0.0.1:8830/cmd/reviews/count", $(this).serialize()).done(function (data) {
                     $("#count-reviews-result").text(data[2] + ": " + data[0] + "/" + data[1])
                 });
             });
@@ -204,7 +202,7 @@
                 for (let i in raw_data) {
                     data[raw_data[i].name] = raw_data[i].value;
                 }
-                $.get("http://127.0.0.1:8080/products/get/" + data["asin"]).done(function (data) {
+                $.get("http://127.0.0.1:8830/products/get/" + data["asin"]).done(function (data) {
                     console.log(data);
                     // TODO: show output info
                 });
@@ -217,13 +215,12 @@
                 for (let i in raw_data) {
                     data[raw_data[i].name] = raw_data[i].value;
                 }
-                $.get("http://127.0.0.1:8080/cmd/category/set", {
-                    cat_name: data.cat_name,
-                    client_name: data.client_name,
+                $.post("http://127.0.0.1:8830/cmd/category/set", JSON.stringify({
+                    cat_name: data['category'],
+                    client_name: data['alias-client'],
                     asins: data.asins,
                     top5_asins: [],
-                }).done(function (data) {
-                    console.log(data);
+                })).done(function (data) {
                 });
             });
 
@@ -437,7 +434,7 @@
                                 </label>
                                 <label>
                                     Enter the ASINs (divide by any punctuation symbol):
-                                    <textarea name="asin" class="form-control" placeholder="ASINs or links list"></textarea>
+                                    <textarea name="asins" class="form-control" placeholder="ASINs or links list"></textarea>
                                 </label>
                                 <button type="submit" class="btn btn-success">Set category</button>
                             </form>
