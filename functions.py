@@ -330,10 +330,6 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
 
 def chrome_close(wd: WebDriver):
     try:
-        wd.driver.quit()
-    except:
-        pass
-    try:
         wd.driver.close()
     except:
         pass

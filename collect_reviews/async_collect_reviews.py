@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+import urllib
 from builtins import Exception
 from json import JSONDecodeError
 from queue import Queue
@@ -11,9 +12,9 @@ from pandas import DataFrame
 
 import database
 import parser
-from amazon_requests import Requests
+from functions import base_chrome_init, WebDriver
 
-from helpers import log, send_bot_msg, end_task
+from helpers import log
 import tasks
 
 
@@ -108,11 +109,27 @@ def process_data_from_page(asin, seed, process_data_res, domain):
     return bool(res) - (not bool(res))
 
 
-async def send_request(sess: Requests, asin, seed, page, keywords='', domain='amazon.com', current_format=True):
+def send_request(sess: WebDriver, asin, seed, page, keywords='', domain='amazon.com', current_format=True):
     if seed >= params_len:
         return True
 
-    current_params = {}
+    global requests_counter
+
+    current_params = {
+        'formatType': 'current_format' if current_format else '',
+        'filterByAge': '',
+        'pageNumber': page,
+        'filterByLanguage': '',
+        'filterByKeyword': keywords,
+        'shouldAppend': 'undefined',
+        'deviceType': 'desktop',
+        'canShowIntHeader': 'undefined',
+        'reftag': 'cm_cr_arp_d_viewopt_srt',
+        'pageSize': 10,
+        'asin': asin,
+        'scope': 'reviewsAjax{}'.format(requests_counter),
+    }
+    requests_counter += 1
     s = seed
     for i in params:
         length = len(params[i])
@@ -120,12 +137,12 @@ async def send_request(sess: Requests, asin, seed, page, keywords='', domain='am
         s //= length
 
     try:
-        res = await sess.get_reviews(asin, page, current_params, keywords, current_format=current_format)
+        ajax = f"$.post(\"https://www.{domain}/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt\", " \
+               + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
+               + ", null, 'text');"
+        res = sess.execute_script("return " + ajax)
         if not res or 'BAAAAAAD ASIN!' in res:
-            res = await sess.get_reviews(asin, page, current_params, keywords, current_format=current_format, xmlhttp=False)
-            if not res or 'BAAAAAAD ASIN!' in res:
-                return False
-            return process_data_from_page(asin, seed, res, domain)
+            return False
         return process_data(asin, seed, res, domain)
     except Exception as e:
         log(e)
@@ -133,25 +150,22 @@ async def send_request(sess: Requests, asin, seed, page, keywords='', domain='am
         return False
 
 
-async def collect(_id, asin, keywords, domain, index=0, current_format=True):
+async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
     if index == -1:
         return -1
     log('loading Requests')
-    sess = Requests(domain)
-    await sess.init()
+    webdriver = base_chrome_init(goto=f'https://{domain}/')
+    webdriver.change_loc(domain=domain)
+    webdriver.get(webdriver.current_url
+                  + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+    try:
+        webdriver.get(webdriver.get_element('link[rel="canonical"]').get_attribute('href')
+                      + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+    except Exception:
+        pass
 
-    soup = BeautifulSoup(await sess.get_reviews(asin, params={
-        'formatType': 'current_format' if current_format else '',
-    }, xmlhttp=False), features='lxml')
+    soup = BeautifulSoup(webdriver.get_page_source(), features='lxml')
     reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
-    while not reviews_count_element:
-        await sess.init()
-        print(soup)
-        soup = BeautifulSoup(await sess.get_reviews(asin, params={
-            'formatType': 'current_format' if current_format else '',
-        }, xmlhttp=False), features='lxml')
-        reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
-
     reviews_count = 0
     reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
     if len(reviews_count_part) == 2:
@@ -160,44 +174,32 @@ async def collect(_id, asin, keywords, domain, index=0, current_format=True):
 
     try:
         log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-        await sess.req(
-            f'hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin'
-            f'={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns='
-            f'&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl=https://{domain}'
-            f'/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews',
-            xmlhttp=True,
-        )
+        webdriver.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
 
-        async def send_wrapper(s, a, _p, _i, k, d, cf, retry=True):
-            if not s.request:
-                await asyncio.sleep(1)
-                return await send_wrapper(s, a, _p, _i, k, d, cf)
-
-            res = await send_request(s, a, _p, _i, k, d, cf)
+        def send_wrapper(s, a, _p, _i, k, d, cf, retry=True):
+            res = send_request(s, a, _p, _i, k, d, cf)
             if not res and retry:
-                await sess.init()
-                return await send_wrapper(s, a, _p, _i, k, d, cf, False)
+                # await sess.init()
+                return send_wrapper(s, a, _p, _i, k, d, cf, False)
             return res
 
         try:
-            futures = []
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
-                    futures.append(send_wrapper(sess, asin, params_seed, i, keywords, domain, current_format))
+                    send_wrapper(webdriver, asin, params_seed, i, keywords, domain, current_format)
                 index += 1
-            await asyncio.gather(*futures)
-            await sess.request.close()
+            webdriver.full_close()
             tasks.get_task(_id).add_progress(1)
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
-                await sess.request.close()
+                webdriver.full_close()
                 raise e
             log(f'Skip {asin}')
-            await sess.request.close()
+            webdriver.full_close()
             tasks.get_task(_id).success = False
             return index
     except KeyboardInterrupt:
         log('Script stopped')
-        await sess.request.close()
+        webdriver.full_close()
         raise

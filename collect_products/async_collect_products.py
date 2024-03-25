@@ -3,7 +3,6 @@ import asyncio
 import amazon_requests
 import database as db
 import tasks
-from functions import WebDriver
 from helpers import parse_args, log, send_bot_msg, end_task, chunk_asins
 from parser import parse_product, parse_aspects
 
@@ -13,7 +12,6 @@ domain = 'amazon.com'
 async def collect(products_info_list, collect_aspects=True):
     if not products_info_list:
         return -1
-
     sess = amazon_requests.Requests(domain)
     await sess.init()
     collected = set()

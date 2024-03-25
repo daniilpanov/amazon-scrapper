@@ -21,11 +21,7 @@ class Requests:
         if self.request:
             await self.request.close()
         cookies = db('amazon_data')['__cookies'].find_one()
-        while not cookies:
-            cookies = db('amazon_data')['__cookies'].find_one()
-            sleep(10)
-        db('amazon_data')['__cookies'].delete_one({'session-id': cookies['session-id']})
-        self.request = aiohttp.ClientSession(cookies=cookies)
+        self.request = aiohttp.ClientSession(cookies=cookies or {})
         await self.req()
 
     async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None, abs_path=False, retry=True):
