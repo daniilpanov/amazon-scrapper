@@ -1,7 +1,15 @@
 from .async_collect_reviews import *
 
 
-def run(ev, asin, keywords='', user=None, domain='amazon.com', current_format=True):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.create_task(collect(asin, keywords, user, domain, 0, current_format))
+async def _run(ev, _id, asins, keywords='', domain='amazon.com', current_format=True):
+    return await asyncio.gather(*(collect(_id, asin, keywords, domain, 0, current_format) for asin in asins))
+
+
+def run(ev, _id, asins, keywords='', domain='amazon.com', current_format=True):
+    task = tasks.get_task(_id)
+    task.all = len(asins)
+    asyncio.run(_run(ev, _id, asins, keywords, domain, current_format))
+    if task.success is None:
+        task.success = True
+    task.progress = 100
+    task.result = asins

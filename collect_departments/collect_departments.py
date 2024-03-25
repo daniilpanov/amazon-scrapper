@@ -30,9 +30,7 @@ class Level:
             is_last_group=None, ready: bool = False, all_items_preloaded: bool = False,
     ):
         self.name = name
-        if (link and not link.strip().startswith(f'https://{domain}')
-                and not link.strip().startswith(f'https://www.{domain}')):
-            link = f'https://{domain}' + link
+        link = link.replace(f'https://{domain}/', '').replace(f'https://www.{domain}/', '')
         self.link = link
         self.is_last_group = is_last_group
         self.ready = ready
@@ -167,7 +165,7 @@ class XSheet:
         self.wb.save(os.path.abspath(path('tmp__', f'{self.name}.xlsx', filecontent=False)))
 
 
-async def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
+async def recursive_tree(tree: Level, xsh: XSheet):
     if tree.ready:
         return
     sess = xsh.session
@@ -184,15 +182,14 @@ async def recursive_tree(tree: Level, xsh: XSheet, name_only=None):
                 if name:
                     name = name.strip()
                 log('[2] Departments found:', name)
-                if not name_only or name_only == name:
-                    tree.add_item(Level(name, a_tag['href']), True)
+                tree.add_item(Level(name, a_tag['href']), True)
         tree.all_items_preloaded = True
         xsh.save()
     # if links are already collected, or we have a links group
     if tree.is_last_group is False:
         # RECURSIVE_CALL: load tree
         # full loading
-        return (link for link in tree if not name_only or name_only == link.name)
+        return (link for link in tree)
 
 
 async def recursive_call(trees, xsh):
@@ -205,10 +202,10 @@ async def recursive_call(trees, xsh):
             await recursive_call(trees, xsh)
 
 
-async def collect_all_info(xsheet: XSheet, dep_name=None):
+async def collect_all_info(xsheet: XSheet):
     log('[1] Get chrome')
     xsheet.set_link(f'https://{domain}/gp/bestsellers')
-    await recursive_tree(xsheet.departments_tree, xsheet, dep_name)
+    await recursive_tree(xsheet.departments_tree, xsheet)
     await recursive_call(xsheet.departments_tree.items, xsheet)
     xsheet.save()
     log('[1] Tree collected:', xsheet.departments_tree)
@@ -227,29 +224,19 @@ def write_info(xsh: XSheet, tree: Level, cat_names: list[str] | None = None):
     return True
 
 
-async def start(sheet_name=None, dep_name=None, tg_note_user_id: int | str | None = True):
-    if not sheet_name:
-        sheet_name = str(hash(tg_note_user_id))
+async def start(task_id):
+    sheet_name = 'all departments'
     sess = amazon_requests.Requests(domain)
     xsh = XSheet(sheet_name, sess)
 
     if not xsh.departments_tree.ready:
         log('[0] Start. Collect all info')
-        await collect_all_info(xsh, dep_name)
+        await collect_all_info(xsh)
     await sess.request.close()
-    if tg_note_user_id:
-        log('[0] Write all info')
-        for item in xsh.departments_tree:
-            write_info(xsh, item)
-        xsh.to_xlsx()
-        log('[0] Open file to send it')
-        with open(path('tmp__', sheet_name + '.xlsx'), 'rb') as f:
-            send_bot_msg(
-                tg_note_user_id,
-                'Data collected! Your XLSX file with the Departments:',
-                [(sheet_name + '.xlsx', f)],
-            )
-            log('[0] Sent!')
+    log('[0] Write all info')
+    for item in xsh.departments_tree:
+        write_info(xsh, item)
+    xsh.to_xlsx()
     log('[0] Program finished')
 
 
@@ -259,12 +246,7 @@ if __name__ == '__main__':
     domain = params_dict.get('domain', 'amazon.com')
     try:
         params_dict.setdefault('dep_name', None)
-        asyncio.run(start(
-            # name of the list
-            params_dict['dep_name'] or 'all departments',
-            # name of the collecting department and TG user
-            params_dict['dep_name'], params_dict.get('user'),
-        ))
+        asyncio.run(start())
         send_bot_msg(params_dict['user'], f'Departments collected: {params_dict["dep_name"]}')
     except Exception as e:
         # raise e

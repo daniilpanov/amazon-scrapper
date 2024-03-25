@@ -1,4 +1,5 @@
 import json
+from time import sleep
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -20,13 +21,17 @@ class Requests:
         if self.request:
             await self.request.close()
         cookies = db('amazon_data')['__cookies'].find_one()
+        while not cookies:
+            cookies = db('amazon_data')['__cookies'].find_one()
+            sleep(10)
         db('amazon_data')['__cookies'].delete_one({'session-id': cookies['session-id']})
         self.request = aiohttp.ClientSession(cookies=cookies)
         await self.req()
 
-    async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None, retry=True):
+    async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None, abs_path=False, retry=True):
         try:
-            return await self.request.request(method, f'https://{self.domain}/{path}', params=params, headers={
+            url = path if abs_path else f'https://{self.domain}/{path}'
+            return await self.request.request(method, url, params=params, headers={
                 'User-Agent': UserAgent(
                     100, software_names=[SoftwareName.CHROME.value],
                     operating_systems=[OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value],
@@ -53,10 +58,10 @@ class Requests:
             if not retry:
                 return None
             await self.init()
-            return await self.req(path, method, params, headers, xmlhttp, ref, False)
+            return await self.req(path, method, params, headers, xmlhttp, ref, abs_path, False)
 
-    async def get_html(self, path='', headers=None):
-        res = await self.req(path, headers=headers)
+    async def get_html(self, path='', headers=None, abs_path=False):
+        res = await self.req(path, headers=headers, abs_path=abs_path)
         if res.status == 200:
             return await res.text()
         return None

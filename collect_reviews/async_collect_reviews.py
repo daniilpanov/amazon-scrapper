@@ -13,7 +13,8 @@ import database
 import parser
 from amazon_requests import Requests
 
-from helpers import log, parse_args, send_bot_msg, end_task
+from helpers import log, send_bot_msg, end_task
+import tasks
 
 
 params = {
@@ -121,8 +122,10 @@ async def send_request(sess: Requests, asin, seed, page, keywords='', domain='am
     try:
         res = await sess.get_reviews(asin, page, current_params, keywords, current_format=current_format)
         if not res or 'BAAAAAAD ASIN!' in res:
-            log(f'broken result. ASIN: {asin}')
-            return False
+            res = await sess.get_reviews(asin, page, current_params, keywords, current_format=current_format, xmlhttp=False)
+            if not res or 'BAAAAAAD ASIN!' in res:
+                return False
+            return process_data_from_page(asin, seed, res, domain)
         return process_data(asin, seed, res, domain)
     except Exception as e:
         log(e)
@@ -130,7 +133,7 @@ async def send_request(sess: Requests, asin, seed, page, keywords='', domain='am
         return False
 
 
-async def collect(asin, keywords, user, domain, index=0, current_format=True):
+async def collect(_id, asin, keywords, domain, index=0, current_format=True):
     if index == -1:
         return -1
     log('loading Requests')
@@ -143,6 +146,7 @@ async def collect(asin, keywords, user, domain, index=0, current_format=True):
     reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
     while not reviews_count_element:
         await sess.init()
+        print(soup)
         soup = BeautifulSoup(await sess.get_reviews(asin, params={
             'formatType': 'current_format' if current_format else '',
         }, xmlhttp=False), features='lxml')
@@ -176,13 +180,14 @@ async def collect(asin, keywords, user, domain, index=0, current_format=True):
             return res
 
         try:
-            tasks = []
+            futures = []
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
-                    tasks.append(send_wrapper(sess, asin, params_seed, i, keywords, domain, current_format))
+                    futures.append(send_wrapper(sess, asin, params_seed, i, keywords, domain, current_format))
                 index += 1
-            await asyncio.gather(*tasks)
+            await asyncio.gather(*futures)
             await sess.request.close()
+            tasks.get_task(_id).add_progress(1)
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
@@ -190,54 +195,9 @@ async def collect(asin, keywords, user, domain, index=0, current_format=True):
                 raise e
             log(f'Skip {asin}')
             await sess.request.close()
+            tasks.get_task(_id).success = False
             return index
     except KeyboardInterrupt:
         log('Script stopped')
         await sess.request.close()
         raise
-
-
-async def start_reviews_collect(params_dict):
-    res = 0
-    try:
-        res = await collect(
-            params_dict['asin'], params_dict.get('keywords', ''),
-            params_dict.get('user'), params_dict.get('domain', 'amazon.com'),
-            res, params_dict.get('current_format', True),
-        )
-    except KeyError:
-        log('No ASIN error!')
-    except KeyboardInterrupt:
-        log('Stop task')
-        raise
-    else:
-        if 'user' in params_dict:
-            if res == -1:
-                send_bot_msg(
-                    params_dict['user'],
-                    f'Reviews of ASIN {params_dict["asin"]} collected!',
-                )
-            else:
-                send_bot_msg(
-                    params_dict['user'],
-                    f'Reviews of ASIN {params_dict["asin"]} did NOT collected [max retry limit].',
-                )
-    finally:
-        if 'id' in params_dict:
-            end_task(params_dict['_id'])
-    return res
-
-
-if __name__ == '__main__':
-    import sys
-    p = parse_args(sys.argv)
-    p.setdefault('asin', 'B08H4YYXYM')
-    p.setdefault('domain', 'amazon.com')
-    p.setdefault('current_format', False)
-    writer_thr.start()
-    logger_thr.start()
-    asyncio.run(start_reviews_collect(p))
-    data_queue.put(None)
-    logging_queue.put(None)
-    writer_thr.join()
-    logger_thr.join()

@@ -2,15 +2,18 @@ import asyncio
 
 import amazon_requests
 import database as db
+import tasks
+from functions import WebDriver
 from helpers import parse_args, log, send_bot_msg, end_task, chunk_asins
 from parser import parse_product, parse_aspects
 
 domain = 'amazon.com'
 
 
-async def collect(products_info_list):
+async def collect(products_info_list, collect_aspects=True):
     if not products_info_list:
         return -1
+
     sess = amazon_requests.Requests(domain)
     await sess.init()
     collected = set()
@@ -18,7 +21,7 @@ async def collect(products_info_list):
     for el in products_info_list:
         html = await sess.get_html(f'dp/{el}')
 
-        if product_info_write(el, html):
+        if product_info_write(el, html, collect_aspects):
             collected.add(el)
 
     await sess.request.close()
@@ -38,39 +41,20 @@ def product_info_write(asin, html, write_aspects=True):
         return False
 
 
-async def start(asins, user, list_name, _id):
+async def start(_id, asins, collect_aspects=True):
     res = False
     c = 15
     try:
         if asins:
             while not res and c > 0:
-                res = await collect(asins)
+                res = await collect(asins, collect_aspects)
                 c -= 1
         else:
             log('No ASINs error!')
     except:
         pass
-    else:
-        if user:
-            if res or c == 15:
-                send_bot_msg(
-                    user,
-                    f'Product cards of "{list_name}" list collected!') \
-                    if list_name else f'Products {asins} collected!'
-            else:
-                send_bot_msg(
-                    user,
-                    f'Product cards of "{list_name}" list are NOT collected.' \
-                        if list_name else f'Products {asins} are NOT collected'
-                )
     finally:
-        if _id:
-            end_task(_id)
-
-
-if __name__ == '__main__':
-    import sys
-
-    params = parse_args(sys.argv)
-    domain = params.get('domain', 'amazon.com')
-    asyncio.run(start(chunk_asins(params.get('asins', 'B08H4YYXYM')), **params))
+        task = tasks.get_task(_id)
+        task.progress = 100
+        task.success = bool(res)
+        task.result = res

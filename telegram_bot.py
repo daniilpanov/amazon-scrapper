@@ -13,13 +13,11 @@ from telebot import types
 from telebot.apihelper import ApiTelegramException
 
 import database
-import payload_manager_new as payload_manager
 from functions import base_chrome_init
 from helpers import get_all_asins_from_text, log
 import settings
 
 import collect_asins_nearby as cmd_collect_asins_nearby
-import collect_amazon_aspects as cmd_collect_amazon_aspects
 
 bot = telebot.TeleBot('6907121969:AAFxNOUoBwata5M_YEXwGj_dGanLN6ct1gc')
 auth_users = set()
@@ -71,8 +69,8 @@ def get_asins_data(msg: types.Message, **kwargs):
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
             if 'list_name' in kwargs:
-                payload_manager.add_reviews_tasks(asins, msg.from_user.id, domain=kwargs['domain'], current_format=kwargs.get('current_format', True))
-                payload_manager.add_products_task(asins, kwargs['list_name'], msg.from_user.id, domain=kwargs['domain'])
+                # payload_manager.add_reviews_tasks(asins, msg.from_user.id, domain=kwargs['domain'], current_format=kwargs.get('current_format', True))
+                # payload_manager.add_products_task(asins, kwargs['list_name'], msg.from_user.id, domain=kwargs['domain'])
                 return send_msg(
                     msg.from_user.id,
                     f'Process started. We\'ll notify you when it is completed. List name: {kwargs["list_name"]}',
@@ -83,8 +81,8 @@ def get_asins_data(msg: types.Message, **kwargs):
                 get_asins_data, **kwargs,
             )
         if 'asins' in kwargs:
-            payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, domain=kwargs['domain'], current_format=kwargs.get('current_format', True))
-            payload_manager.add_products_task(kwargs['asins'], asins_raw, msg.from_user.id, domain=kwargs['domain'])
+            # payload_manager.add_reviews_tasks(kwargs['asins'], msg.from_user.id, domain=kwargs['domain'], current_format=kwargs.get('current_format', True))
+            # payload_manager.add_products_task(kwargs['asins'], asins_raw, msg.from_user.id, domain=kwargs['domain'])
             return send_msg(
                 msg.from_user.id,
                 f'Process started. We\'ll notify you when it is completed. List name: {asins_raw}',
@@ -108,7 +106,7 @@ def get_products(msg: types.Message, **kwargs):
     asins_raw = kwargs['args']
     if asins_raw:
         asins = set(get_all_asins_from_text(asins_raw))
-        payload_manager.add_products_task(asins, None, msg.from_user.id, domain=kwargs['domain'])
+        # payload_manager.add_products_task(asins, None, msg.from_user.id, domain=kwargs['domain'])
         return send_msg(
             msg.from_user.id,
             f'Process started. We\'ll notify you when it is completed',
@@ -126,7 +124,7 @@ def get_amazon_aspects(msg: types.Message, **kwargs):
         asins = set(get_all_asins_from_text(asins_raw))
         if asins:
             if 'list_name' in kwargs:
-                payload_manager.add_amazon_aspects_task(kwargs['list_name'], asins, msg.from_user.id, domain=kwargs['domain'])
+                # payload_manager.add_amazon_aspects_task(kwargs['list_name'], asins, msg.from_user.id, domain=kwargs['domain'])
                 return send_msg(
                     msg.from_user.id,
                     f'Process started. We\'ll notify you when it is completed. List name: {kwargs["list_name"]}',
@@ -137,7 +135,7 @@ def get_amazon_aspects(msg: types.Message, **kwargs):
                 get_amazon_aspects, **kwargs,
             )
         if 'asins' in kwargs:
-            payload_manager.add_amazon_aspects_task(asins_raw, kwargs['asins'], msg.from_user.id, domain=kwargs['domain'])
+            # payload_manager.add_amazon_aspects_task(asins_raw, kwargs['asins'], msg.from_user.id, domain=kwargs['domain'])
             return send_msg(
                 msg.from_user.id,
                 f'Process started. We\'ll notify you when it is completed. List name: {asins_raw}',
@@ -474,7 +472,7 @@ def _delete_asins(asins_list, user_id, collection='customer_reviews', db_name='a
 def collect_asins_nearby(msg: types.Message, **kwargs):
     asin = kwargs['args']
     if asin:
-        payload_manager.add_asins_nearby_task(asin, msg.from_user.id, True, kwargs['domain'])
+        # payload_manager.add_asins_nearby_task(asin, msg.from_user.id, True, kwargs['domain'])
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
     return bot.register_next_step_handler(
         send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '),
@@ -486,7 +484,7 @@ def collect_asins_nearby(msg: types.Message, **kwargs):
 def collect_top5(msg: types.Message, **kwargs):
     asin = kwargs['args']
     if asin:
-        payload_manager.add_asins_nearby_task(asin, msg.from_user.id, False, kwargs['domain'])
+        # payload_manager.add_asins_nearby_task(asin, msg.from_user.id, False, kwargs['domain'])
         return send_msg(msg.from_user.id, f'Start finding BSR data [{asin}]')
     return bot.register_next_step_handler(
         send_msg(msg.from_user.id, 'Please enter the ASIN or URL: '),
@@ -526,15 +524,15 @@ def get_all(msg: types.Message, **kwargs):
         if not count:
             _export_asins(kwargs['asins'], msg.from_user.id)
 
-    payload_manager.add_products_task(
-        kwargs['asins'], kwargs['list'],
-        msg.from_user.id, callback=decrement,
-        domain=kwargs['domain'],
-    )
-    payload_manager.add_reviews_tasks(
-        kwargs['asins'], msg.from_user.id,
-        callback=decrement, domain=kwargs['domain'],
-    )
+    # payload_manager.add_products_task(
+    #     kwargs['asins'], kwargs['list'],
+    #     msg.from_user.id, callback=decrement,
+    #     domain=kwargs['domain'],
+    # )
+    # payload_manager.add_reviews_tasks(
+    #     kwargs['asins'], msg.from_user.id,
+    #     callback=decrement, domain=kwargs['domain'],
+    # )
 
 
 cmdreg(get_all, 'get_all_mx', domain='amazon.com.mx')
@@ -543,7 +541,7 @@ cmdreg(get_all, 'get_all_mx', domain='amazon.com.mx')
 @cmdreg
 def update_department_collection(msg: types.Message, **kwargs):
     dep_name = kwargs['args']
-    payload_manager.add_departments_task(dep_name, msg.from_user.id, kwargs['domain'])
+    # payload_manager.add_departments_task(dep_name, msg.from_user.id, kwargs['domain'])
     return send_msg(msg.from_user.id, f'Start collecting departments [{dep_name or "all deps."}]')
 
 
@@ -585,7 +583,7 @@ def run_bottle():
         current_format = request.params.get('current_format', True)
         if not asins or not all(map(lambda x: len(x) == 10, asins)):
             return bottle.HTTPResponse(status=400)
-        payload_manager.add_reviews_tasks(asins, domain=domain, current_format=current_format, keywords=keywords)
+        # payload_manager.add_reviews_tasks(asins, domain=domain, current_format=current_format, keywords=keywords)
         return bottle.HTTPResponse(status=204)
 
     @bottle.route('/cmd/products/collect', 'GET')
@@ -594,7 +592,7 @@ def run_bottle():
         domain = request.params.get('domain', 'amazon.com')
         if not asins or not all(map(lambda x: len(x) == 10, asins)):
             return bottle.HTTPResponse(status=400)
-        payload_manager.add_products_task(asins, domain=domain)
+        # payload_manager.add_products_task(asins, domain=domain)
         return bottle.HTTPResponse(status=204)
 
     @bottle.route('/cmd/amazon_aspects/collect', 'GET')
@@ -603,7 +601,7 @@ def run_bottle():
         domain = request.params.get('domain', 'amazon.com')
         if not asins or not all(map(lambda x: len(x) == 10, asins)):
             return bottle.HTTPResponse(status=400)
-        payload_manager.add_amazon_aspects_task(asins=asins, domain=domain)
+        # payload_manager.add_amazon_aspects_task(asins=asins, domain=domain)
 
     @bottle.route('/cmd/asins_nearby/collect', 'GET')
     def bottle_asins_nearby_collect():
@@ -662,7 +660,7 @@ def run_bottle():
     def end_task():
         _id = request.forms.get('_id')
         try:
-            payload_manager.end_task(_id)
+            # payload_manager.end_task(_id)
             return bottle.HTTPResponse(status=204)
         except KeyError:
             return bottle.HTTPResponse(status=404)
@@ -697,8 +695,8 @@ if __name__ == '__main__':
     try:
         bot.infinity_polling()
     finally:
-        payload_manager.alive = False
-        payload_manager.processes_waiters.shutdown(cancel_futures=True)
+        # payload_manager.alive = False
+        # payload_manager.processes_waiters.shutdown(cancel_futures=True)
         with open('auth_users.data', 'w') as f:
             for user in auth_users:
                 if settings.ENVIRONMENT == 'product':

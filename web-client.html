@@ -7,6 +7,9 @@
           integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 
     <style>
+        a {
+            text-decoration: none;
+        }
         table td {
             border: 1px solid black;
         }
@@ -17,6 +20,40 @@
             padding: 3em;
             height: 100%;
         }
+
+        ul#tasks > li {
+            padding: 10px 10px 0;
+        }
+        .success {
+            color: green;
+            border: green;
+        }
+        .error {
+            color: red;
+            border: red;
+        }
+        .progress {
+            height: 3px;
+            background-color: green;
+        }
+        .text-progress {
+            color: rgba(255, 255, 255, .5);
+        }
+        ul[data-bs-key="result"] li:nth-of-type(1),
+        ul[data-bs-key="result"] li:nth-of-type(2),
+        ul[data-bs-key="result"] li:nth-of-type(3),
+        ul[data-bs-key="result"] li:nth-of-type(4),
+        ul[data-bs-key="result"] li:nth-of-type(5) {
+            font-style: italic;
+            font-weight: bold;
+        }
+
+        .tab {
+            display: none;
+        }
+        .tab.active {
+            display: block;
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
@@ -25,48 +62,50 @@
     <title>AMAZON WEB MANAGEMENT</title>
 
     <script>
-        let tasks_list = [];
-        function add_task(task_alias, data) {
-            $.post("http://135.181.13.132/tasks/add/" + task_alias, {
-                method: "POST",
-                data: data,
-            }).success(function (data, status, jqXhr) {
-                tasks_list.push(data['id']);
+        function add_task(script, task_alias, data, callback=null) {
+            let url = "http://127.0.0.1:8080/tasks/add/" + script;
+            data.alias = task_alias;
+            $.post(url, JSON.stringify(data)).done(function (data, status, jqXhr) {
                 const new_element = $("<li>");
                 new_element.prop("data-bs-task-id", data['id']).appendTo("#tasks");
+                if (callback) {
+                    callback(data);
+                }
             });
         }
         function delete_task(task_id) {
             $.ajax({
-                url: "http://135.181.13.132/tasks/delete/" + String(task_id),
+                url: "http://127.0.0.1:8080/tasks/delete/" + String(task_id),
                 type: "DELETE",
-            }).success(function () {
+            }).done(function () {
                 $("#tasks li[data-bs-task-id='" + String(task_id) + "']").remove();
-                tasks_list.splice(tasks_list.indexOf(task_id), 1)
             });
         }
+        function set_task_content(data) {
+            $(".nav-link").removeClass("active").attr("aria-selected", false);
+            $(".tab-pane").removeClass("show").removeClass("active");
+            $("#task-content").addClass("show").addClass("active");
+        }
         function update() {
-            $.get("http://135.181.13.132/tasks/get").success(function (data) {
-                let temp_tasks_list = [];
+            $.get("http://127.0.0.1:8080/tasks/get").done(function (data) {
+                $("ul#tasks").html(' ');
                 for (let i = 0; i < data.length; ++i) {
-                    temp_tasks_list.push(data["task_id"]);
-                    $("#tasks li[data-bs-task-id='" + String(data[i]["task_id"]) + "'] .progress")
-                        .css("width", String(data["progress"]) + "%");
-                    if (data["progress"] >= 100) {
-                        $("#tasks li[data-bs-task-id='" + String(data[i]["task_id"]) + "']").addClass("success");
+                    const root = $("<li>").attr("data-bs-task-id", data[i]["id"]).appendTo("#tasks");
+                    const lnk = $("<a>").attr("href", "#").attr("data-bs-task-id", data[i]["id"]).click(function () {
+                        $.get("http://127.0.0.1:8080/tasks/get/" + $(this).attr("data-bs-task-id")).done(set_task_content);
+                    }).text(data[i]["alias"]).appendTo(root);
+                    $("<span>").addClass("text-progress").html("&emsp;" + String(data[i]["progress"] ?? 0) + "%").appendTo(lnk);
+                    $("<button>").addClass("close").html("&times;").attr("data-bs-task-id", data[i]["id"]).click(function () {
+                        delete_task($(this).attr("data-bs-task-id"));
+                    }).appendTo(root);
+                    $("<div>").addClass("progress").css("width", String(data[i]["progress"] ?? .5) + "%").appendTo(root);
+                    if (data[i]["progress"] >= 100) {
+                        root.addClass(data[i]["success"] ? "success" : "error");
                     } else {
-                        $("#tasks li[data-bs-task-id='" + String(data[i]["task_id"]) + "']").removeClass("success");
+                        root.removeClass("success").removeClass("error");
                     }
                 }
-                for (let i = 0; i < tasks_list.length; ++i) {
-                    if (temp_tasks_list.includes(tasks_list[i])) {
-                        continue;
-                    }
-                    $("#tasks li[data-bs-task-id='" + String(tasks_list[i]) + "']").remove();
-                    tasks_list.splice(tasks_list.indexOf(i), 1);
-                }
-            }).error(function () {
-
+            }).fail(function (jqXhr) {
             });
         }
 
@@ -75,18 +114,119 @@
 
     <script>
         $(document).ready(function () {
-            $("form[action]").submit(function (e) {
+            $("form[action]:not([data-bs-special])").submit(function (e) {
                 e.preventDefault();
-                const data = $(this).serialize();
-                const url = "http://135.181.13.132" + $(this).prop("action");
-                const method = $(this).prop("method") ?? "get";
-                $.ajax({
-                    method: method,
-                    url: url,
-                    data: JSON.stringify(data),
-                })
+                const raw_data = $(this).serializeArray();
+                let data = {};
+                for (let i in raw_data) {
+                    data[raw_data[i].name] = raw_data[i].value;
+                }
+                const url = "http://127.0.0.1:8080" + $(this).attr("action");
+                $.post(url, JSON.stringify(data));
                 return false;
-            })
+            });
+            function wait(req, success, delay = 1000) {
+                return function (data) {
+                    if (!data || data["success"] === null) {
+                        return setTimeout(function () {
+                            return req().done(wait(req, success, delay))
+                        }, delay);
+                    }
+                    success(data);
+                }
+            }
+            //
+            $("form[action='/cmd/alias/get_all']").submit(function (e) {
+                e.preventDefault();
+                const raw_data = $(this).serializeArray();
+                let data = {};
+                for (let i in raw_data) {
+                    data[raw_data[i].name] = raw_data[i].value;
+                }
+                const limit = Boolean(Number(data.limit));
+                const unique_brands = Boolean(Number(data.unique_brands));
+                const amazon_aspects = Boolean(Number(data.amazon_aspects));
+                const task_name = data.alias;
+                const category = data.category;
+                const client_alias = data.client_alias;
+                const bsr_link = data.bsr_link;
+                const count = Boolean(Number(data.only_top5)) ? 5 : 30;
+                alert(JSON.stringify(data));
+                add_task("collect_departments", (task_name ?? "Get all") + "#bsr", {
+                    bsr: bsr_link,
+                    limit: limit,
+                    unique_brands: unique_brands,
+                    count: count,
+                }, function (data) {
+                    wait(function () {
+                        return $.get("http://127.0.0.1:8080/tasks/get/" + data)
+                    }, function (data) {
+                        console.log(data);
+                        add_task("collect_products", (task_name ?? "Get all") + "#products", {
+                            asins: data["result"]["asins"],
+                            collect_aspects: amazon_aspects,
+                        });
+                        add_task("collect_reviews", (task_name ?? "Get all") + "#reviews", {
+                            asins: data["result"]["asins"],
+                            current_format: true,
+                        });
+                        $.post("http://127.0.0.1:8080/cmd/category/set", {
+                            cat_name: category,
+                            client_name: client_alias,
+                            asins: data["result"]["asins"],
+                            top5_asins: data["result"]["asins"].slice(0, 5),
+                        })
+                    })();
+                });
+            });
+            //
+            $("form[action='/cmd/reviews/count']").submit(function (e) {
+                e.preventDefault();
+                $.get("http://127.0.0.1:8080/cmd/reviews/count", $(this).serialize()).done(function (data) {
+                    $("#count-reviews-result").text(data[2] + ": " + data[0] + "/" + data[1])
+                });
+            });
+            //
+            /*$("form[action='/tasks/add/collect_reviews']").submit(function (e) {
+                e.preventDefault();
+                const raw_data = $(this).serializeArray();
+                let data = {};
+                for (let i in raw_data) {
+                    data[raw_data[i].name] = raw_data[i].value;
+                }
+                add_task('collect_reviews', data.alias, data);
+            });*/
+            //
+            $("form[action='/cmd/products/get']").submit(function (e) {
+                e.preventDefault();
+                const raw_data = $(this).serializeArray();
+                let data = {};
+                for (let i in raw_data) {
+                    data[raw_data[i].name] = raw_data[i].value;
+                }
+                $.get("http://127.0.0.1:8080/products/get/" + data["asin"]).done(function (data) {
+                    console.log(data);
+                    // TODO: show output info
+                });
+            });
+            //
+            $("form[action='/cmd/category/set']").submit(function (e) {
+                e.preventDefault();
+                const raw_data = $(this).serializeArray();
+                let data = {};
+                for (let i in raw_data) {
+                    data[raw_data[i].name] = raw_data[i].value;
+                }
+                $.get("http://127.0.0.1:8080/cmd/category/set", {
+                    cat_name: data.cat_name,
+                    client_name: data.client_name,
+                    asins: data.asins,
+                    top5_asins: [],
+                }).done(function (data) {
+                    console.log(data);
+                });
+            });
+
         })
     </script>
 </head>
@@ -121,25 +261,52 @@
 
         <div class="col-auto tab-content col-md-9 col-xl-10 px-sm-10 px-12" id="content">
             <div class="tab-pane fade show active" id="nav-bsr30" role="tabpanel" aria-labelledby="nav-bsr30-tab">
-                <h2>Collect 30 ASINs from BSR</h2>
-                <form method="post" action="/cmd/alias/get_all">
-                    <label>
-                        Task name (optional)
-                        <input type="text" class="form-control" placeholder="Task name">
-                    </label>
-                    <label>
-                        Category name
-                        <input type="text" name="category" class="form-control" placeholder="Category name" required>
-                    </label>
-                    <label>
-                        Client alias (optional)
-                        <input type="text" name="client_alias" class="form-control" placeholder="Client alias">
-                    </label>
-                    <label>
-                        BSR link (full URL)
-                        <input type="text" name="bsr_link" class="form-control" placeholder="BSR link" required>
-                    </label>
-                    <button type="submit" class="btn btn-success">Create task</button>
+                <h2>Collect ASINs from BSR</h2>
+                <form method="post" action="/cmd/alias/get_all" data-bs-special="true">
+                    <p> </p>
+                    <div>
+                        <label>
+                            Task name (optional)
+                            <input type="text" name="alias" class="form-control" placeholder="Task name">
+                        </label>
+                        <label>
+                            Category name
+                            <input type="text" name="category" class="form-control" placeholder="Category name"
+                                   required>
+                        </label>
+                        <label>
+                            Client alias (optional)
+                            <input type="text" name="client_alias" class="form-control" placeholder="Client alias">
+                        </label>
+                        <label>
+                            BSR link (full URL)
+                            <input type="text" name="bsr_link" class="form-control" placeholder="BSR link" required>
+                        </label>
+                    </div>
+                    <p> </p>
+                    <div>
+                        <p>
+                            <label>
+                                <input type="checkbox" class="checkbox" name="only_top5" value="1"> Only top5
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type="checkbox" class="checkbox" name="limit" value="1"> Limits (reviews > 700)
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type="checkbox" class="checkbox" name="unique_brands" value="1"> Unique brands
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type="checkbox" class="checkbox" name="amazon_aspects" value="1"> Collect amazon aspects
+                            </label>
+                        </p>
+                        <button type="submit" class="btn btn-success">Create task</button>
+                    </div>
                 </form>
             </div>
 
@@ -149,10 +316,14 @@
                     <div class="col-md-6">
                         <div>
                             <h4>Collect reviews</h4>
-                            <form method="get" action="/cmd/reviews/collect">
+                            <form method="post" action="/tasks/add/collect_reviews">
+                                <label>
+                                    Task name (optional)
+                                    <input type="text" name="alias" class="form-control" placeholder="Task name">
+                                </label>
                                 <label>
                                     Enter the ASINs (divide by any punctuation symbol):
-                                    <textarea name="asin" class="form-control" placeholder="ASINs or links list"></textarea>
+                                    <textarea name="asins" class="form-control" placeholder="ASINs or links list"></textarea>
                                 </label>
                                 <button type="submit" class="btn btn-success">Create task</button>
                             </form>
@@ -161,7 +332,7 @@
                     <div class="col-md-6">
                         <div>
                             <h4>Count reviews</h4>
-                            <form method="get" action="/cmd/reviews/count">
+                            <form method="get" action="/cmd/reviews/count" data-bs-special="true">
                                 <label>
                                     Enter the ASIN:
                                     <input type="text" name="asin" placeholder="ASIN or link">
@@ -183,7 +354,7 @@
                         <div>
                             <h4>Get product info</h4>
                             <div class="row">
-                                <form class="col-md-6" method="get" action="/cmd/products/get">
+                                <form class="col-md-6" method="get" action="/cmd/products/get" data-bs-special="true">
                                     <label>
                                         Enter the ASIN:
                                         <input type="text" class="form-control" name="asin" placeholder="ASIN or link">
@@ -238,10 +409,14 @@
                     <div class="col-md-6">
                         <div>
                             <h4>Collect products data</h4>
-                            <form method="get" action="/cmd/products/collect">
+                            <form method="get" action="/tasks/add/collect_products">
+                                <label>
+                                    Task name (optional)
+                                    <input type="text" name="alias" class="form-control" placeholder="Task name">
+                                </label>
                                 <label>
                                     Enter the ASINs (divide by any punctuation symbol):
-                                    <textarea name="asin" class="form-control" placeholder="ASINs or links list"></textarea>
+                                    <textarea name="asins" class="form-control" placeholder="ASINs or links list"></textarea>
                                 </label>
                                 <button type="submit" class="btn btn-success">Create task</button>
                             </form>
@@ -251,7 +426,7 @@
                     <div class="col-md-6">
                         <div>
                             <h4>Set category for ASINs</h4>
-                            <form method="post" action="/cmd/category/set">
+                            <form method="post" action="/cmd/category/set" data-bs-special="true">
                                 <label>
                                     Category name
                                     <input type="text" class="form-control" name="category" placeholder="Category name">
@@ -266,6 +441,27 @@
                                 </label>
                                 <button type="submit" class="btn btn-success">Set category</button>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="task-content">
+                <h1></h1>
+                <div class="tab" data-bs-script="collect_reviews">
+                    <span data-bs-key="count"></span>
+                    <ul data-bs-key="asins"></ul>
+                </div>
+                <div class="tab" data-bs-script="collect_products">
+                    <ul data-bs-key="asins"></ul>
+                </div>
+                <div class="tab" data-bs-script="collect_departments">
+                    <div class="row">
+                        <div class="col-md-6">
+                            BSR URL: <a href data-bs-key="bsr_url"></a>
+                        </div>
+                        <div class="col-md-6">
+                            ASINS: <div><ul data-bs-key="result"></ul></div>
                         </div>
                     </div>
                 </div>
