@@ -79,14 +79,18 @@ async def get_bsr(asin, sess, domain):
 
 
 async def collect_nearby(_id, asin_bsr, limit=True, unique_brands=False, count=5, domain='amazon.com'):
+    print('ok1')
     sess = amazon_requests.Requests(domain)
+    print('ok2')
     # get department url
     url = await get_bsr(asin_bsr, sess, domain)
+    print('ok3')
     # search asins
     asins_generator = get_asins(url, sess, asin_bsr, limit, domain, unique_brands, count)
     result = []
     async for item in asins_generator:
         result.append(item)
+    print('ok4')
     task = tasks.get_task(_id)
     task.progress = 100
     task.success = True
