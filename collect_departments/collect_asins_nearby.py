@@ -14,16 +14,20 @@ async def get_asins(url, sess, excluded=None, limit=True, domain='amazon.com', u
     soup = BeautifulSoup(await sess.get_html(url, abs_path=True), features='lxml')
     links_a = soup.select('div.a-cardui[id*="asin-index"]')
     brands = set()
+    print('ok-1')
     i = 0
     for link in links_a:
         if i >= count:
             break
+        print('ok-2')
         reviews_lnk = link.select_one('a[href*="product-reviews"]')
         reviews_info = reviews_lnk.text.replace('\u2009', '\n').split('\n')
         reviews_count = int(reviews_info[1].strip().replace(',', '').replace(' ', ''))
         if limit and reviews_count < 700 or excluded and excluded in link.find('a')['href']:
             continue
+        print('ok-3')
         asin = get_all_asins_from_text(link.find('a')['href'])[0]
+        print('ok-4')
         if unique_brands:
             soup = BeautifulSoup(await sess.get_html('dp/' + asin), features='lxml')
             try:
@@ -34,6 +38,7 @@ async def get_asins(url, sess, excluded=None, limit=True, domain='amazon.com', u
             except Exception as e:
                 print(e)
         i += 1
+        print('ok-l')
         yield f'https://{domain}/dp/' + asin, asin
 
 
@@ -79,12 +84,9 @@ async def get_bsr(asin, sess, domain):
 
 
 async def collect_nearby(_id, asin_bsr, limit=True, unique_brands=False, count=5, domain='amazon.com'):
-    print('ok1')
     sess = amazon_requests.Requests(domain)
-    print('ok2')
     # get department url
     url = await get_bsr(asin_bsr, sess, domain)
-    print('ok3')
     # search asins
     asins_generator = get_asins(url, sess, asin_bsr, limit, domain, unique_brands, count)
     result = []
