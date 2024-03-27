@@ -11,7 +11,9 @@ from helpers import get_all_asins_from_text
 async def get_asins(url, sess, excluded=None, limit=True, domain='amazon.com', unique_brands=False, count=5):
     await sess.init()
 
-    soup = BeautifulSoup(await sess.get_html(url, abs_path=True), features='lxml')
+    html = await sess.get_html(url, abs_path=True)
+    print('...')
+    soup = BeautifulSoup(html, features='lxml')
     print('ok-0')
     links_a = soup.select('div.a-cardui[id*="asin-index"]')
     print('ok-0.0')
