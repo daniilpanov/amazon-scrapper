@@ -4,6 +4,7 @@ import re
 import fastapi
 from bs4 import BeautifulSoup
 from fastapi import HTTPException, Body
+from pymongo.errors import BulkWriteError
 from starlette.middleware.cors import CORSMiddleware
 
 import amazon_requests
@@ -85,6 +86,8 @@ async def category_set_cmd(data=Body()):
             'relation_to_TOP5': asin in top5_asins,
         } for asin in asins])
         return fastapi.Response(status_code=fastapi.status.HTTP_204_NO_CONTENT)
+    except BulkWriteError:
+        pass
     except Exception as e:
         print(type(e))
         raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
