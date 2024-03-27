@@ -185,16 +185,6 @@
                 });
             });
             //
-            /*$("form[action='/tasks/add/collect_reviews']").submit(function (e) {
-                e.preventDefault();
-                const raw_data = $(this).serializeArray();
-                let data = {};
-                for (let i in raw_data) {
-                    data[raw_data[i].name] = raw_data[i].value;
-                }
-                add_task('collect_reviews', data.alias, data);
-            });*/
-            //
             $("form[action='/cmd/products/get']").submit(function (e) {
                 e.preventDefault();
                 const raw_data = $(this).serializeArray();

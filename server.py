@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from fastapi import HTTPException, Body
 from pymongo.errors import BulkWriteError
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import FileResponse
 
 import amazon_requests
 import tasks
@@ -20,6 +21,11 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+
+@app.get('/cp', response_class=FileResponse)
+async def cp_show():
+    return 'web-client.html'
 
 
 @app.post('/tasks/add/{script}')
