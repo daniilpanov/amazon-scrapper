@@ -1,5 +1,6 @@
 import json
 import re
+from collections import defaultdict
 
 import fastapi
 from bs4 import BeautifulSoup
@@ -100,11 +101,33 @@ async def category_set_cmd(data=Body()):
 
 
 @app.get('/cmd/products/get/{asin}')
-async def product_get_cmd(asin):
+async def product_get_cmd(asin: str):
     try:
-        res = db('amazon_data')['product_card'].find_one({'asin': asin})
-        return res
+        product_card = db('amazon_data')['product_card'].find_one({'asin': asin})
+        try:
+            aspects = [(i['Aspect'], i['positive'], i['negative']) for i in db('amazon_data')['amazon_aspects'].find({'ASIN': asin})]
+        except:
+            aspects = None
+        try:
+            category = db('amazon_data')['all_categories'].find_one({'ASIN': asin}) or defaultdict(lambda: None)
+        except:
+            category = defaultdict(lambda: None)
+        if not product_card:
+            raise HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
+        return {
+            'ASIN': asin,
+            'URL': product_card['product_url'],
+            'Title': product_card['product_title'],
+            'Description': product_card['product_descr'],
+            'Features': product_card['features'],
+            'Top 5 phrases': product_card['top_5_phrases'],
+            'Price': product_card['product_price'],
+            'Aspects': aspects,
+            'Category': [category['Category'], category['relation_to_category']],
+            'Picture': product_card['picture_url'],
+        }
     except Exception as e:
+        raise
         raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
