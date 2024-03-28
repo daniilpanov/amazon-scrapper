@@ -58,6 +58,7 @@ class Requests:
 
     async def get_html(self, path='', headers=None, abs_path=False):
         res = await self.req(path, headers=headers, abs_path=abs_path)
+        print(res)
         if res.status == 200:
             return await res.text()
         return None

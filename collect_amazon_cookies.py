@@ -26,7 +26,6 @@ def write_data(wqp):
         try:
             db('amazon_data')['__cookies'].insert_one(processed)
         except Exception:
-            raise
             pass
 
 

@@ -16,6 +16,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+import database
 import helpers
 
 
@@ -153,6 +154,14 @@ class WebDriver:
             sleep(1)
             self.get(url)
             self.activate_jquery()
+            cookies = self.driver.get_cookies()
+            processed = {}
+            for datum in cookies:
+                processed[datum['name']] = datum['value']
+            try:
+                database.db('amazon_data')['__cookies'].insert_one(processed)
+            except Exception:
+                pass
             return True
         except JavascriptException as e:
             if retry and '$ is not defined' in e.msg:
