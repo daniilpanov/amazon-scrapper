@@ -26,7 +26,7 @@ app.add_middleware(
 
 @app.get('/cp', response_class=FileResponse)
 async def cp_show():
-    return 'web-client.html'
+    return 'web/index.html'
 
 
 @app.post('/tasks/add/{script}')
@@ -104,6 +104,7 @@ async def category_set_cmd(data=Body()):
 async def product_get_cmd(asin: str):
     try:
         product_card = db('amazon_data')['product_card'].find_one({'asin': asin})
+        print(asin, product_card)
         try:
             aspects = [(i['Aspect'], i['positive'], i['negative']) for i in db('amazon_data')['amazon_aspects'].find({'ASIN': asin})]
         except:
@@ -134,6 +135,11 @@ async def product_get_cmd(asin: str):
 @app.get('/tasks/get')
 async def get_tasks_req():
     return list(tasks.get_task(_id).to_dict() for _id in tasks.all_tasks if type(_id) is int)
+
+
+@app.get('/file', response_class=FileResponse)
+async def file(filepath: str):
+    return filepath
 
 
 if __name__ == '__main__':

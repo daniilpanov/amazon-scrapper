@@ -1,72 +1,85 @@
 import asyncio
-import os
+from queue import Queue
+from threading import Thread
+
+import peewee
 from bs4 import BeautifulSoup
-from peewee import MySQLDatabase, Model, AutoField, ForeignKeyField, CharField
 
 from amazon_requests import Requests
-from helpers import log
-
-import dotenv
-
-dotenv.load_dotenv('.env')
-
+from db import Department
 
 domain = 'amazon.com'
 
-conn = MySQLDatabase(
-    os.environ.get('DB_NAME'),
-    user=os.environ.get('DB_USER'),
-    password=os.environ.get('DB_PASS'),
-    host=os.environ.get('DB_HOST'),
-    port=os.environ.get('DB_PORT'),
-)
+
+def data_writing(q: Queue):
+    models = q.get()
+    while models is not None:
+        try:
+            Department.bulk_create(models)
+        except peewee.IntegrityError as e:
+            print(e)
+        models = q.get()
 
 
-def NotIncrementingAutoField():
-    field = AutoField()
-    field.auto_increment = False
-    return field
+def data_logging(q: Queue):
+    s = q.get()
+    while s is not None:
+        print(s)
+        s = q.get()
 
 
-class BaseModel(Model):
-    class Meta:
-        database = conn
+data_q = Queue()
+data_thr = Thread(target=data_writing, args=(data_q,))
+data_log_q = Queue()
+data_log_thr = Thread(target=data_logging, args=(data_log_q,))
 
 
-class Department(BaseModel):
-    class Meta:
-        table_name = 'departments'
-
-    id = AutoField()
-    parent_id = ForeignKeyField('self', backref='departments', null=True)
-    name = CharField(255)
-    url = CharField(1000, unique=True)
+semaphore = asyncio.Semaphore(30)
 
 
-class Product(BaseModel):
-    class Meta:
-        table_name = 'products'
-
-    id = AutoField()
-    department_id = ForeignKeyField('self', backref='products', null=True)
-    name = CharField(255)
-    url = CharField(1000, unique=True)
-
-
-async def _test():
-    r = Requests()
-    await r.init()
-    html = await r.get_html('https://www.amazon.com/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_1289283011_4')
-    soup = BeautifulSoup(html, features='lxml')
-    group = soup.find('div', {'role': 'group'})
-    items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
-    data = []
-    for item in items:
-        a = item.find('a')
-        data.append((a.text, a['href']))
-    print(data)
-
+async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783011_2', parent_id=None):
+    async with semaphore:
+        if not r:
+            r = Requests()
+            await r.init()
+        html = await r.get_html(link)
+        while not html:
+            r = Requests()
+            await r.init()
+            html = await r.get_html(link)
+        soup = BeautifulSoup(html, features='lxml')
+        group = soup.find('div', {'role': 'group'})
+        items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
+        data = []
+        models = []
+        for item in items:
+            a = item.find('a')
+            if not a:
+                return None
+            title = a.text
+            link = a['href']
+            data.append((title, link))
+            models.append(Department(parent_id=parent_id, name=title, url=link))
+        data_q.put(models)
+        models = {i.name: i for i in Department.select().where(Department.parent_id == parent_id)}
+        data_log_q.put(data)
+        coroutines = []
+        for title, link in data:
+            model = models.get(title)
+            if model:
+                _id = model.id
+            else:
+                _id = None
+            coroutines.append(collect(r, link, _id))
+    await asyncio.gather(*coroutines)
 
 
 if __name__ == '__main__':
-    print(asyncio.run(_test()))
+    data_thr.start()
+    data_log_thr.start()
+    # asyncio.run(collect())
+    asyncio.run(collect(link='/Best-Sellers-Health-Household-Shoe-Inserts-Insoles/zgbs/hpc/3780081/ref=zg_bs_nav_hpc_3_3779911', parent_id=9628))
+    data_q.put(None)
+    data_log_q.put(None)
+    data_thr.join()
+    data_log_thr.join()

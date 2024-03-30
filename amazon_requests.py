@@ -1,4 +1,6 @@
+import asyncio
 import json
+import random
 from time import sleep
 
 import aiohttp
@@ -13,14 +15,19 @@ class Requests:
     request: aiohttp.ClientSession | None = None
     reviews_request_counter: int = 1
     domain: str
+    all_cookies = None
 
-    def __init__(self, domain='amazon.com'):
-        self.domain = domain
+    def __new__(cls, domain='amazon.com'):
+        if not cls.all_cookies:
+            cls.all_cookies = list(db('amazon_data')['__cookies'].find())
+        inst = super(Requests, cls).__new__(cls)
+        inst.domain = domain
+        return inst
 
     async def init(self):
+        cookies = random.choice(Requests.all_cookies)
         if self.request:
             await self.request.close()
-        cookies = db('amazon_data')['__cookies'].find_one()
         self.request = aiohttp.ClientSession(cookies=cookies or {})
         await self.req()
 
@@ -58,8 +65,7 @@ class Requests:
 
     async def get_html(self, path='', headers=None, abs_path=False):
         res = await self.req(path, headers=headers, abs_path=abs_path)
-        print(res)
-        if res.status == 200:
+        if res and res.status == 200:
             return await res.text()
         return None
 

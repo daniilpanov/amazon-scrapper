@@ -40,7 +40,6 @@ def product_info_write(asin, html, write_aspects=True):
 
 
 async def start(_id, asins, collect_aspects=True):
-    print('prods:', _id, asins, collect_aspects)
     res = False
     c = 15
     try:

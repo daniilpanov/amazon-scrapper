@@ -18,5 +18,8 @@ def run(ev, _id, asins, keywords='', domain='amazon.com', current_format=True):
     if type(asins) is str:
         asins = get_all_asins_from_text(asins)
     task.all = len(asins)
-    task.result = []
+    task.result = {
+        'asins': asins,
+        'count': [database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}) for asin in asins],
+    }
     asyncio.run(_run(ev, _id, asins, keywords, domain, current_format))

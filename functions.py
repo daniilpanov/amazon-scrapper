@@ -2,19 +2,17 @@ import os
 import random
 from time import sleep
 
-import colorama
-import requests
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
-from selenium import webdriver
 from selenium.common import JavascriptException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from seleniumwire import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 
 import database
 import helpers
@@ -123,7 +121,7 @@ class WebDriver:
                     'pageType: "Gateway",'
                     'storeContext: "generic",'
                     f'zipCode: "{with_zip}"' + '}'
-                    ')'
+                                               ')'
                 )
                 self.execute_script(
                     f'$.get("https://www.{domain}/portal-migration/hz/glow/condo-refresh-html'
@@ -234,11 +232,11 @@ def captcha_check(wd):
     except:
         return False
     # finally:
-        # wd.sleep(3)
-        # wd.get('https://amazon.com')
-        # wd.get(url)
-        # wd.wait_for_loading()
-        # wd.activate_jquery()
+    # wd.sleep(3)
+    # wd.get('https://amazon.com')
+    # wd.get(url)
+    # wd.wait_for_loading()
+    # wd.activate_jquery()
 
 
 def captcha_solve(wd: WebDriver):
@@ -300,12 +298,17 @@ class RetryException(Exception):
     pass
 
 
-def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False, logs=False):
+def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False, logs=False, proxy=None):
     opts = Options()
+    options = {}
     if extension:
         opts.add_extension(os.path.abspath(extension))
     if tor:
         opts.add_argument('proxy-server=socks5://104.154.150.173:9050')
+    if proxy:
+        # FIXME: understand what is real proxy?)
+        opts.add_argument(f'proxy-server={proxy}')
+        options = {'proxy': {'https': f'{proxy}'}}
     if headless:
         opts.add_argument('--headless')
         opts.add_argument('--headless=new')
@@ -325,7 +328,7 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
                   operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value),
                   limit=120).get_random_user_agent(),
     ))
-    wd = WebDriver(webdriver.Chrome(opts, ChromeService(ChromeDriverManager().install())))
+    wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), chrome_options=opts, seleniumwire_options=options))
     ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         wd.get(goto, False)

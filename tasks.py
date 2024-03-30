@@ -1,7 +1,10 @@
+import datetime
 import importlib
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 from typing import Any
+
+import pytz
 
 import settings
 
@@ -20,6 +23,7 @@ class Task:
     alias: str | None = None
     ev: Event
     result: Any | None = None
+    started_at: datetime.datetime
 
     def __init__(self, _id, script, data=None, alias=None):
         self.id = _id
@@ -27,11 +31,12 @@ class Task:
         self.data = data
         self.alias = alias
         self.ev = Event()
+        self.started_at = datetime.datetime.now(pytz.UTC)
 
     def to_dict(self):
         return {
-            'id': self.id, 'progress': self.progress,
-            'alias': self.alias, 'data': self.data,
+            'id': self.id, 'progress': self.progress, 'script': self.script,
+            'alias': self.alias, 'data': self.data, 'started_at': self.started_at.isoformat(),
             'success': self.success, 'result': self.result,
         }
 
