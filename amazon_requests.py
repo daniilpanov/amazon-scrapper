@@ -1,13 +1,10 @@
-import asyncio
-import json
 import random
-from time import sleep
 
 import aiohttp
-from bs4 import BeautifulSoup
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
 
+import settings
 from database import db
 
 
@@ -34,7 +31,7 @@ class Requests:
     async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None, abs_path=False, retry=True):
         try:
             url = path if abs_path else f'https://{self.domain}/{path}'
-            return await self.request.request(method, url, params=params, headers={
+            return await self.request.request(method, url, proxy=settings.PROXY, params=params, headers={
                 'User-Agent': UserAgent(
                     100, software_names=[SoftwareName.CHROME.value],
                     operating_systems=[OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value],

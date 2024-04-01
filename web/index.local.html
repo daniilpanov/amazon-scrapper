@@ -81,7 +81,7 @@
 
     <script>
         function add_task(script, task_alias, data, callback = null) {
-            let url = 'http://195.201.194.213:8830/tasks/add/' + script;
+            let url = 'http://localhost:8830/tasks/add/' + script;
             data.alias = task_alias;
             $.post(url, JSON.stringify(data)).done(function (data, status, jqXhr) {
                 const new_element = $('<li>');
@@ -94,7 +94,7 @@
 
         function delete_task(task_id) {
             $.ajax({
-                url: 'http://195.201.194.213:8830/tasks/delete/' + String(task_id),
+                url: 'http://localhost:8830/tasks/delete/' + String(task_id),
                 type: 'DELETE',
             }).done(function () {
                 $('#tasks li[data-bs-task-id="' + String(task_id) + '"]').remove();
@@ -146,12 +146,12 @@
         }
 
         function update() {
-            $.get('http://195.201.194.213:8830/tasks/get').done(function (data) {
+            $.get('http://localhost:8830/tasks/get').done(function (data) {
                 $('ul#tasks').html(' ');
                 for (let i = 0; i < data.length; ++i) {
                     const root = $('<li>').attr('data-bs-task-id', data[i]['id']).appendTo('#tasks');
                     const lnk = $('<a>').attr('href', '#').attr('data-bs-task-id', data[i]['id']).click(function () {
-                        $.get('http://195.201.194.213:8830/tasks/get/' + $(this).attr('data-bs-task-id')).done(set_task_content);
+                        $.get('http://localhost:8830/tasks/get/' + $(this).attr('data-bs-task-id')).done(set_task_content);
                     }).text(data[i]['alias']).appendTo(root);
                     $('<span>').addClass('text-progress').html('&emsp;' + String(data[i]['progress'] ?? 0) + '%').appendTo(lnk);
                     $('<button>').addClass('close').html('&times;').attr('data-bs-task-id', data[i]['id']).click(function () {
@@ -180,7 +180,7 @@
                 for (let i in raw_data) {
                     data[raw_data[i].name] = raw_data[i].value;
                 }
-                const url = 'http://195.201.194.213:8830' + $(this).attr('action');
+                const url = 'http://localhost:8830' + $(this).attr('action');
                 $.post(url, JSON.stringify(data));
                 return false;
             });
@@ -219,7 +219,7 @@
                     count: count,
                 }, function (data) {
                     wait(function () {
-                        return $.get('http://195.201.194.213:8830/tasks/get/' + data)
+                        return $.get('http://localhost:8830/tasks/get/' + data)
                     }, function (data) {
                         add_task('collect_products', (task_name ?? 'Get all') + '#products', {
                             asins: data['result']['asins'],
@@ -229,7 +229,7 @@
                             asins: data['result']['asins'],
                             current_format: true,
                         });
-                        $.post('http://195.201.194.213:8830/cmd/category/set', JSON.stringify({
+                        $.post('http://localhost:8830/cmd/category/set', JSON.stringify({
                             cat_name: category,
                             client_name: client_alias,
                             asins: data['result']['asins'],
@@ -260,7 +260,7 @@
             //
             $('form[action="/cmd/reviews/count"]').submit(function (e) {
                 e.preventDefault();
-                $.get('http://195.201.194.213:8830/cmd/reviews/count', $(this).serialize()).done(function (data) {
+                $.get('http://localhost:8830/cmd/reviews/count', $(this).serialize()).done(function (data) {
                     $('#count-reviews-result').text(data[2] + ': ' + data[0] + '/' + data[1])
                 });
             });
@@ -272,7 +272,7 @@
                 for (let i in raw_data) {
                     data[raw_data[i].name] = raw_data[i].value;
                 }
-                $.get('http://195.201.194.213:8830/cmd/products/get/' + data['asin']).done(function (data) {
+                $.get('http://localhost:8830/cmd/products/get/' + data['asin']).done(function (data) {
                     $('#product-info > .data-table > tbody > tr').each(function (i, el) {
                         const all_cells = $(el).find('td');
                         let key = all_cells.get(0).innerText;
@@ -336,7 +336,7 @@
                 for (let i in raw_data) {
                     data[raw_data[i].name] = raw_data[i].value;
                 }
-                $.post('http://195.201.194.213:8830/cmd/category/set', JSON.stringify({
+                $.post('http://localhost:8830/cmd/category/set', JSON.stringify({
                     cat_name: data['category'],
                     client_name: data['alias-client'],
                     asins: data.asins,

@@ -1,16 +1,21 @@
-import os
-from concurrent.futures import ThreadPoolExecutor
-
 from helpers import get_all_asins_from_text
+from asyncio import Semaphore
 from .async_collect_reviews import *
 
+global_reviews_limit_sem = Semaphore(2)
 
-threader = ThreadPoolExecutor(min(os.cpu_count(), 8))
+
+async def __run(coroutine):
+    async with global_reviews_limit_sem:
+        r = await coroutine
+    return r
 
 
 async def _run(ev, _id, asins, keywords='', domain='amazon.com', current_format=True):
+    collect_tasks = []
     for asin in asins:
-        threader.submit(collect, _id, asin, keywords, domain, 0, current_format)
+        collect_tasks.append(__run(collect(_id, asin, keywords, domain, 0, current_format)))
+    return await asyncio.gather(*collect_tasks)
 
 
 def run(ev, _id, asins, keywords='', domain='amazon.com', current_format=True):
