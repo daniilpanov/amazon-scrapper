@@ -21,12 +21,13 @@ class Requests:
         inst.domain = domain
         return inst
 
-    async def init(self):
+    async def init(self, retry=True):
         cookies = random.choice(Requests.all_cookies)
         if self.request:
             await self.request.close()
         self.request = aiohttp.ClientSession(cookies=cookies or {})
-        await self.req()
+        # self.request = aiohttp.ClientSession()
+        await self.req(retry=retry)
 
     async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None, abs_path=False, retry=True):
         try:
@@ -57,7 +58,7 @@ class Requests:
         except Exception:
             if not retry:
                 return None
-            await self.init()
+            await self.init(False)
             return await self.req(path, method, params, headers, xmlhttp, ref, abs_path, False)
 
     async def get_html(self, path='', headers=None, abs_path=False):
@@ -65,6 +66,10 @@ class Requests:
         if res and res.status == 200:
             return await res.text()
         return None
+
+    @staticmethod
+    async def check_captcha(soup):
+        return bool(soup.select('body > div > div[style*="width: 350px"]'))
 
     async def get_reviews(self, asin, page=1, params=None, keywords='', xmlhttp=True, **kwargs):
         curr_params = {

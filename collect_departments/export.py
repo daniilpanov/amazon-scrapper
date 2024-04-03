@@ -43,7 +43,7 @@ def rec(department, parent_chain=None):
 def export(filename: str, *, delimiter=',', quotechar='"', lim=None, _in=None):
     data_dict = get_data()
 
-    q = (Department.parent_id == None) & (Department.id <= 9)
+    q = (Department.parent_id == 0)
     if isinstance(lim, typing.Sized):
         if len(lim) > 0:
             q &= (Department.id >= lim[0])
@@ -65,3 +65,7 @@ def export(filename: str, *, delimiter=',', quotechar='"', lim=None, _in=None):
                     nr.append(i.name)
                 nr.append(i.url)
                 writer.writerow(nr)
+
+
+if __name__ == '__main__':
+    export('result.csv')

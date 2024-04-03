@@ -30,6 +30,7 @@ class Department(BaseModel):
     parent_id = ForeignKeyField('self', backref='departments', null=True)
     name = CharField(255)
     url = CharField(1000)
+    internal_id = CharField(100)
     items: list
 
     def __init__(self, *args, **kwargs):

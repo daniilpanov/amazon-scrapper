@@ -193,8 +193,9 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
             await asyncio.gather(*req_tasks)
             await sess.request.close()
             task = tasks.get_task(_id)
-            task.add_progress(1)
-            task.result.append(asin)
+            if task:
+                task.add_progress(1)
+                task.result.append(asin)
             data_queue.put(None)
             logging_queue.put(None)
             writer_thr.join()
