@@ -134,13 +134,15 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
     try:
         res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=True)
         if not res or 'BAAAAAAD ASIN!' in res:
-            # log('bad request! use full page')
+            log('bad request! use full page')
             res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=False)
             if not res or 'BAAAAAAD ASIN!' in res:
+                log('..f..')
                 sleep(10)
                 return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
             r = await process_data_from_page(asin, seed, res, domain, dq, lq)
             if r == -3:
+                log('...f...')
                 sleep(10)
                 return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
             return r
@@ -169,6 +171,12 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
         await sess.init()
         html = await sess.get_reviews(asin, xmlhttp=False)
     soup = BeautifulSoup(html, features='lxml')
+    while Requests.check_captcha(soup):
+        print('Kek. Captcha :)')
+        while not html:
+            await sess.init()
+            html = await sess.get_reviews(asin, xmlhttp=False)
+        soup = BeautifulSoup(html, features='lxml')
     reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
     reviews_count = 0
     reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
@@ -186,8 +194,10 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
         async def send_wrapper(s, a, _p, _i, k, d, cf, dq, lq, retry=True):
             await asyncio.sleep(0)
             async with limit_semaphore:
+                print('*r*')
                 res = await send_request(s, a, _p, _i, k, d, cf, dq, lq)
                 if not res and retry:
+                    print('.f.')
                     await asyncio.sleep(10)
                     await sess.init()
                     return await send_wrapper(s, a, _p, _i, k, d, cf, dq, lq, False)
@@ -234,3 +244,7 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
         writer_thr.join()
         logger_thr.join()
         raise
+
+
+if __name__ == '__main__':
+    asyncio.run(collect(None, 'B079QC596Y'))

@@ -13,6 +13,7 @@ class Requests:
     reviews_request_counter: int = 1
     domain: str
     all_cookies = None
+    proxy: str | None = None
 
     def __new__(cls, domain='amazon.com'):
         if not cls.all_cookies:
@@ -21,10 +22,11 @@ class Requests:
         inst.domain = domain
         return inst
 
-    async def init(self, retry=True):
+    async def init(self, retry=True, proxy=None):
         cookies = random.choice(Requests.all_cookies)
         if self.request:
             await self.request.close()
+        self.proxy = proxy or settings.PROXY
         self.request = aiohttp.ClientSession(cookies=cookies or {})
         # self.request = aiohttp.ClientSession()
         await self.req(retry=retry)
@@ -32,7 +34,7 @@ class Requests:
     async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None, abs_path=False, retry=True):
         try:
             url = path if abs_path else f'https://{self.domain}/{path}'
-            return await self.request.request(method, url, proxy=settings.PROXY, params=params, headers={
+            return await self.request.request(method, url, proxy=self.proxy, params=params, headers={
                 'User-Agent': UserAgent(
                     100, software_names=[SoftwareName.CHROME.value],
                     operating_systems=[OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value],
