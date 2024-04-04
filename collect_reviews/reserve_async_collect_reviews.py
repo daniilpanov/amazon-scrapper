@@ -2,7 +2,6 @@ import asyncio
 import json
 import re
 import urllib
-from asyncio import Semaphore
 from builtins import Exception
 from json import JSONDecodeError
 from queue import Queue
@@ -11,7 +10,6 @@ from threading import Thread
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 
-import amazon_requests
 import database
 import parser
 from functions import base_chrome_init, WebDriver
@@ -105,7 +103,7 @@ def process_data_from_page(asin, seed, process_data_res, domain):
     return bool(res) - (not bool(res))
 
 
-async def send_request(sess: amazon_requests.Requests, asin, seed, page, keywords='', domain='amazon.com', current_format=True):
+def send_request(sess: WebDriver, asin, seed, page, keywords='', domain='amazon.com', current_format=True):
     if seed >= params_len:
         return True
 
@@ -133,13 +131,12 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
         s //= length
 
     try:
-        res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=True)
+        ajax = f"$.post(\"https://www.{domain}/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt\", " \
+               + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
+               + ", null, 'text');"
+        res = sess.execute_script("return " + ajax)
         if not res or 'BAAAAAAD ASIN!' in res:
-            log('bad request! use full page')
-            res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=False)
-            if not res or 'BAAAAAAD ASIN!' in res:
-                return False
-            return process_data_from_page(asin, seed, res, domain)
+            return False
         return process_data(asin, seed, res, domain)
     except Exception as e:
         log(e)
@@ -147,21 +144,24 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
         return False
 
 
-async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
     writer_thr.start()
     logger_thr.start()
 
     if index == -1:
         return -1
     log('loading Requests')
-    sess = amazon_requests.Requests(domain)
-    await sess.init()
-    html = await sess.get_reviews(asin, xmlhttp=False)
-    print(html)
-    while not html:
-        await sess.init()
-        html = await sess.get_reviews(asin, xmlhttp=False)
-    soup = BeautifulSoup(html, features='lxml')
+    webdriver = base_chrome_init(goto=f'https://{domain}/')
+    webdriver.change_loc(domain=domain)
+    webdriver.get(webdriver.current_url
+                  + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+    try:
+        webdriver.get(webdriver.get_element('link[rel="canonical"]').get_attribute('href')
+                      + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+    except Exception:
+        pass
+
+    soup = BeautifulSoup(webdriver.get_page_source(), features='lxml')
     reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
     reviews_count = 0
     reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
@@ -169,33 +169,29 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
         reviews_count = int(float(reviews_count_part[1].replace(',', '').replace(' ', '')))
     print('count:', reviews_count)
 
-    limit_semaphore = Semaphore(30)
-
     try:
         log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-        ru = f'www.{domain}/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
-        await sess.req(f'hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={ru}')
+        webdriver.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
 
-        async def send_wrapper(s, a, _p, _i, k, d, cf, retry=True):
-            async with limit_semaphore:
-                res = await send_request(s, a, _p, _i, k, d, cf)
-                if not res and retry:
-                    await sess.init()
-                    return await send_wrapper(s, a, _p, _i, k, d, cf, False)
+        def send_wrapper(s, a, _p, _i, k, d, cf, retry=True):
+            res = send_request(s, a, _p, _i, k, d, cf)
+            if not res and retry:
+                # await sess.init()
+                u = s.driver.current_url
+                s.get('https://' + d)
+                s.get(u)
+                return send_wrapper(s, a, _p, _i, k, d, cf, False)
             return res
 
         try:
-            req_tasks = []
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
-                    req_tasks.append(send_wrapper(sess, asin, params_seed, i, keywords, domain, current_format))
+                    send_wrapper(webdriver, asin, params_seed, i, keywords, domain, current_format)
                 index += 1
-            await asyncio.gather(*req_tasks)
-            await sess.request.close()
+            webdriver.full_close()
             task = tasks.get_task(_id)
-            if task:
-                task.add_progress(1)
-                task.result.append(asin)
+            task.add_progress(1)
+            task.result.append(asin)
             data_queue.put(None)
             logging_queue.put(None)
             writer_thr.join()
@@ -203,12 +199,10 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
-                if sess.request:
-                    await sess.request.close()
+                webdriver.full_close()
                 raise e
             log(f'Skip {asin}')
-            if sess.request:
-                await sess.request.close()
+            webdriver.full_close()
             tasks.get_task(_id).success = False
             data_queue.put(None)
             logging_queue.put(None)
@@ -217,8 +211,7 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
             return index
     except KeyboardInterrupt:
         log('Script stopped')
-        if sess.request:
-            await sess.request.close()
+        webdriver.full_close()
         data_queue.put(None)
         logging_queue.put(None)
         writer_thr.join()

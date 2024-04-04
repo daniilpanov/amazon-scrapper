@@ -290,7 +290,7 @@ def _import_asins(user_id, document, location):
         'ai_highlights.aspects_color': ai_highlights_aspects_new_mapping,
         'amazon_data.customer_reviews': [
             'review_id', 'product_url', 'asin', 'date', 'country',
-            'name', 'title', 'content', 'rating', 'helpful', 'options', 'scrap_datetime',
+            'name', 'title', 'description', 'rating', 'helpful', 'options', 'scrap_datetime',
         ],
     }
     try:

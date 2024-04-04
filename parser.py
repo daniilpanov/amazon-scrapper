@@ -3,6 +3,8 @@ import re
 import pytz
 from bs4 import BeautifulSoup
 
+from amazon_requests import Requests
+
 
 def month_to_int(month: str):
     month = month.lower()
@@ -150,7 +152,7 @@ def parse_reviews(asin, html, domain='amazon.com'):
         'country': review_country,
         'name': customer_name,
         'title': review_title,
-        'content': review_body,
+        'description': review_body,
         'rating': review_rating,
         'helpful': helpful_votes,
         'options': review_options,
@@ -196,6 +198,8 @@ def parse_product(asin, html, tiny=False, domain='amazon.com'):
         print('NO BS! ASIN:', asin)
         return False
     if not bs.select_one('#titleSection, #title, #productTitle'):
+        if Requests.check_captcha(bs):
+            print('Kek, captcha :)', asin)
         print('NO TITLE! ASIN:', asin)
         with open('error-dump.html', 'w', encoding='utf-8') as f:
             f.write(str(bs))

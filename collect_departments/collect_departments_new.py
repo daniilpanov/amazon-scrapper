@@ -13,17 +13,21 @@ from db import Department
 domain = 'amazon.com'
 
 
-semaphore = asyncio.Semaphore(20)
+async def start(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783011_2', parent_id=0):
+    semaphore = asyncio.Semaphore(20)
+    await collect(r, link, parent_id)
 
 
-async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783011_2', parent_id=0):
+async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783011_2', parent_id=0, semaphore=None):
+    if not semaphore:
+        semaphore = asyncio.Semaphore(20)
     async with semaphore:
         if not r:
             r = Requests()
             await r.init()
         try:
             html = await r.get_html(link)
-        except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError) as e:
+        except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError, ConnectionAbortedError) as e:
             print(e)
             sleep(1)
             html = None
@@ -34,12 +38,12 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
             await r.init()
             try:
                 html = await r.get_html(link)
-            except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError) as e:
+            except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError, ConnectionAbortedError) as e:
                 print(e)
                 sleep(1)
                 html = None
         soup = BeautifulSoup(html, features='lxml')
-        if await Requests.check_captcha(soup):
+        if Requests.check_captcha(soup):
             print('Kek.. captcha :)')
             exit(0)
         group = soup.find('div', {'role': 'group'})
@@ -68,7 +72,7 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
                 _id = model.id
             else:
                 _id = 0
-            coroutines.append(collect(r, link, _id))
+            coroutines.append(collect(r, link, _id, semaphore))
         await r.request.close()
     await asyncio.gather(*coroutines)
 
@@ -76,9 +80,11 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
 if __name__ == '__main__':
     fl_d = Department.select().where(Department.parent_id == 0)
     for d in fl_d:
-        if d.id < 630:
+        if d.id < 634:
             continue
-        print('*** collecting', d.name, '--', d.url)
-        asyncio.run(collect(link=d.url, parent_id=d.id))
+        print('*** collecting', d.name, '--', d.url, '--', d.id)
+        asyncio.run(start(link=d.url, parent_id=d.id))
+        with open('deps-log.txt', 'w') as f:
+            f.write(d.name + '--' + d.url + '--' + d.id)
         print('*** end', d.name, '--', d.id)
-    # asyncio.run(collect(link='Best-Sellers-Beauty-Personal-Care-Perfumes-Fragrances/zgbs/beauty/11056591/ref=zg_bs_unv_beauty_2_11056761_1'))
+    # asyncio.run(start(link='Best-Sellers-Beauty-Personal-Care-Perfumes-Fragrances/zgbs/beauty/11056591/ref=zg_bs_unv_beauty_2_11056761_1'))

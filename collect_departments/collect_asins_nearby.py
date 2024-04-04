@@ -12,6 +12,10 @@ async def get_asins(url, sess, excluded=None, limit=True, domain='amazon.com', u
     await sess.init()
 
     html = await sess.get_html(url, abs_path=True)
+    while not html:
+        await asyncio.sleep(0)
+        await sess.init()
+        html = await sess.get_html(url, abs_path=True)
     soup = BeautifulSoup(html, features='lxml')
     links_a = soup.select('div.a-cardui[id*="asin-index"]')
     brands = set()

@@ -68,7 +68,7 @@ class Requests:
         return None
 
     @staticmethod
-    async def check_captcha(soup):
+    def check_captcha(soup):
         return bool(soup.select('body > div > div[style*="width: 350px"]'))
 
     async def get_reviews(self, asin, page=1, params=None, keywords='', xmlhttp=True, **kwargs):
@@ -96,8 +96,8 @@ class Requests:
             )
         else:
             res = await self.req(kwargs.get('canonical_link', f'product-reviews/{asin}'), 'GET', params)
-        if res.status == 200:
+        if res and res.status == 200:
             self.reviews_request_counter += 1
             return await res.text()
-        print('FAIL:', res, await res.text())
+        # print('FAIL:', res)
         return None
