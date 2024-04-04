@@ -29,11 +29,6 @@ async def cp_show():
     return 'web/index.html'
 
 
-@app.get('/cp/local', response_class=FileResponse)
-async def cp_show():
-    return 'web/index.local.html'
-
-
 @app.post('/tasks/add/{script}')
 async def add_task_req(script: str, data=Body()):
     data = json.loads(data)

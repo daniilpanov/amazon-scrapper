@@ -7,7 +7,7 @@ if not dotenv.load_dotenv('.env'):
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'product')
 # POWER LIMITS (active browsers quantity depending on sum of these numbers)
 THREADS = {
-    'reviews': int(os.environ.get('REVIEWS_THREADS', 2)),
+    'reviews': int(os.environ.get('REVIEWS_THREADS', 10)),
     'products': int(os.environ.get('PRODUCTS_THREADS') or 0),
     'departments': int(os.environ.get('DEPARTMENTS_THREADS') or 0),
     'all': int(os.environ.get('ALL_THREADS', os.cpu_count())),

@@ -43,7 +43,9 @@ class Task:
     def to_dict(self):
         return {
             'id': self.id, 'progress': self.progress, 'script': self.script,
-            'alias': self.alias, 'data': self.data, 'started_at': self.started_at.isoformat(),
+            'alias': self.alias, 'data': self.data,
+            'started_at': self.started_at.isoformat(),
+            'ended_at': self.ended_at.isoformat() if self.ended_at else None,
             'success': self.success, 'result': self.result,
         }
 
