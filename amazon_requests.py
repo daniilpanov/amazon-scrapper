@@ -27,7 +27,7 @@ class Requests:
         if self.request:
             await self.request.close()
         if Requests.all_cookies:
-            cookies = random.choice(Requests.all_cookies.values())
+            cookies = random.choice(list(Requests.all_cookies.values()))
             self.sessid = cookies.get('session-id')
         else:
             cookies = {}
