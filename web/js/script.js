@@ -99,7 +99,7 @@ function update() {
                 e.preventDefault();
                 delete_task($(this).attr('data-bs-task-id'));
             })
-            let time = (data[i]['ended_at'] ? (new Data(data[i]['ended_at'])) : Date.now()) - (new Date(data[i]['started_at']))
+            let time = (data[i]['ended_at'] ? (new Date(data[i]['ended_at'])) : Date.now()) - (new Date(data[i]['started_at']))
             if (time) {
                 $(taskTemplate.find('.task-time')).text(formatTime(time));
             }
