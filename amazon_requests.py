@@ -13,22 +13,26 @@ class Requests:
     reviews_request_counter: int = 1
     domain: str
     all_cookies = None
+    sessid: str | None = None
     proxy: str | None = None
 
     def __new__(cls, domain='amazon.com'):
         if not cls.all_cookies:
-            cls.all_cookies = list(db('amazon_data')['__cookies'].find())
+            cls.all_cookies = {i['session-id']: i for i in db('amazon_data')['__cookies'].find()}
         inst = super(Requests, cls).__new__(cls)
         inst.domain = domain
         return inst
 
     async def init(self, retry=True, proxy=None):
-        cookies = random.choice(Requests.all_cookies)
         if self.request:
             await self.request.close()
+        if Requests.all_cookies:
+            cookies = random.choice(Requests.all_cookies.values())
+            self.sessid = cookies.get('session-id')
+        else:
+            cookies = {}
         self.proxy = proxy or settings.PROXY
-        self.request = aiohttp.ClientSession(cookies=cookies or {})
-        # self.request = aiohttp.ClientSession()
+        self.request = aiohttp.ClientSession(cookies=cookies)
         await self.req(retry=retry)
 
     async def req(self, path='', method='GET', params=None, headers=None, xmlhttp=False, ref=None, abs_path=False, retry=True):

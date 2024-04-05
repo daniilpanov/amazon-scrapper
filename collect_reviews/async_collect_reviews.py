@@ -132,21 +132,24 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
         s //= length
 
     try:
-        res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=True)
+        # res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=True)
+        res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=False)
         if not res or 'BAAAAAAD ASIN!' in res:
-            log('bad request! use full page')
-            res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=False)
-            if not res or 'BAAAAAAD ASIN!' in res:
-                log('..f..')
-                sleep(10)
-                return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
-            r = await process_data_from_page(asin, seed, res, domain, dq, lq)
-            if r == -3:
-                log('...f...')
-                sleep(10)
-                return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
-            return r
-        return process_data(asin, seed, res, domain, dq, lq)
+            log('..fff..')
+            # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
+            # del Requests.all_cookies[sess.sessid]
+            sleep(10)
+            await sess.init()
+            return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
+        r = await process_data_from_page(asin, seed, res, domain, dq, lq)
+        if r == -3:
+            log('...captcha...')
+            # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
+            # del Requests.all_cookies[sess.sessid]
+            sleep(10)
+            await sess.init()
+            return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
+        return r
     except Exception as e:
         log(e)
         log('sending reviews request failed')
@@ -205,11 +208,16 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
 
         try:
             req_tasks = []
+            ars = []
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
+                r = amazon_requests.Requests(domain)
+                ars.append(r)
                 for i in range(1, 11):
-                    req_tasks.append(send_wrapper(sess, asin, params_seed, i, keywords, domain, current_format, dq=data_queue, lq=logging_queue))
+                    req_tasks.append(send_wrapper(r, asin, params_seed, i, keywords, domain, current_format, dq=data_queue, lq=logging_queue))
                 index += 1
             await asyncio.gather(*req_tasks)
+            for r in ars:
+                await r.request.close()
             await sess.request.close()
             task = tasks.get_task(_id)
             if task:
