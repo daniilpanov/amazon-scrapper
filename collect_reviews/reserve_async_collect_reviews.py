@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 import re
 import urllib
@@ -7,6 +8,7 @@ from json import JSONDecodeError
 from queue import Queue
 from threading import Thread
 
+import pytz
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 
@@ -203,7 +205,9 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 raise e
             log(f'Skip {asin}')
             webdriver.full_close()
-            tasks.get_task(_id).success = False
+            task = tasks.get_task(_id)
+            task.success = False
+            task.ended_at = datetime.datetime.now(pytz.UTC)
             data_queue.put(None)
             logging_queue.put(None)
             writer_thr.join()

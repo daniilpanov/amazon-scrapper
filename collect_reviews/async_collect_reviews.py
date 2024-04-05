@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 import re
 import urllib
@@ -9,6 +10,7 @@ from queue import Queue
 from threading import Thread
 from time import sleep
 
+import pytz
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 
@@ -138,6 +140,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
             log('..fff..')
             # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
             # del Requests.all_cookies[sess.sessid]
+            Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find()}
             sleep(10)
             await sess.init()
             return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
@@ -146,6 +149,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
             log('...captcha...')
             # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
             # del Requests.all_cookies[sess.sessid]
+            Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find()}
             sleep(10)
             await sess.init()
             return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
@@ -237,7 +241,9 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
             log(f'Skip {asin}')
             if sess.request:
                 await sess.request.close()
-            tasks.get_task(_id).success = False
+            task = tasks.get_task(_id)
+            task.success = False
+            task.ended_at = datetime.datetime.now(pytz.UTC)
             data_queue.put(None)
             logging_queue.put(None)
             writer_thr.join()

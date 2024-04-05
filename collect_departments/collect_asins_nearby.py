@@ -1,5 +1,7 @@
 import asyncio
+import datetime
 
+import pytz
 from bs4 import BeautifulSoup
 from selenium.common import NoSuchElementException
 
@@ -98,6 +100,7 @@ async def collect_nearby(_id, asin_bsr, limit=True, unique_brands=False, count=5
     task = tasks.get_task(_id)
     task.progress = 100
     task.success = True
+    task.ended_at = datetime.datetime.now(pytz.UTC)
     task.result = {
         'bsr_url': url,
         'asins': list(map(lambda x: x[1], result)),
