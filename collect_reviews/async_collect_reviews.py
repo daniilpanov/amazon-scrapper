@@ -141,7 +141,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
             # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
             # del Requests.all_cookies[sess.sessid]
             Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find()}
-            sleep(10)
+            await asyncio.sleep(1)
             await sess.init()
             return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
         r = await process_data_from_page(asin, seed, res, domain, dq, lq)
@@ -150,7 +150,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
             # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
             # del Requests.all_cookies[sess.sessid]
             Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find()}
-            sleep(10)
+            await asyncio.sleep(1)
             await sess.init()
             return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
         return r
