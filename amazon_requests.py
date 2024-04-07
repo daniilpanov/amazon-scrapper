@@ -18,7 +18,7 @@ class Requests:
 
     def __new__(cls, domain='amazon.com'):
         if not cls.all_cookies:
-            cls.all_cookies = {i['session-id']: i for i in db('amazon_data')['__cookies'].find()}
+            cls.all_cookies = {i['session-id']: i for i in db('amazon_data')['__cookies'].find() if 'session-id' in i}
         inst = super(Requests, cls).__new__(cls)
         inst.domain = domain
         return inst

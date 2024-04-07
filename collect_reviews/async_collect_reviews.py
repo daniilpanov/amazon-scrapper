@@ -140,7 +140,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
             log('..fff..')
             # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
             # del Requests.all_cookies[sess.sessid]
-            Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find()}
+            Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find() if 'session-id' in i}
             await asyncio.sleep(1)
             await sess.init()
             return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
@@ -149,7 +149,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
             log('...captcha...')
             # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
             # del Requests.all_cookies[sess.sessid]
-            Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find()}
+            Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find() if 'session-id' in i}
             await asyncio.sleep(1)
             await sess.init()
             return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
