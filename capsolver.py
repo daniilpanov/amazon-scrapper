@@ -38,14 +38,8 @@ def main():
 
     while True:
         print(proxies, old_proxy_list)
-        reload = False
-        for i, proxy in enumerate(proxies):
-            if not old_proxy_list or old_proxy_list[i][0] == proxy[0] and old_proxy_list[i][1] == proxy[1]:
-                reload = True
-                break
-        print('Proxies need update:', reload)
-
-        if reload:
+        if old_proxy_list != proxies:
+            print('Proxies need update!')
             with ThreadPoolExecutor(len(proxies)) as threader:
                 for chrome in chromes:
                     threader.submit(chrome.full_close)
@@ -55,7 +49,7 @@ def main():
                 for i in proxies:
                     threader.submit(chrome_init, chromes, f'socks5://{i[2]}:{i[3]}@{i[0]}:{i[1]}')
             print('Chromes inited!')
-
+            sleep(5)
         with ThreadPoolExecutor(len(proxies)) as threader:
             for chrome in chromes:
                 threader.submit(chrome.get, 'https://amazon.com')
