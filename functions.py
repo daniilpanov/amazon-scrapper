@@ -300,15 +300,14 @@ class RetryException(Exception):
 
 def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False, logs=False, proxy=None):
     opts = Options()
-    options = {}
+    wire_opts = {}
     if extension:
         opts.add_extension(os.path.abspath(extension))
     if tor:
         opts.add_argument('proxy-server=socks5://104.154.150.173:9050')
     if proxy:
-        # FIXME: understand what is real proxy?)
-        opts.add_argument(f'proxy-server={proxy}')
-        options = {'proxy': {'https': f'{proxy}'}}
+        # opts.add_argument(f'proxy-server={proxy}')
+        wire_opts = {'proxy': {'http': proxy, 'https': proxy}}
     if headless:
         opts.add_argument('--headless')
         opts.add_argument('--headless=new')
@@ -328,7 +327,7 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
                   operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value),
                   limit=120).get_random_user_agent(),
     ))
-    wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), chrome_options=opts, seleniumwire_options=options))
+    wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=opts, seleniumwire_options=wire_opts))
     ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         wd.get(goto, False)

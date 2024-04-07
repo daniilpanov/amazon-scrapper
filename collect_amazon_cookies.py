@@ -1,7 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from threading import Thread
-from time import sleep
 
 from database import db
 from functions import base_chrome_init
