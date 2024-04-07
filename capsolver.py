@@ -3,6 +3,7 @@ from time import sleep
 
 import requests
 
+import database
 from functions import base_chrome_init
 
 
@@ -19,7 +20,15 @@ def get_proxies_list():
 
 
 def chrome_init(arr, proxy):
-    arr.append(base_chrome_init(False, goto='https://amazon.com', proxy=proxy))
+    ch = base_chrome_init(goto='https://amazon.com', proxy=proxy)
+    processed = {}
+    for datum in ch.driver.get_cookies():
+        processed[datum['name']] = datum['value']
+    try:
+        database.db('amazon_data')['__cookies'].insert_one(processed)
+    except Exception:
+        pass
+    arr.append(ch)
 
 
 def main():
