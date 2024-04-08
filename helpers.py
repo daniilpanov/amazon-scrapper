@@ -1,5 +1,7 @@
 import os.path
 import re
+from time import sleep
+
 from more_itertools import batched
 
 import colorama
@@ -8,6 +10,18 @@ from urllib3.exceptions import NewConnectionError, MaxRetryError
 from requests.exceptions import ConnectionError
 
 DEBUG = True
+
+
+def get_proxies_list():
+    r = requests.get(
+        'https://proxy.webshare.io/api/v2/proxy/list/download/fylqlgwtujdvttnfaorztplrphexumivqxzmwiof/-/any/username/direct/-/')
+    if r.status_code == 200:
+        res = []
+        for i in r.text.splitlines():
+            res.append(i.split(':'))
+        return res
+    sleep(10)
+    return get_proxies_list()
 
 
 def chunk_asins(asins_raw):
