@@ -70,21 +70,21 @@ def send_bot_msg(user, msg=None, files=None):
     if msg or files:
         try:
             requests.post('http://localhost:8080/send_msg', {'msg': msg, 'uid': user, 'files': files})
-        except (ConnectionError, MaxRetryError, ConnectionRefusedError, NewConnectionError):
+        except (ConnectionError, MaxRetryError, ConnectionRefusedError, ConnectionResetError, NewConnectionError):
             pass
 
 
 def end_task(_id):
     try:
         requests.post('http://localhost:8080/end_task', {'_id': _id})
-    except (ConnectionError, MaxRetryError, ConnectionRefusedError, NewConnectionError):
+    except (ConnectionError, MaxRetryError, ConnectionRefusedError, ConnectionResetError, NewConnectionError):
         pass
 
 
 def captcha_solve(url):
     try:
         result = requests.post('http://localhost:8090/solve/url', {'url': url})
-    except (ConnectionError, MaxRetryError, ConnectionRefusedError, NewConnectionError):
+    except (ConnectionError, MaxRetryError, ConnectionRefusedError, ConnectionResetError, NewConnectionError):
         return None
     if result.status_code == 200:
         return result.content.decode('utf-8')

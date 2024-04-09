@@ -87,8 +87,8 @@ class Requests:
             await self.init(False)
             return await self.req(path, method, params, headers, xmlhttp, ref, abs_path, False)
 
-    async def get_html(self, path='', headers=None, abs_path=False):
-        res = await self.req(path, headers=headers, abs_path=abs_path)
+    async def get_html(self, path='', headers=None, abs_path=False, ref=None):
+        res = await self.req(path, headers=headers, abs_path=abs_path, ref=ref)
         if res and res.status == 200:
             return await res.text()
         return None
@@ -118,7 +118,7 @@ class Requests:
         if xmlhttp:
             res = await self.req(
                 'hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt',
-                'POST', params, xmlhttp=True,
+                'POST', params, xmlhttp=True, ref=kwargs.get('canonical_link', f'product-reviews/{asin}'),
             )
         else:
             res = await self.req(kwargs.get('canonical_link', f'product-reviews/{asin}'), 'GET', params)

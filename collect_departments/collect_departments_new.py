@@ -7,6 +7,7 @@ import colorama
 import peewee
 from bs4 import BeautifulSoup
 
+import database
 from amazon_requests import Requests
 from db import Department
 
@@ -18,9 +19,9 @@ async def start(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_
     await collect(r, link, parent_id, semaphore)
 
 
-async def init(r, link):
+async def init(r, link, parent_link=None):
     try:
-        html = await r.get_html(link)
+        html = await r.get_html(link, ref=parent_link)
     except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError,
             ConnectionAbortedError) as e:
         print(e)
@@ -32,7 +33,7 @@ async def init(r, link):
         r = Requests()
         await r.init()
         try:
-            html = await r.get_html(link)
+            html = await r.get_html(link, ref=parent_link)
         except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError,
                 ConnectionAbortedError) as e:
             print(e)
@@ -41,19 +42,22 @@ async def init(r, link):
     return html
 
 
-async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783011_2', parent_id=0, semaphore=None):
+async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783011_2', parent_id=0, semaphore=None, parent_link=None):
     if not semaphore:
         semaphore = asyncio.Semaphore(20)
     async with semaphore:
         if not r:
             r = Requests()
             await r.init()
-        html = await init(r, link)
+        html = await init(r, link, parent_link)
         soup = BeautifulSoup(html, features='lxml')
         while Requests.check_captcha(soup):
             print('Kek.. captcha :)')
-            sleep(60)
-            html = await init(r, link)
+            if r.sessid in Requests.all_cookies:
+                del Requests.all_cookies[r.sessid]
+            database.db('amazon_data')['__cookies'].delete_one({'session-id': r.sessid})
+            sleep(20)
+            html = await init(r, link, parent_link)
             soup = BeautifulSoup(html, features='lxml')
         group = soup.find('div', {'role': 'group'})
         items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
@@ -75,13 +79,14 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
         models = {i.internal_id: i for i in Department.select().where(Department.parent_id == parent_id)}
         print('models: ', models)
         coroutines = []
+        parent_link = link
         for internal_id, title, link in data:
             model = models.get(internal_id)
             if model:
                 _id = model.id
             else:
                 _id = 0
-            coroutines.append(collect(r, link, _id, semaphore))
+            coroutines.append(collect(r, link, _id, semaphore, parent_link))
         await r.request.close()
     await asyncio.gather(*coroutines)
 
@@ -89,7 +94,7 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
 if __name__ == '__main__':
     fl_d = Department.select().where(Department.parent_id == 0)
     for d in fl_d:
-        if d.id < 640:
+        if d.id < 642:
             continue
         print('*** collecting', d.name, '--', d.url, '--', d.id)
         asyncio.run(start(link=d.url, parent_id=d.id))

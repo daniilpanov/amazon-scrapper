@@ -172,6 +172,7 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
     except Exception:
         pass
+    print('inited')
 
     soup = BeautifulSoup(wd.get_page_source(), features='lxml')
     reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
@@ -200,16 +201,21 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
         try:
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
+                    print('seed:', params_seed)
                     send_wrapper(asin, params_seed, i, keywords, domain, current_format)
                 index += 1
             wd.full_close()
             task = tasks.get_task(_id)
-            task.add_progress(1)
-            task.result.append(asin)
+            if task:
+                task.result['asins'].append(asin)
+                task.result['count'].append(
+                    database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}))
+                task.add_progress(1)
             data_queue.put(None)
             logging_queue.put(None)
             writer_thr.join()
             logger_thr.join()
+            print('full end!')
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):

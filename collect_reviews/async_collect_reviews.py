@@ -106,7 +106,7 @@ async def process_data_from_page(asin, seed, process_data_res, domain, data_queu
     return bool(res) - (not bool(res))
 
 
-async def send_request(sess: amazon_requests.Requests, asin, seed, page, keywords='', domain='amazon.com', current_format=True, dq=None, lq=None):
+async def send_request(sess: amazon_requests.Requests, asin, seed, page, keywords='', domain='amazon.com', current_format=True, dq=None, lq=None, **kwargs):
     if seed >= params_len:
         return True
 
@@ -135,7 +135,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
 
     try:
         # res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=True)
-        res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=False)
+        res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=False, **kwargs)
         if not res or 'BAAAAAAD ASIN!' in res:
             log('..fff..')
             # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
@@ -143,7 +143,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
             Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find() if 'session-id' in i}
             await asyncio.sleep(1)
             await sess.init()
-            return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
+            return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq, **kwargs)
         r = await process_data_from_page(asin, seed, res, domain, dq, lq)
         if r == -3:
             log('...captcha...')
@@ -152,7 +152,7 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
             Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find() if 'session-id' in i}
             await asyncio.sleep(1)
             await sess.init()
-            return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq)
+            return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq, **kwargs)
         return r
     except Exception as e:
         log(e)
@@ -184,6 +184,11 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
             await sess.init()
             html = await sess.get_reviews(asin, xmlhttp=False)
         soup = BeautifulSoup(html, features='lxml')
+    canonical_link_item = soup.select_one('link[rel="canonical"]')
+    if canonical_link_item:
+        canonical_link = canonical_link_item['href'] + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
+    else:
+        canonical_link = None
     reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
     reviews_count = 0
     reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
@@ -198,16 +203,16 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
         ru = f'www.{domain}/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
         await sess.req(f'hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={ru}')
 
-        async def send_wrapper(s, a, _p, _i, k, d, cf, dq, lq, retry=True):
+        async def send_wrapper(s, a, _p, _i, k, d, cf, dq, lq, retry=True, **kw):
             await asyncio.sleep(0)
             async with limit_semaphore:
                 print('*r*')
-                res = await send_request(s, a, _p, _i, k, d, cf, dq, lq)
+                res = await send_request(s, a, _p, _i, k, d, cf, dq, lq, **kw)
                 if not res and retry:
                     print('.f.')
                     await asyncio.sleep(10)
                     await sess.init()
-                    return await send_wrapper(s, a, _p, _i, k, d, cf, dq, lq, False)
+                    return await send_wrapper(s, a, _p, _i, k, d, cf, dq, lq, False, **kw)
             return res
 
         try:
@@ -217,7 +222,7 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
                 r = amazon_requests.Requests(domain)
                 ars.append(r)
                 for i in range(1, 11):
-                    req_tasks.append(send_wrapper(r, asin, params_seed, i, keywords, domain, current_format, dq=data_queue, lq=logging_queue))
+                    req_tasks.append(send_wrapper(r, asin, params_seed, i, keywords, domain, current_format, dq=data_queue, lq=logging_queue, canonical_link=canonical_link))
                 index += 1
             await asyncio.gather(*req_tasks)
             for r in ars:
