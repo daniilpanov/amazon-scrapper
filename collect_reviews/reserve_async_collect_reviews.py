@@ -215,7 +215,6 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
             logging_queue.put(None)
             writer_thr.join()
             logger_thr.join()
-            print('full end!')
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
