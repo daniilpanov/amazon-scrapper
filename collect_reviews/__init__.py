@@ -1,5 +1,7 @@
 from helpers import get_all_asins_from_text
-from .async_collect_reviews import *
+import settings
+# from .async_collect_reviews import *
+from .reserve_async_collect_reviews import *
 
 
 active_asins = []
