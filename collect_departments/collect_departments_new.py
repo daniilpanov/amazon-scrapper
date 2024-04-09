@@ -49,18 +49,20 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
         if not r:
             r = Requests()
             await r.init()
-        html = await init(r, link, parent_link)
-        soup = BeautifulSoup(html, features='lxml')
-        while Requests.check_captcha(soup):
-            print('Kek.. captcha :)')
-            if r.sessid in Requests.all_cookies:
-                del Requests.all_cookies[r.sessid]
-            database.db('amazon_data')['__cookies'].delete_one({'session-id': r.sessid})
-            sleep(20)
+        group = None
+        while not group:
             html = await init(r, link, parent_link)
             soup = BeautifulSoup(html, features='lxml')
-        group = soup.find('div', {'role': 'group'})
-        items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
+            while Requests.check_captcha(soup):
+                print('Kek.. captcha :)')
+                if r.sessid in Requests.all_cookies:
+                    del Requests.all_cookies[r.sessid]
+                database.db('amazon_data')['__cookies'].delete_one({'session-id': r.sessid})
+                sleep(20)
+                html = await init(r, link, parent_link)
+                soup = BeautifulSoup(html, features='lxml')
+            group = soup.find('div', {'role': 'group'})
+            items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
         data = []
         models = []
         for item in items:

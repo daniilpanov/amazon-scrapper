@@ -13,7 +13,7 @@ def get_data():
 
     for item in data:
         _id = int(str(item.id))
-        parent_id = int(str(item.parent_id)) if item.parent_id else None
+        parent_id = int(str(item.parent_id)) if item.parent_id_id > 0 else None
         data_dict[_id] = item
         if parent_id not in data_parent_dict:
             data_parent_dict[parent_id] = [item]
@@ -46,9 +46,9 @@ def export(filename: str, *, delimiter=',', quotechar='"', lim=None, _in=None):
     q = (Department.parent_id == 0)
     if isinstance(lim, typing.Sized):
         if len(lim) > 0:
-            q &= (Department.id >= lim[0])
+            q &= (Department.id <= lim[0])
         if len(lim) > 1:
-            q &= (Department.id <= lim[1])
+            q &= (Department.id >= lim[1])
     if isinstance(_in, typing.Iterable):
         q &= (Department.id in _in)
 
@@ -68,4 +68,4 @@ def export(filename: str, *, delimiter=',', quotechar='"', lim=None, _in=None):
 
 
 if __name__ == '__main__':
-    export('result.csv')
+    export('result.csv', lim=(641,))

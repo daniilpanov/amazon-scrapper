@@ -48,4 +48,4 @@ def get_runnable(ev, _id, asins, keywords='', domain='amazon.com', current_forma
         asins = get_all_asins_from_text(asins)
     task.all = len(asins)
     task.result = {'asins': [], 'count': []}
-    return [collect(_id, asin, keywords, domain, 0, current_format) for asin in asins]
+    return [start_async(_id, asin, keywords, domain, 0, current_format) for asin in asins]
