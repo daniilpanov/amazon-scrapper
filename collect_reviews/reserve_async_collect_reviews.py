@@ -152,7 +152,7 @@ def send_request(asin, seed, page, keywords='', domain='amazon.com', current_for
 def wd_init(domain, asin):
     global wd
     log('loading Requests')
-    wd = base_chrome_init(False, goto=f'https://{domain}/')
+    wd = base_chrome_init(goto=f'https://{domain}/')
     wd.change_loc(domain=domain)
 
 
