@@ -16,7 +16,7 @@ import database
 import parser
 from functions import base_chrome_init, WebDriver
 
-from helpers import log
+from helpers import log, to_async
 import tasks
 
 
@@ -32,6 +32,7 @@ for key in params:
     params_len *= len(params[key])
 data_queue = Queue()
 logging_queue = Queue()
+wd: WebDriver | None = None
 
 
 def write_data(q: Queue):
@@ -105,7 +106,8 @@ def process_data_from_page(asin, seed, process_data_res, domain):
     return bool(res) - (not bool(res))
 
 
-def send_request(sess: WebDriver, asin, seed, page, keywords='', domain='amazon.com', current_format=True):
+def send_request(asin, seed, page, keywords='', domain='amazon.com', current_format=True):
+    global wd
     if seed >= params_len:
         return True
 
@@ -136,8 +138,9 @@ def send_request(sess: WebDriver, asin, seed, page, keywords='', domain='amazon.
         ajax = f"$.post(\"https://www.{domain}/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt\", " \
                + "{" + '",'.join([':"'.join(map(str, keyval)) for keyval in current_params.items()]) + "\"}" \
                + ", null, 'text');"
-        res = sess.execute_script("return " + ajax)
+        res = wd.execute_script("return " + ajax)
         if not res or 'BAAAAAAD ASIN!' in res:
+
             return False
         return process_data(asin, seed, res, domain)
     except Exception as e:
@@ -146,24 +149,31 @@ def send_request(sess: WebDriver, asin, seed, page, keywords='', domain='amazon.
         return False
 
 
+def wd_init(domain, asin):
+    global wd
+    log('loading Requests')
+    wd = base_chrome_init(False, goto=f'https://{domain}/')
+    wd.change_loc(domain=domain)
+
+
+@to_async
 def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+    global wd
     writer_thr.start()
     logger_thr.start()
 
     if index == -1:
         return -1
-    log('loading Requests')
-    webdriver = base_chrome_init(goto=f'https://{domain}/')
-    webdriver.change_loc(domain=domain)
-    webdriver.get(webdriver.current_url
-                  + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+    wd_init(domain, asin)
+    wd.get(wd.current_url
+           + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
     try:
-        webdriver.get(webdriver.get_element('link[rel="canonical"]').get_attribute('href')
-                      + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+        wd.get(wd.get_element('link[rel="canonical"]').get_attribute('href')
+               + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
     except Exception:
         pass
 
-    soup = BeautifulSoup(webdriver.get_page_source(), features='lxml')
+    soup = BeautifulSoup(wd.get_page_source(), features='lxml')
     reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
     reviews_count = 0
     reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
@@ -173,24 +183,26 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
 
     try:
         log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-        webdriver.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(webdriver.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
+        wd.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(wd.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
 
-        def send_wrapper(s, a, _p, _i, k, d, cf, retry=True):
-            res = send_request(s, a, _p, _i, k, d, cf)
+        def send_wrapper(a, _p, _i, k, d, cf, retry=True):
+            global wd
+            res = send_request(a, _p, _i, k, d, cf)
             if not res and retry:
-                # await sess.init()
-                u = s.driver.current_url
-                s.get('https://' + d)
-                s.get(u)
-                return send_wrapper(s, a, _p, _i, k, d, cf, False)
+                u = wd.driver.current_url
+                wd.full_close()
+                wd_init(d, a)
+                wd.get('https://' + d)
+                wd.get(u)
+                return send_wrapper(a, _p, _i, k, d, cf, False)
             return res
 
         try:
             for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
                 for i in range(1, 11):
-                    send_wrapper(webdriver, asin, params_seed, i, keywords, domain, current_format)
+                    send_wrapper(asin, params_seed, i, keywords, domain, current_format)
                 index += 1
-            webdriver.full_close()
+            wd.full_close()
             task = tasks.get_task(_id)
             task.add_progress(1)
             task.result.append(asin)
@@ -201,10 +213,10 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
             return -1
         except Exception as e:
             if 'Bad ASIN' not in str(e):
-                webdriver.full_close()
+                wd.full_close()
                 raise e
             log(f'Skip {asin}')
-            webdriver.full_close()
+            wd.full_close()
             task = tasks.get_task(_id)
             task.success = False
             task.ended_at = datetime.datetime.now(pytz.UTC)
@@ -215,9 +227,13 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
             return index
     except KeyboardInterrupt:
         log('Script stopped')
-        webdriver.full_close()
+        wd.full_close()
         data_queue.put(None)
         logging_queue.put(None)
         writer_thr.join()
         logger_thr.join()
         raise
+
+
+if __name__ == '__main__':
+    asyncio.run(collect(None, 'B079QC596Y'))

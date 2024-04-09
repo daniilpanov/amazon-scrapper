@@ -89,7 +89,7 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
 if __name__ == '__main__':
     fl_d = Department.select().where(Department.parent_id == 0)
     for d in fl_d:
-        if d.id < 635:
+        if d.id < 636:
             continue
         print('*** collecting', d.name, '--', d.url, '--', d.id)
         asyncio.run(start(link=d.url, parent_id=d.id))

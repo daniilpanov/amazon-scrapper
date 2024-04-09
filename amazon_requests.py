@@ -22,7 +22,7 @@ class Requests:
     def __new__(cls, domain='amazon.com'):
         if not cls.all_cookies or not cls.last_update or datetime.datetime.now(
                 pytz.UTC) - cls.last_update > datetime.timedelta(minutes=5):
-            cls.all_cookies = {i['session-id']: i for i in db('amazon_data')['__cookies_special'].find()
+            cls.all_cookies = {i['session-id']: i for i in db('amazon_data')['__cookies'].find()
                                if 'session-id' in i}
             cls.last_update = datetime.datetime.now(pytz.UTC)
         inst = super(Requests, cls).__new__(cls)
@@ -34,7 +34,7 @@ class Requests:
             await self.request.close()
         if not Requests.all_cookies or not Requests.last_update or datetime.datetime.now(
                 pytz.UTC) - Requests.last_update > datetime.timedelta(minutes=5):
-            Requests.all_cookies = {i['session-id']: i for i in db('amazon_data')['__cookies_special'].find()
+            Requests.all_cookies = {i['session-id']: i for i in db('amazon_data')['__cookies'].find()
                                     if 'session-id' in i}
             Requests.last_update = datetime.datetime.now(pytz.UTC)
         if Requests.all_cookies:

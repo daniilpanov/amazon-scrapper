@@ -1,5 +1,7 @@
+import asyncio
 import os.path
 import re
+from functools import wraps, partial
 from time import sleep
 
 from more_itertools import batched
@@ -10,6 +12,16 @@ from urllib3.exceptions import NewConnectionError, MaxRetryError
 from requests.exceptions import ConnectionError
 
 DEBUG = True
+
+
+def to_async(func):
+    @wraps(func)
+    async def run(*args, loop=None, executor=None, **kwargs):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        pfunc = partial(func, *args, **kwargs)
+        return await loop.run_in_executor(executor, pfunc)
+    return run
 
 
 def get_proxies_list():
