@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecodeError
 from queue import Queue
 from threading import Thread
+from time import sleep
 
 import pytz
 from bs4 import BeautifulSoup
@@ -155,9 +156,13 @@ def wd_init(domain, asin):
     if asin in wds:
         wds[asin].full_close()
     log('loading webdriver for', asin)
-    wds[asin] = base_chrome_init(goto=f'https://{domain}/')
-    wds[asin].change_loc(domain=domain)
-    return wds[asin]
+    try:
+        wds[asin] = base_chrome_init(goto=f'https://{domain}/')
+        wds[asin].change_loc(domain=domain)
+        return wds[asin]
+    except:
+        sleep(5)
+        return wd_init(domain, asin)
 
 
 def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
@@ -252,7 +257,11 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
             raise
     except Exception as e:
         with open('log', 'w', encoding='utf-8') as f:
-            f.write(str(e))
+            tb = e.__traceback__
+            while tb:
+                f.write(
+                    f'Имя файла: {tb.tb_frame.f_code.co_filename}, строка {tb.tb_lineno}, метод: {tb.tb_frame.f_code.co_name}\n')
+                tb = tb.tb_next
         raise e
 
 
