@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import json
 import re
@@ -12,16 +11,14 @@ from time import sleep
 
 import pytz
 from bs4 import BeautifulSoup
-from pandas import DataFrame
+from selenium.common import NoSuchElementException, StaleElementReferenceException, WebDriverException
 
 import database
 import parser
 import settings
-from functions import base_chrome_init, WebDriver
-
-from helpers import log, to_async
 import tasks
-
+from functions import base_chrome_init, WebDriver
+from helpers import log
 
 params = {
     'sortBy': ['', 'recent'],
@@ -175,16 +172,28 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
 
         if index == -1:
             return -1
-        wd = wd_init(domain, asin)
-        wd.get(wd.current_url
-               + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
-        try:
-            wd.get(wd.get_element('link[rel="canonical"]').get_attribute('href')
-                   + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
-        except Exception:
-            pass
-
-        soup = BeautifulSoup(wd.get_page_source(), features='lxml')
+        prod_link = None
+        while True:
+            try:
+                wd = wd_init(domain, asin)
+                prod_link = (wd.current_url
+                             + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+                wd.get(prod_link)
+                canonical_link_item = wd.get_element('link[rel="canonical"]')
+                if canonical_link_item:
+                    canonical_link = canonical_link_item.get_attribute('href')
+                    if canonical_link:
+                        prod_link = canonical_link + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
+                        wd.get(prod_link)
+            except (NoSuchElementException, StaleElementReferenceException, KeyError):
+                pass
+            except WebDriverException:
+                continue
+            try:
+                soup = BeautifulSoup(wd.get_page_source(), features='lxml')
+            except WebDriverException:
+                continue
+            break
         reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
         reviews_count = 0
         reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
@@ -194,7 +203,23 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
 
         try:
             log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-            wd.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(wd.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
+            while True:
+                try:
+                    wd.execute_script(
+                        f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews'
+                        f'&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords='
+                        f'&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias='
+                        f'''&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(
+                            wd.current_url.replace(f"https://{domain}", "")
+                            .replace(f"https://www.{domain}", "")
+                        )}")'''
+                    )
+                    break
+                except WebDriverException:
+                    sleep(1)
+                    wd = wd_init(domain, asin)
+                    wd.get(prod_link)
+                    continue
 
             def send_wrapper(a, _p, _i, k, d, cf):
                 global wds
@@ -263,7 +288,6 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                     f'Имя файла: {tb.tb_frame.f_code.co_filename}, строка {tb.tb_lineno}, метод: {tb.tb_frame.f_code.co_name}\n')
                 tb = tb.tb_next
         raise e
-
 
 
 def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
