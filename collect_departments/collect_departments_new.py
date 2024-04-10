@@ -49,8 +49,7 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
         if not r:
             r = Requests()
             await r.init()
-        group = None
-        while not group:
+        while True:
             html = await init(r, link, parent_link)
             soup = BeautifulSoup(html, features='lxml')
             while Requests.check_captcha(soup):
@@ -62,7 +61,9 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
                 html = await init(r, link, parent_link)
                 soup = BeautifulSoup(html, features='lxml')
             group = soup.find('div', {'role': 'group'})
-            items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
+            if group:
+                items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
+                break
         data = []
         models = []
         for item in items:
@@ -96,7 +97,7 @@ async def collect(r=None, link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_
 if __name__ == '__main__':
     fl_d = Department.select().where(Department.parent_id == 0)
     for d in fl_d:
-        if d.id < 643:
+        if d.id < 645:
             continue
         print('*** collecting', d.name, '--', d.url, '--', d.id)
         asyncio.run(start(link=d.url, parent_id=d.id))

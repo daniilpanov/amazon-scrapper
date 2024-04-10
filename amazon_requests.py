@@ -45,7 +45,8 @@ class Requests:
             self.sessid = cookies.get('session-id')
         else:
             cookies = {}
-        self.proxy = proxy or settings.PROXY
+        if proxy is not False:
+            self.proxy = proxy or settings.PROXY
         self.request = aiohttp.ClientSession(cookies=cookies)
         await self.req(retry=retry)
 

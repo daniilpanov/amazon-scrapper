@@ -1,8 +1,6 @@
 import asyncio
 
-import amazon_requests
 import database as db
-import tasks
 from helpers import log
 from parser import parse_product, parse_aspects
 

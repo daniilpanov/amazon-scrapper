@@ -1,6 +1,7 @@
-from helpers import chunk_asins, get_all_asins_from_text
+from helpers import get_all_asins_from_text
 from .async_collect_products import *
-import asyncio
+import tasks
+import amazon_requests
 
 
 def get_runnable(ev, _id, asins, collect_aspects=True):

@@ -26,6 +26,7 @@ def write_data(wqp):
         for datum in data:
             processed[datum['name']] = datum['value']
         try:
+            print(processed['session-id'])
             db('amazon_data')['__cookies'].insert_one(processed)
         except Exception:
             pass
