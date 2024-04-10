@@ -161,94 +161,100 @@ def wd_init(domain, asin):
 
 
 def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
-    global wds
-    writer_thr = Thread(target=write_data, args=(data_queue,))
-    logger_thr = Thread(target=logger, args=(logging_queue,))
-    writer_thr.start()
-    logger_thr.start()
-
-    if index == -1:
-        return -1
-    wd = wd_init(domain, asin)
-    wd.get(wd.current_url
-           + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
     try:
-        wd.get(wd.get_element('link[rel="canonical"]').get_attribute('href')
-               + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
-    except Exception:
-        pass
+        global wds
+        writer_thr = Thread(target=write_data, args=(data_queue,))
+        logger_thr = Thread(target=logger, args=(logging_queue,))
+        writer_thr.start()
+        logger_thr.start()
 
-    soup = BeautifulSoup(wd.get_page_source(), features='lxml')
-    reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
-    reviews_count = 0
-    reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
-    if len(reviews_count_part) == 2:
-        reviews_count = int(float(reviews_count_part[1].replace(',', '').replace(' ', '')))
-    log('count:', reviews_count)
+        if index == -1:
+            return -1
+        wd = wd_init(domain, asin)
+        wd.get(wd.current_url
+               + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+        try:
+            wd.get(wd.get_element('link[rel="canonical"]').get_attribute('href')
+                   + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+        except Exception:
+            pass
 
-    try:
-        log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-        wd.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(wd.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
-
-        def send_wrapper(a, _p, _i, k, d, cf):
-            global wds
-            if a in wds:
-                w = wds[asin]
-            else:
-                w = wd_init(d, a)
-            res = send_request(a, _p, _i, k, d, cf)
-            if not res:
-                u = w.driver.current_url
-                w.full_close()
-                w = wd_init(d, a)
-                w.get('https://' + d)
-                w.get(u)
-                return send_wrapper(a, _p, _i, k, d, cf)
-            return res
+        soup = BeautifulSoup(wd.get_page_source(), features='lxml')
+        reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
+        reviews_count = 0
+        reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
+        if len(reviews_count_part) == 2:
+            reviews_count = int(float(reviews_count_part[1].replace(',', '').replace(' ', '')))
+        log('count:', reviews_count)
 
         try:
-            for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
-                for i in range(1, 11):
-                    log('seed:', params_seed)
-                    send_wrapper(asin, params_seed, i, keywords, domain, current_format)
-                index += 1
-            wd.full_close()
-            del wds[asin]
-            task = tasks.get_task(_id)
-            if task:
-                task.result['asins'].append(asin)
-                task.result['count'].append(
-                    database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}))
-                task.add_progress(1)
-            data_queue.put(None)
-            logging_queue.put(None)
-            writer_thr.join()
-            logger_thr.join()
-            return -1
-        except Exception as e:
-            if 'Bad ASIN' not in str(e):
+            log('COLLECTING REVIEWS FOR ASIN', asin + ':')
+            wd.execute_script(f'$.get("https://www.{domain}/hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={urllib.parse.quote(wd.current_url.replace(f"https://{domain}", "").replace(f"https://www.{domain}", ""))}")')
+
+            def send_wrapper(a, _p, _i, k, d, cf):
+                global wds
+                if a in wds:
+                    w = wds[asin]
+                else:
+                    w = wd_init(d, a)
+                res = send_request(a, _p, _i, k, d, cf)
+                if not res:
+                    u = w.driver.current_url
+                    w.full_close()
+                    w = wd_init(d, a)
+                    w.get('https://' + d)
+                    w.get(u)
+                    return send_wrapper(a, _p, _i, k, d, cf)
+                return res
+
+            try:
+                for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
+                    for i in range(1, 11):
+                        log('seed:', params_seed)
+                        send_wrapper(asin, params_seed, i, keywords, domain, current_format)
+                    index += 1
                 wd.full_close()
-                raise e
-            log(f'Skip {asin}')
+                del wds[asin]
+                task = tasks.get_task(_id)
+                if task:
+                    task.result['asins'].append(asin)
+                    task.result['count'].append(
+                        database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}))
+                    task.add_progress(1)
+                data_queue.put(None)
+                logging_queue.put(None)
+                writer_thr.join()
+                logger_thr.join()
+                return -1
+            except Exception as e:
+                if 'Bad ASIN' not in str(e):
+                    wd.full_close()
+                    raise e
+                log(f'Skip {asin}')
+                wd.full_close()
+                del wds[asin]
+                task = tasks.get_task(_id)
+                task.success = False
+                task.ended_at = datetime.datetime.now(pytz.UTC)
+                data_queue.put(None)
+                logging_queue.put(None)
+                writer_thr.join()
+                logger_thr.join()
+                return index
+        except KeyboardInterrupt:
+            log('Script stopped')
             wd.full_close()
             del wds[asin]
-            task = tasks.get_task(_id)
-            task.success = False
-            task.ended_at = datetime.datetime.now(pytz.UTC)
             data_queue.put(None)
             logging_queue.put(None)
             writer_thr.join()
             logger_thr.join()
-            return index
-    except KeyboardInterrupt:
-        log('Script stopped')
-        wd.full_close()
-        del wds[asin]
-        data_queue.put(None)
-        logging_queue.put(None)
-        writer_thr.join()
-        logger_thr.join()
-        raise
+            raise
+    except Exception as e:
+        with open('log', 'w', encoding='utf-8') as f:
+            f.write(str(e))
+        raise e
+
 
 
 def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
