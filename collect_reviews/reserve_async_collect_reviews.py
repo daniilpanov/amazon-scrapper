@@ -159,6 +159,7 @@ def wd_init(domain, asin):
         return wds[asin]
     except:
         sleep(5)
+        raise
         return wd_init(domain, asin)
 
 
