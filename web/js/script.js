@@ -1,5 +1,6 @@
 // const base_url = 'http://195.201.194.213:8830';
-const base_url = 'http://localhost:8830';
+// const base_url = 'http://localhost:8830';
+const base_url = '';
 
 function add_task(script, task_alias, data, callback = null) {
     let url = base_url + '/tasks/add/' + script;
