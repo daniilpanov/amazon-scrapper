@@ -232,9 +232,20 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 if not res:
                     u = w.driver.current_url
                     w.full_close()
-                    w = wd_init(d, a)
-                    w.get('https://' + d)
-                    w.get(u)
+                    while True:
+                        w = wd_init(d, a)
+                        try:
+                            w.get('https://' + d)
+                            w.get(u)
+                            break
+                        except Exception as e:
+                            with open('log2', 'w', encoding='utf-8') as f:
+                                f.write('Тип исключения: ' + type(e).__name__ + '\nСообщение: ' + str(e) + '\n\n')
+                                tb = e.__traceback__
+                                while tb:
+                                    f.write(
+                                        f'Имя файла: {tb.tb_frame.f_code.co_filename}, строка {tb.tb_lineno}, метод: {tb.tb_frame.f_code.co_name}\n')
+                                    tb = tb.tb_next
                     return send_wrapper(a, _p, _i, k, d, cf)
                 return res
 
@@ -283,6 +294,7 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
             raise
     except Exception as e:
         with open('log', 'w', encoding='utf-8') as f:
+            f.write('Тип исключения: ' + type(e).__name__ + '\nСообщение: ' + str(e) + '\n\n')
             tb = e.__traceback__
             while tb:
                 f.write(
