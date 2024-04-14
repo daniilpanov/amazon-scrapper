@@ -157,9 +157,15 @@ def wd_init(domain, asin):
         wds[asin] = base_chrome_init(goto=f'https://{domain}/')
         wds[asin].change_loc(domain=domain)
         return wds[asin]
-    except:
+    except Exception as e:
+        with open('log3', 'w', encoding='utf-8') as f:
+            f.write('ASIN: ' + asin + '\nТип исключения: ' + type(e).__name__ + '\nСообщение: ' + str(e) + '\n\n')
+            tb = e.__traceback__
+            while tb:
+                f.write(
+                    f'Имя файла: {tb.tb_frame.f_code.co_filename}, строка {tb.tb_lineno}, метод: {tb.tb_frame.f_code.co_name}\n')
+                tb = tb.tb_next
         sleep(5)
-        raise
         return wd_init(domain, asin)
 
 
@@ -225,7 +231,7 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
             def send_wrapper(a, _p, _i, k, d, cf):
                 global wds
                 if a in wds:
-                    w = wds[asin]
+                    w = wds[a]
                 else:
                     w = wd_init(d, a)
                 res = send_request(a, _p, _i, k, d, cf)
@@ -240,7 +246,7 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                             break
                         except Exception as e:
                             with open('log2', 'w', encoding='utf-8') as f:
-                                f.write('Тип исключения: ' + type(e).__name__ + '\nСообщение: ' + str(e) + '\n\n')
+                                f.write('ASIN: ' + a + '\nТип исключения: ' + type(e).__name__ + '\nСообщение: ' + str(e) + '\n\n')
                                 tb = e.__traceback__
                                 while tb:
                                     f.write(
@@ -294,7 +300,7 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
             raise
     except Exception as e:
         with open('log', 'w', encoding='utf-8') as f:
-            f.write('Тип исключения: ' + type(e).__name__ + '\nСообщение: ' + str(e) + '\n\n')
+            f.write('ASIN: ' + asin + '\nТип исключения: ' + type(e).__name__ + '\nСообщение: ' + str(e) + '\n\n')
             tb = e.__traceback__
             while tb:
                 f.write(
@@ -308,7 +314,3 @@ def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_for
 
 async def start_async(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
     threader.submit(collect, _id, asin, keywords, domain, index, current_format)
-
-
-if __name__ == '__main__':
-    start_sync(None, 'B079QC596Y')
