@@ -300,7 +300,6 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 f.write(
                     f'Имя файла: {tb.tb_frame.f_code.co_filename}, строка {tb.tb_lineno}, метод: {tb.tb_frame.f_code.co_name}\n')
                 tb = tb.tb_next
-        raise e
 
 
 def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
