@@ -26,8 +26,11 @@ async def get_asins(url, sess, excluded=None, limit=True, domain='amazon.com', u
         if i >= count:
             break
         reviews_lnk = link.select_one('a[href*="product-reviews"]')
-        reviews_info = reviews_lnk.text.replace('\u2009', '\n').split('\n')
-        reviews_count = int(reviews_info[1].strip().replace(',', '').replace(' ', ''))
+        if reviews_lnk:
+            reviews_info = reviews_lnk.text.replace('\u2009', '\n').split('\n')
+            reviews_count = int(reviews_info[1].strip().replace(',', '').replace(' ', ''))
+        else:
+            reviews_count = 0
         if limit and reviews_count < 700 or excluded and excluded in link.find('a')['href']:
             continue
         asin = get_all_asins_from_text(link.find('a')['href'])[0]
@@ -94,14 +97,18 @@ async def collect_nearby(_id, asin_bsr, limit=True, unique_brands=False, count=5
     result = []
     async for item in asins_generator:
         result.append(item)
+    await sess.request.close()
     task = tasks.get_task(_id)
-    task.progress = 100
-    task.success = True
-    task.ended_at = datetime.datetime.now(pytz.UTC)
-    task.result = {
-        'bsr_url': url,
-        'asins': list(map(lambda x: x[1], result)),
-        'links': list
-        (map(lambda x: x[0], result)),
-    }
+    if task:
+        task.progress = 100
+        task.success = True
+        task.ended_at = datetime.datetime.now(pytz.UTC)
+        task.result = {
+            'bsr_url': url,
+            'asins': list(map(lambda x: x[1], result)),
+            'links': list(map(lambda x: x[0], result)),
+        }
 
+
+if __name__ == '__main__':
+    asyncio.run(collect_nearby(None, 'https://www.amazon.com/gp/bestsellers/kitchen/979839011/ref=pd_zg_hrsr_kitchen', count=30))
