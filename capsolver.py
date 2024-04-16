@@ -8,11 +8,12 @@ from helpers import get_proxies_list
 
 def chrome_init(arr, proxy):
     ch = base_chrome_init(goto='https://amazon.com', proxy=proxy)
+    ch.change_loc()
     processed = {}
     for datum in ch.driver.get_cookies():
         processed[datum['name']] = datum['value']
     try:
-        database.db('amazon_data')['__cookies_special'].insert_one(processed | {'proxy': proxy})
+        database.db('amazon_data')['__cookies'].insert_one(processed)
     except Exception:
         pass
     arr.append(ch)
@@ -30,7 +31,6 @@ def main():
             with ThreadPoolExecutor(len(proxies)) as threader:
                 for chrome in chromes:
                     threader.submit(chrome.full_close)
-            database.db('amazon_data')['__cookies_special'].delete_many({})
             print('Chromes closed!')
             chromes = []
             with ThreadPoolExecutor(len(proxies)) as threader:

@@ -10,11 +10,11 @@ import tasks
 from helpers import get_all_asins_from_text
 
 
-async def get_asins(url, sess, excluded=None, limit=True, domain='amazon.com', unique_brands=False, count=5):
+async def get_asins(ev, url, sess, excluded=None, limit=True, domain='amazon.com', unique_brands=False, count=5, target=None):
     await sess.init()
 
     html = await sess.get_html(url, abs_path=True)
-    while not html:
+    while not html and not (ev and ev.is_set()):
         await asyncio.sleep(0)
         await sess.init()
         html = await sess.get_html(url, abs_path=True)
@@ -23,7 +23,7 @@ async def get_asins(url, sess, excluded=None, limit=True, domain='amazon.com', u
     brands = set()
     i = 0
     for link in links_a:
-        if i >= count:
+        if ev and ev.is_set() or i >= count:
             break
         reviews_lnk = link.select_one('a[href*="product-reviews"]')
         if reviews_lnk:
@@ -47,7 +47,7 @@ async def get_asins(url, sess, excluded=None, limit=True, domain='amazon.com', u
         yield f'https://{domain}/dp/' + asin, asin
 
 
-async def get_bsr(asin, sess, domain):
+async def get_bsr(ev, asin, sess, domain):
     asins = get_all_asins_from_text(asin)
     if not asins:
         return asin
@@ -65,6 +65,8 @@ async def get_bsr(asin, sess, domain):
         get_bsrs = lambda detail: detail.select('td > span > span')
 
     for det in details:
+        if ev and ev.is_set():
+            break
         if 'Best Sellers Rank' in det.text:
             bsrs = get_bsrs(det)
             min_place = None
@@ -88,12 +90,12 @@ async def get_bsr(asin, sess, domain):
             return url
 
 
-async def collect_nearby(_id, asin_bsr, limit=True, unique_brands=False, count=5, domain='amazon.com'):
+async def collect_nearby(ev, _id, asin_bsr, limit=True, unique_brands=False, count=5, domain='amazon.com', target=None):
     sess = amazon_requests.Requests(domain)
     # get department url
-    url = await get_bsr(asin_bsr, sess, domain)
+    url = await get_bsr(ev, asin_bsr, sess, domain)
     # search asins
-    asins_generator = get_asins(url, sess, asin_bsr, limit, domain, unique_brands, count)
+    asins_generator = get_asins(ev, url, sess, asin_bsr, limit, domain, unique_brands, count, target)
     result = []
     async for item in asins_generator:
         result.append(item)
@@ -108,7 +110,3 @@ async def collect_nearby(_id, asin_bsr, limit=True, unique_brands=False, count=5
             'asins': list(map(lambda x: x[1], result)),
             'links': list(map(lambda x: x[0], result)),
         }
-
-
-if __name__ == '__main__':
-    asyncio.run(collect_nearby(None, 'https://www.amazon.com/gp/bestsellers/kitchen/979839011/ref=pd_zg_hrsr_kitchen', count=30))

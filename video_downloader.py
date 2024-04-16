@@ -5,6 +5,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 import amazon_requests
+from amazon_requests import Requests
 
 
 async def get_res(sess, arr, link):
@@ -13,15 +14,22 @@ async def get_res(sess, arr, link):
     arr.append((link, content))
 
 
-async def main(asin, domain='https://amazon.com'):
+async def collect_media(asin=None, html=None, domain='amazon.com'):
+    if not html and not asin:
+        raise ValueError('collect_media needs one of arguments: asin or html!')
     sess = amazon_requests.Requests(domain)
-    html = None
-    while not html:
-        html = await sess.req('dp/' + asin)
-        if html:
-            html = html.content
-        await asyncio.sleep(1)
+    if not html:
+        await sess.init()
+        while not html:
+            html = await sess.get_html('dp/' + asin)
+            await asyncio.sleep(1)
     soup = BeautifulSoup(html, features='lxml')
+    if Requests.check_captcha(soup):
+        await sess.request.close()
+        print('Kek.. kaptcha :)')
+        return await collect_media(asin, None, domain)
+    with open('test2.html', 'w', encoding='utf-8') as f:
+        f.write(html)
     js = soup.find('div', id='ajaxBlockComponents_feature_div').find('script').text
     media_links = re.findall(r'(?:https?://|ftps?://|www\.)(?:(?![.,?!;:()]*(?:\s|"|$))[^\s"]){2,}', js)
     first_video_link = None
@@ -34,6 +42,7 @@ async def main(asin, domain='https://amazon.com'):
             else:
                 if first_video_link is None:
                     first_video_link = ml
+        print(first_video_link)
         await asyncio.gather(*coroutines)
 
         if first_video_link:
@@ -43,4 +52,4 @@ async def main(asin, domain='https://amazon.com'):
 
 
 if __name__ == '__main__':
-    asyncio.run(main('B08YKB6VMN'))
+    asyncio.run(collect_media('B08YKB6VMN'))
