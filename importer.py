@@ -22,13 +22,13 @@ app.add_middleware(
     allow_headers=['*'],
 )
 api_key = '2dBtEL2DRjO0AAQqaKLWEAN4xr4XTaqwSRyUXepJRDYEiseSs7JzfGTVLc3b0poS'
-api_key_hashed = sha256(api_key).hexdigest()
+api_key_hashed = sha256(api_key.encode('utf-8')).hexdigest()
 
 
 @app.post('/import/report')
 async def import_report(request: Request, body=Body()):
     auth_token = request.headers.get('Authorization')
-    if sha256(auth_token).hexdigest() != api_key_hashed or auth_token != api_key:
+    if sha256(auth_token.encode('utf-8')).hexdigest() != api_key_hashed or auth_token != api_key:
         raise HTTPException(status_code=403, detail='Invalid API KEY')
     try:
         content = json.loads(body)
