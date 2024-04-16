@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from fastapi import HTTPException, Body
 from pymongo.errors import BulkWriteError
 from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
 from starlette.responses import FileResponse
 
 import amazon_requests
