@@ -39,7 +39,7 @@ async def import_report(request: Request, body=Body()):
 
     df = pd.read_csv(io.StringIO(content['body']), header=0, index_col=None)
     try:
-        database.db('Keywords')['Amazon_keyword_tracker'].insert_many(list(df.T.to_dict().values()), ordered=False)
+        database.db('Keywords')['Amazon_keyword_tracker'].insert_many(list(df.T.to_dict().values()))
     except BulkWriteError:
         pass
     return Response(status_code=204)
