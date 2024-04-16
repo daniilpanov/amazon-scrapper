@@ -9,7 +9,6 @@ from queue import Queue
 from threading import Thread
 from time import sleep
 
-import aiohttp
 import pytz
 import requests
 from bs4 import BeautifulSoup
@@ -316,9 +315,9 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 tb = tb.tb_next
 
 
-def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
-    threader.submit(collect, _id, asin, keywords, domain, index, current_format)
+def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True, bsr=None):
+    threader.submit(collect, _id, asin, keywords, domain, index, current_format, bsr)
 
 
 async def start_async(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True, bsr=None):
-    threader.submit(collect, _id, asin, keywords, domain, index, current_format, bsr=None)
+    threader.submit(collect, _id, asin, keywords, domain, index, current_format, bsr)
