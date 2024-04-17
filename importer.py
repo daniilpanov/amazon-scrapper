@@ -32,7 +32,7 @@ async def import_report(request: Request):
     if not auth_token or sha256(auth_token.encode('utf-8')).hexdigest() != api_key_hashed or auth_token != api_key:
         raise HTTPException(status_code=403, detail='Invalid API KEY')
     print(await request.body())
-    print(await request.form())
+    print((await request.form()).multi_items())
     # df = pd.read_csv(io.BytesIO(await request.body()), header=0, index_col=None, delimiter=';')
     # print(df)
     return
