@@ -32,6 +32,8 @@ async def import_report(request: Request, file: UploadFile):
     if not auth_token or sha256(auth_token.encode('utf-8')).hexdigest() != api_key_hashed or auth_token != api_key:
         raise HTTPException(status_code=403, detail='Invalid API KEY')
     df = pd.read_csv(io.BytesIO(await file.read()), header=0, index_col=None, delimiter=';')
+    print(df)
+    return
     try:
         database.db('Keywords')['Amazon_keyword_tracker'].insert_many(list(df.T.to_dict().values()))
     except BulkWriteError:
