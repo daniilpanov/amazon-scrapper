@@ -15,4 +15,4 @@ def get_runnable(ev, _id, asins, collect_aspects=True, need_collect_media=False)
     sess = amazon_requests.Requests(domain)
     collected = set()
 
-    return [get_item(el, sess, task, collected, collect_aspects, need_collect_media) for el in asins]
+    return [get_item(ev, el, sess, task, collected, collect_aspects, need_collect_media) for el in asins]

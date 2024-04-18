@@ -8,11 +8,17 @@ from video_downloader import collect_media
 domain = 'amazon.com'
 
 
-async def get_item(asin, sess, task, collected, collect_aspects, need_collect_media=False):
+async def get_item(ev, asin, sess, task, collected, collect_aspects, need_collect_media=False):
     await asyncio.sleep(0)
-    html = await sess.get_html(f'dp/{asin}')
+    if ev and ev.is_set():
+        return
+    html = None
+    while not html:
+        html = await sess.get_html(f'dp/{asin}')
     await asyncio.sleep(1)
 
+    if ev and ev.is_set():
+        return
     if product_info_write(asin, html, collect_aspects, need_collect_media):
         if task:
             task.result['asins'].append(asin)
