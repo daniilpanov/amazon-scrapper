@@ -4,7 +4,7 @@ from time import sleep
 
 from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
-from selenium.common import JavascriptException
+from selenium.common import JavascriptException, NoSuchElementException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -16,6 +16,10 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 import database
 import helpers
+
+
+class Amazon404Exception(Exception):
+    pass
 
 
 class WebDriver:
@@ -30,8 +34,19 @@ class WebDriver:
         self.auto_waiting = auto_waiting
         self.auto_jquery_insert = auto_jquery_insert
 
+    def check_404(self):
+        try:
+            return self.driver.find_element(By.CSS_SELECTOR, 'img[alt="Sorry! We couldn\'t find that page. Try searching or go to Amazon\'s home page."]')
+        except NoSuchElementException:
+            try:
+                return self.driver.find_element(By.CSS_SELECTOR, 'img[alt="Lo sentimos! No pudimos encontrar la página que buscabas. Trata de usar la barra de búsqueda o visita la página principal de Amazon Mexico."]')
+            except NoSuchElementException:
+                return False
+
     def get(self, url, cap_check=None, jquery=None, wait=None):
         self.driver.get(url)
+        if self.check_404():
+            raise Amazon404Exception
         if wait is None and self.auto_waiting or wait:
             sleep(.04)
             htmltag = self.wait_for_loading()

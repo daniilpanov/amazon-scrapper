@@ -8,7 +8,7 @@ from video_downloader import collect_media
 domain = 'amazon.com'
 
 
-async def get_item(asin, sess, task, collected, collect_aspects):
+async def get_item(asin, sess, task, collected, collect_aspects, collect_videos):
     await asyncio.sleep(0)
     html = await sess.get_html(f'dp/{asin}')
     await asyncio.sleep(1)
@@ -30,6 +30,7 @@ def product_info_write(asin, html, write_aspects=True, get_media=False):
                 db.write_aspects(asin, aspects)
         if get_media:
             media = collect_media(html=html, domain=domain)
+            
         return True
     except Exception as e:
         log(f'ERROR when parsing asin: {asin} -- ', e)

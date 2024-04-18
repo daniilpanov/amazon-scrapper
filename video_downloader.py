@@ -33,22 +33,29 @@ async def collect_media(asin=None, html=None, domain='amazon.com'):
     js = soup.find('div', id='imageBlockVariations_feature_div').find('script').text
     media_links = re.findall(r'(?:https?://|ftps?://|www\.)(?:(?![.,?!;:()]*(?:\s|"|$))[^\s"]){2,}', js)
     first_video_link = None
-    images_links = []
     await sess.request.close()
-    async with aiohttp.ClientSession() as sess:
-        coroutines = []
-        for ml in media_links:
-            if ml.endswith('.jpg') or ml.endswith('.png') or ml.endswith('.gif'):
-                coroutines.append(get_res(sess, images_links, ml))
-            elif ml.endswith('.mp4'):
-                if first_video_link is None:
-                    first_video_link = ml
-        await asyncio.gather(*coroutines)
-
-        if first_video_link:
-            first_video = await (await sess.get(first_video_link)).content.read()
-
-    return *images_links, (first_video_link, first_video)
+    images_links = []
+    for ml in media_links:
+        if ml.endswith('.jpg') or ml.endswith('.png') or ml.endswith('.gif'):
+            images_links.append(ml)
+        elif ml.endswith('.mp4'):
+            if first_video_link is None:
+                first_video_link = ml
+    # async with aiohttp.ClientSession() as sess:
+    #     coroutines = []
+    #     for ml in media_links:
+    #         if ml.endswith('.jpg') or ml.endswith('.png') or ml.endswith('.gif'):
+    #             coroutines.append(get_res(sess, images_links, ml))
+    #         elif ml.endswith('.mp4'):
+    #             if first_video_link is None:
+    #                 first_video_link = ml
+    #     await asyncio.gather(*coroutines)
+    #
+    #     if first_video_link:
+    #         first_video = await (await sess.get(first_video_link)).content.read()
+    #
+    # return *images_links, (first_video_link, first_video)
+    return images_links, [first_video_link]
 
 
 if __name__ == '__main__':

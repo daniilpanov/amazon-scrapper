@@ -18,7 +18,7 @@ import database
 import parser
 import settings
 import tasks
-from functions import base_chrome_init, WebDriver
+from functions import base_chrome_init, WebDriver, Amazon404Exception
 from helpers import log
 
 params = {
@@ -170,7 +170,9 @@ def wd_init(domain, asin):
         return wd_init(domain, asin)
 
 
-def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+def collect(ev, _id, asin, keywords='', domain='amazon.com', params_seed=0, current_format=True):
+    task = tasks.get_task(_id)
+    wd = None
     try:
         global wds
         writer_thr = Thread(target=write_data, args=(data_queue,))
@@ -178,7 +180,7 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
         writer_thr.start()
         logger_thr.start()
 
-        if index == -1:
+        if params_seed == -1:
             return -1
         prod_link = None
         while True:
@@ -257,23 +259,26 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 return res
 
             try:
-                for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
+                for params_seed in (range(params_seed, params_len) if reviews_count > 100 else [0]):
+                    if ev and ev.is_set():
+                        break
                     for i in range(1, 11):
                         log('seed:', params_seed)
                         send_wrapper(asin, params_seed, i, keywords, domain, current_format)
-                    index += 1
+                    if task:
+                        task.result['asins_progress'][asin] = params_seed
                 wd.full_close()
                 del wds[asin]
-                task = tasks.get_task(_id)
                 if task:
-                    requests.post('http://45.14.245.223:1802/new_collection/', {
+                    requests.post('http://45.14.245.223:1802/new_collection/', json={
                         'name': task.alias,
-                        'date': datetime.datetime.now(pytz.UTC).date(),
+                        'date': datetime.datetime.now(pytz.UTC).date().isoformat(),
                         'asins': [asin],
                     })
                     task.result['asins'].append(asin)
                     task.result['count'].append(
-                        database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}))
+                        database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin})
+                    )
                     task.add_progress(1)
                 data_queue.put(None)
                 logging_queue.put(None)
@@ -294,7 +299,7 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 logging_queue.put(None)
                 writer_thr.join()
                 logger_thr.join()
-                return index
+                return params_seed
         except KeyboardInterrupt:
             log('Script stopped')
             wd.full_close()
@@ -304,6 +309,14 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
             writer_thr.join()
             logger_thr.join()
             raise
+    except Amazon404Exception:
+        if task:
+            task.result['asins'].append(asin)
+            task.result['count'].append('Not found')
+            task.add_progress(1)
+        if wd:
+            wd.full_close()
+        print('Not found:', asin)
     except Exception as e:
         with open('log', 'w', encoding='utf-8') as f:
             f.write('ASIN: ' + asin + '\nТип исключения: ' + type(e).__name__ + '\nСообщение: ' + str(e) + '\n\n')
@@ -314,9 +327,12 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 tb = tb.tb_next
 
 
-def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
-    threader.submit(collect, _id, asin, keywords, domain, index, current_format)
+collect(None, None, 'B07LHL5NJT')
 
 
-async def start_async(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
-    threader.submit(collect, _id, asin, keywords, domain, index, current_format)
+def start_sync(ev, _id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+    threader.submit(collect, ev, _id, asin, keywords, domain, index, current_format)
+
+
+async def start_async(ev, _id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+    threader.submit(collect, ev, _id, asin, keywords, domain, index, current_format)
