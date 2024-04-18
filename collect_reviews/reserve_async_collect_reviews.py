@@ -327,9 +327,6 @@ def collect(ev, _id, asin, keywords='', domain='amazon.com', params_seed=0, curr
                 tb = tb.tb_next
 
 
-collect(None, None, 'B07LHL5NJT')
-
-
 def start_sync(ev, _id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
     threader.submit(collect, ev, _id, asin, keywords, domain, index, current_format)
 
