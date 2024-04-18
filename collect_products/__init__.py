@@ -4,7 +4,7 @@ import tasks
 import amazon_requests
 
 
-def get_runnable(ev, _id, asins, collect_aspects=True, need_collect_media=False):
+def get_runnable(ev, _id, asins, collect_aspects=True, need_collect_media=False, domain='amazon.com'):
     if type(asins) is str:
         asins = get_all_asins_from_text(asins)
     task = tasks.get_task(_id)
