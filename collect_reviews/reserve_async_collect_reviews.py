@@ -170,7 +170,7 @@ def wd_init(domain, asin):
         return wd_init(domain, asin)
 
 
-def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True, bsr_name=None):
+def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
     try:
         global wds
         writer_thr = Thread(target=write_data, args=(data_queue,))
@@ -266,12 +266,11 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 del wds[asin]
                 task = tasks.get_task(_id)
                 if task:
-                    if bsr_name:
-                        requests.post('http://45.14.245.223:1802/new_collection/', {
-                            'name': bsr_name,
-                            'date': datetime.datetime.now(pytz.UTC).date(),
-                            'asins': [asin],
-                        })
+                    requests.post('http://45.14.245.223:1802/new_collection/', {
+                        'name': task.alias,
+                        'date': datetime.datetime.now(pytz.UTC).date(),
+                        'asins': [asin],
+                    })
                     task.result['asins'].append(asin)
                     task.result['count'].append(
                         database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}))
@@ -315,9 +314,9 @@ def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_format
                 tb = tb.tb_next
 
 
-def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True, bsr=None):
-    threader.submit(collect, _id, asin, keywords, domain, index, current_format, bsr)
+def start_sync(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+    threader.submit(collect, _id, asin, keywords, domain, index, current_format)
 
 
-async def start_async(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True, bsr=None):
-    threader.submit(collect, _id, asin, keywords, domain, index, current_format, bsr)
+async def start_async(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
+    threader.submit(collect, _id, asin, keywords, domain, index, current_format)

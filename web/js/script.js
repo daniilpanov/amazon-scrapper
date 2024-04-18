@@ -189,7 +189,6 @@ $(document).ready(function () {
                 add_task('collect_reviews', (task_name ?? 'Get all') + '#reviews', {
                     asins: data['result']['asins'],
                     current_format: true,
-                    bsr: category,
                 });
                 $.post(base_url + '/cmd/category/set', JSON.stringify({
                     cat_name: category,

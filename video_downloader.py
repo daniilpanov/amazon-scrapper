@@ -5,6 +5,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 import amazon_requests
+import database
 from amazon_requests import Requests
 
 
@@ -27,22 +28,21 @@ async def collect_media(asin=None, html=None, domain='amazon.com'):
     if Requests.check_captcha(soup):
         await sess.request.close()
         print('Kek.. kaptcha :)')
+        database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
         return await collect_media(asin, None, domain)
-    with open('test2.html', 'w', encoding='utf-8') as f:
-        f.write(html)
-    js = soup.find('div', id='ajaxBlockComponents_feature_div').find('script').text
+    js = soup.find('div', id='imageBlockVariations_feature_div').find('script').text
     media_links = re.findall(r'(?:https?://|ftps?://|www\.)(?:(?![.,?!;:()]*(?:\s|"|$))[^\s"]){2,}', js)
     first_video_link = None
     images_links = []
+    await sess.request.close()
     async with aiohttp.ClientSession() as sess:
         coroutines = []
         for ml in media_links:
             if ml.endswith('.jpg') or ml.endswith('.png') or ml.endswith('.gif'):
                 coroutines.append(get_res(sess, images_links, ml))
-            else:
+            elif ml.endswith('.mp4'):
                 if first_video_link is None:
                     first_video_link = ml
-        print(first_video_link)
         await asyncio.gather(*coroutines)
 
         if first_video_link:
