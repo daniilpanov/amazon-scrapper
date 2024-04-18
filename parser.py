@@ -197,12 +197,11 @@ def parse_product(asin, html, tiny=False, domain='amazon.com'):
     if not bs:
         print('NO BS! ASIN:', asin)
         return False
+    if Requests.check_captcha(bs):
+        print('Kek, captcha :)', asin)
+        return -1
     if not bs.select_one('#titleSection, #title, #productTitle'):
-        if Requests.check_captcha(bs):
-            print('Kek, captcha :)', asin)
         print('NO TITLE! ASIN:', asin)
-        with open('error-dump.html', 'w', encoding='utf-8') as f:
-            f.write(str(bs))
         return False
     title = bs.select_one('#titleSection, #title, #productTitle').text.strip()
     if tiny == -1:
