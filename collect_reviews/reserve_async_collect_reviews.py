@@ -242,8 +242,8 @@ def collect(ev, _id, asin, keywords='', domain='amazon.com', params_seed=0, curr
                     u = w.driver.current_url
                     w.full_close()
                     while True:
-                        w = wd_init(d, a)
                         try:
+                            w = wd_init(d, a)
                             w.get('https://' + d)
                             w.get(u)
                             break
