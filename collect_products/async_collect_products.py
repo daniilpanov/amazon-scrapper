@@ -1,7 +1,6 @@
 import asyncio
 
 from bs4 import BeautifulSoup
-from selenium.webdriver.common.devtools.v85.network import Request
 
 import amazon_requests
 import database as db
@@ -60,6 +59,3 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
             log(f'ERROR when parsing asin: {asin} -- ', e)
             return False
 
-
-if __name__ == '__main__':
-    asyncio.run(get_item(None, 'B07LHL5NJT', amazon_requests.Requests(), None, set()))
