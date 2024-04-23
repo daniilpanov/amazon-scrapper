@@ -1,13 +1,24 @@
 import asyncio
+import io
 
+import aiohttp
 from bs4 import BeautifulSoup
+from pymongo.errors import BulkWriteError
 
 import amazon_requests
 import database as db
 from functions import base_chrome_init, Amazon404Exception
+from google_drive_helper import load_file
 from helpers import log
 from parser import parse_product, parse_aspects
 from video_downloader import collect_media
+
+
+async def get_and_put_media_content(i, link, arr):
+    async with aiohttp.ClientSession() as sess:
+        res = await sess.get(link)
+        if 400 >= res.status >= 200:
+            arr[i] = io.BytesIO(await res.content.read())
 
 
 async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_collect_media=False):
@@ -49,7 +60,27 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
                 if aspects:
                     db.write_aspects(asin, aspects)
             if need_collect_media:
-                media = collect_media(html=html, domain=sess.domain)
+                media = await collect_media(html=html, domain=sess.domain)
+                try:
+                    db.db('amazon_data')['products_media'].insert_many([{'asin': asin, 'type': 'img', 'media_link': lnk} for lnk in media[0]], ordered=False)
+                except BulkWriteError:
+                    pass
+                try:
+                    db.db('amazon_data')['products_media'].insert_many([{'asin': asin, 'type': 'vid', 'media_link': lnk} for lnk in media[1]], ordered=False)
+                except BulkWriteError:
+                    pass
+                coro = []
+                images_content = [None for _ in range(len(media[0]))]
+                for i, image in enumerate(media[0]):
+                    coro.append(get_and_put_media_content(i, image, images_content))
+                video_content = [None for _ in range(len(media[1]))]
+                for i, video in enumerate(media[1]):
+                    coro.append(get_and_put_media_content(i, video, video_content))
+                await asyncio.gather(*coro)
+                for i, (lnk, img) in enumerate(zip(media[0], images_content)):
+                    name = lnk.split('/')[-1]
+                    ext = name.split('.')[-1]
+                    load_file(img, asin + '-' + str(i) + '.' + ext, f'image/{ext}')
             if task:
                 task.result['asins'].append(asin)
                 task.add_progress(1)

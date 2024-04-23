@@ -33,7 +33,8 @@ async def collect_media(asin=None, html=None, domain='amazon.com'):
     js = soup.find('div', id='imageBlockVariations_feature_div').find('script').text
     media_links = re.findall(r'(?:https?://|ftps?://|www\.)(?:(?![.,?!;:()]*(?:\s|"|$))[^\s"]){2,}', js)
     first_video_link = None
-    await sess.request.close()
+    if sess.request:
+        await sess.request.close()
     images_links = []
     for ml in media_links:
         if ml.endswith('.jpg') or ml.endswith('.png') or ml.endswith('.gif'):
@@ -41,6 +42,7 @@ async def collect_media(asin=None, html=None, domain='amazon.com'):
         elif ml.endswith('.mp4'):
             if first_video_link is None:
                 first_video_link = ml
+                break
     # async with aiohttp.ClientSession() as sess:
     #     coroutines = []
     #     for ml in media_links:
