@@ -172,6 +172,7 @@ $(document).ready(function () {
         const category = data.category;
         const client_alias = data.client_alias;
         const bsr_link = data.bsr_link;
+        const target_asin = data.target_asin;
         const count = Boolean(Number(data.only_top5)) ? 5 : 30;
         add_task('collect_departments', (task_name ?? 'Get all') + '#bsr', {
             bsr: bsr_link,
@@ -182,9 +183,21 @@ $(document).ready(function () {
             wait(function () {
                 return $.get(base_url + '/tasks/get/' + data)
             }, function (data) {
+                let usual_asins = [];
+                for (let i in data['result']['asins']) {
+                    if (data['result']['asins'][i] === target_asin) {
+                        continue;
+                    }
+                    usual_asins.push(data['result']['asins'][i]);
+                }
                 add_task('collect_products', (task_name ?? 'Get all') + '#products', {
-                    asins: data['result']['asins'],
+                    asins: usual_asins,
                     collect_aspects: amazon_aspects,
+                });
+                add_task('collect_products', (task_name ?? 'Get all') + '#target', {
+                    asins: [target_asin],
+                    collect_aspects: amazon_aspects,
+                    need_collect_media: Boolean(target_asin),
                 });
                 add_task('collect_reviews', (task_name ?? 'Get all') + '#reviews', {
                     asins: data['result']['asins'],
@@ -195,6 +208,7 @@ $(document).ready(function () {
                     client_name: client_alias,
                     asins: data['result']['asins'],
                     top5_asins: data['result']['asins'].slice(0, 5),
+                    target: target_asin || null,
                 }))
             })();
         });

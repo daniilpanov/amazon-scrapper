@@ -89,7 +89,7 @@ async def category_set_cmd(data=Body()):
         db('amazon_data')['all_categories'].insert_many([{
             'Category': data['cat_name'],
             'ASIN': asin,
-            'relation_to_category': data['client_name'],
+            'relation_to_category': data['client_name'] if asin == data.get('target') else None,
             'relation_to_TOP5': asin in top5_asins,
         } for asin in asins])
         return fastapi.Response(status_code=fastapi.status.HTTP_204_NO_CONTENT)
