@@ -1,14 +1,5 @@
-import datetime
-import os
-import re
-from json import JSONDecoder
-
-import pandas
-import pandas as pd
 import certifi
 
-import pytz
-from pandas import DataFrame
 from pymongo.database import Database
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient

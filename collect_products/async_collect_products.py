@@ -1,5 +1,6 @@
 import asyncio
 import io
+from pprint import pprint
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -8,7 +9,7 @@ from pymongo.errors import BulkWriteError
 import amazon_requests
 import database as db
 from functions import base_chrome_init, Amazon404Exception
-from google_drive_helper import load_file
+from google_drive_helper import load_file, get_files
 from helpers import log
 from parser import parse_product, parse_aspects
 from video_downloader import collect_media
@@ -60,7 +61,7 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
                 if aspects:
                     db.write_aspects(asin, aspects)
             if need_collect_media:
-                media = await collect_media(html=html, domain=sess.domain)
+                media = await collect_media(asin, html, sess.domain)
                 try:
                     db.db('amazon_data')['products_media'].insert_many([{'asin': asin, 'type': 'img', 'media_link': lnk} for lnk in media[0]], ordered=False)
                 except BulkWriteError:
@@ -81,6 +82,10 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
                     name = lnk.split('/')[-1]
                     ext = name.split('.')[-1]
                     load_file(img, asin + '-' + str(i) + '.' + ext, f'image/{ext}')
+                for i, (lnk, vid) in enumerate(zip(media[1], video_content)):
+                    name = lnk.split('/')[-1]
+                    ext = name.split('.')[-1]
+                    load_file(vid, asin + '-' + str(i) + '.' + ext, f'video/{ext}')
             if task:
                 task.result['asins'].append(asin)
                 task.add_progress(1)
@@ -89,4 +94,3 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
         except Exception as e:
             log(f'ERROR when parsing asin: {asin} -- ', e)
             return False
-

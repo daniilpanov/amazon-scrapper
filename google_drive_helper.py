@@ -6,14 +6,15 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 
-import amazon_requests
-import collect_products
-
 SCOPES = ['https://www.googleapis.com/auth/drive']
 SERVICE_ACCOUNT_FILE = 'amascrap3-421123-bf6920748193.json'
 
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+try:
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+except FileNotFoundError:
+    credentials = service_account.Credentials.from_service_account_file(
+        '../' + SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 service = build('drive', 'v3', credentials=credentials)
 
 
@@ -54,11 +55,3 @@ def download_file(file_id):
         print(f"An error occurred: {error}")
         file_content = None
     return file_content.getvalue()
-
-
-async def main():
-    sess = amazon_requests.Requests()
-    await sess.init()
-    await collect_products.get_item(None, 'B019ZZB3O2', sess, None, set(), False, True)
-    await sess.request.close()
-

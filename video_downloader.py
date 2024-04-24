@@ -1,5 +1,7 @@
 import asyncio
+import json
 import re
+from pprint import pprint
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -15,50 +17,68 @@ async def get_res(sess, arr, link):
     arr.append((link, content))
 
 
-async def collect_media(asin=None, html=None, domain='amazon.com'):
-    if not html and not asin:
-        raise ValueError('collect_media needs one of arguments: asin or html!')
-    sess = amazon_requests.Requests(domain)
+async def collect_media(asin, html=None, domain='amazon.com'):
+    if not asin:
+        raise ValueError('collect_media requires ASIN!')
+    sess = None
     if not html:
+        sess = amazon_requests.Requests(domain)
         await sess.init()
         while not html:
             html = await sess.get_html('dp/' + asin)
             await asyncio.sleep(1)
     soup = BeautifulSoup(html, features='lxml')
     if Requests.check_captcha(soup):
-        await sess.request.close()
+        if sess:
+            await sess.request.close()
+            database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
         print('Kek.. kaptcha :)')
-        database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
         return await collect_media(asin, None, domain)
-    js = soup.find('div', id='imageBlockVariations_feature_div').find('script').text
-    media_links = re.findall(r'(?:https?://|ftps?://|www\.)(?:(?![.,?!;:()]*(?:\s|"|$))[^\s"]){2,}', js)
-    first_video_link = None
-    if sess.request:
-        await sess.request.close()
+    try:
+        js = soup.find('div', id='imageBlockVariations_feature_div').find('script').text
+    except AttributeError:
+        with open('error-parse-video.html', 'w', encoding='utf-8') as f:
+            f.write(html)
+        return [], []
+    data_json = re.search(r"var obj = jQuery.parseJSON\('(.+)'\)", js)
+    if not data_json:
+        with open('error-parse-video.html', 'w', encoding='utf-8') as f:
+            f.write(html)
+        return [], []
+    data = json.loads(data_json.group(1))
+    titles_mapping = data['colorToAsin']
+    title = None
+    for t, value in titles_mapping.items():
+        if value['asin'] == asin:
+            title = t
+            break
+    if not title:
+        with open('error-parse-video.html', 'w', encoding='utf-8') as f:
+            f.write(html)
+        return [], []
     images_links = []
-    for ml in media_links:
-        if ml.endswith('.jpg') or ml.endswith('.png') or ml.endswith('.gif'):
-            images_links.append(ml)
-        elif ml.endswith('.mp4'):
-            if first_video_link is None:
-                first_video_link = ml
-                break
-    # async with aiohttp.ClientSession() as sess:
-    #     coroutines = []
-    #     for ml in media_links:
-    #         if ml.endswith('.jpg') or ml.endswith('.png') or ml.endswith('.gif'):
-    #             coroutines.append(get_res(sess, images_links, ml))
-    #         elif ml.endswith('.mp4'):
-    #             if first_video_link is None:
-    #                 first_video_link = ml
-    #     await asyncio.gather(*coroutines)
-    #
-    #     if first_video_link:
-    #         first_video = await (await sess.get(first_video_link)).content.read()
-    #
-    # return *images_links, (first_video_link, first_video)
-    return images_links, [first_video_link]
+    for img in data['colorImages'][title]:
+        if 'hiRes' in img:
+            images_links.append(img['hiRes'])
+        else:
+            res_max = 0
+            media_link = None
+            for link, resolution in img['main'].items():
+                if int(resolution[0]) > res_max:
+                    res_max = int(resolution[0])
+                    media_link = link
+            if media_link:
+                images_links.append(media_link)
+    video_links = []
+    if data['videos']:
+        video_links.append(data['videos'][0]['url'])
+    if sess and sess.request:
+        await sess.request.close()
+    return images_links, video_links
 
 
 if __name__ == '__main__':
-    asyncio.run(collect_media('B08YKB6VMN'))
+    with open('test-video2.html', encoding='utf-8') as f:
+        print(asyncio.run(collect_media(asin='B019ZZB3O2', html=f.read())))
+    with open('test-video.html', encoding='utf-8') as f:
+        print(asyncio.run(collect_media(asin='B08YKB6VMN', html=f.read())))
