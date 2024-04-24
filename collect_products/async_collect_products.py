@@ -60,8 +60,10 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
                 aspects = parse_aspects(asin, html)
                 if aspects:
                     db.write_aspects(asin, aspects)
+                task.result['aspects'] = aspects
             if need_collect_media:
                 media = await collect_media(asin, html, sess.domain)
+                task.result['media_links'] = media
                 try:
                     db.db('amazon_data')['products_media'].insert_many([{'asin': asin, 'type': 'img', 'media_link': lnk} for lnk in media[0]], ordered=False)
                 except BulkWriteError:

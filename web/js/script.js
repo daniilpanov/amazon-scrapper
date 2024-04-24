@@ -46,6 +46,14 @@ function set_task_content(data) {
             for (let i = 0; i < asins_list.length; ++i) {
                 data.result['asins'] += `<li>${asins_list[i]}</li>`;
             }
+            const media_list = data.result['media'];
+            data.result['media'] = '';
+            for (let i = 0; i < media_list[0].length; ++i) {
+                data.result['media'] += `<img src="${media_list[0][i]}"}>`;
+            }
+            for (let i = 0; i < media_list[1].length; ++i) {
+                data.result['media'] += `<video src="${media_list[0][i]}"}></video>`;
+            }
         }
         let item;
         for (let key in data.result) {
