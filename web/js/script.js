@@ -192,11 +192,16 @@ $(document).ready(function () {
                 return $.get(base_url + '/tasks/get/' + data)
             }, function (data) {
                 let usual_asins = [];
+                let target_found = false;
                 for (let i in data['result']['asins']) {
                     if (data['result']['asins'][i] === target_asin) {
+                        target_found = true;
                         continue;
                     }
                     usual_asins.push(data['result']['asins'][i]);
+                }
+                if (!target_found) {
+                    data['result']['asins'].push(target_asin);
                 }
                 add_task('collect_products', (task_name ?? 'Get all') + '#products', {
                     asins: usual_asins,
