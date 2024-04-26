@@ -24,11 +24,13 @@ app.add_middleware(
 )
 
 
+# WEB VERSION
 @app.get('/cp', response_class=FileResponse)
 async def cp_show():
     return 'web/index.html'
 
 
+# USUAL ENDPOINTS
 @app.post('/tasks/add/{script}')
 async def add_task_req(script: str, data=Body()):
     data = json.loads(data)
@@ -42,16 +44,26 @@ async def add_task_req(script: str, data=Body()):
 
 
 @app.delete('/tasks/delete/{task_id}')
-async def delete_task_req(task_id: int):
-    tasks.get_task(task_id).ev.set()
-    tasks.delete_task(task_id)
+async def delete_task_req(task_id: int, pause: bool = False):
+    tasks.stop_task(task_id, pause)
 
 
 @app.get('/tasks/get/{task_id}')
 async def get_task_req(task_id: int):
-    return tasks.get_task(task_id).to_dict()
+    return tasks.get_task(task_id)
 
 
+@app.get('/tasks/get')
+async def get_tasks_req():
+    return tasks.get_all()
+
+
+@app.get('/file', response_class=FileResponse)
+async def file(filepath: str):
+    return filepath
+
+
+# SPECIAL ENDPOINTS
 @app.get('/cmd/reviews/count')
 async def reviews_count_cmd(asin: str, current_format: bool = True):
     try:
@@ -92,11 +104,11 @@ async def category_set_cmd(data=Body()):
             'relation_to_category': data['client_name'] if asin == data.get('target') else None,
             'relation_to_TOP5': asin in top5_asins,
         } for asin in asins])
-        return fastapi.Response(status_code=fastapi.status.HTTP_204_NO_CONTENT)
+        return fastapi.Response(status_code=fastapi.status.HTTP_201_CREATED)
     except BulkWriteError:
         pass
     except Exception as e:
-        print(type(e))
+        print(type(e), e)
         raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
@@ -104,9 +116,10 @@ async def category_set_cmd(data=Body()):
 async def product_get_cmd(asin: str):
     try:
         product_card = db('amazon_data')['product_card'].find_one({'asin': asin})
-        print(asin, product_card)
         try:
-            aspects = [(i['Aspect'], i['positive'], i['negative']) for i in db('amazon_data')['amazon_aspects'].find({'ASIN': asin})]
+            aspects = [(i['Aspect'], i['positive'], i['negative']) for i in db('amazon_data')['amazon_aspects'].find({
+                'ASIN': asin,
+            })]
         except:
             aspects = None
         try:
@@ -128,23 +141,13 @@ async def product_get_cmd(asin: str):
             'Picture': product_card['picture_url'],
         }
     except Exception as e:
-        raise
         raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
-@app.get('/tasks/get')
-async def get_tasks_req():
-    return list(tasks.get_task(_id).to_dict() for _id in tasks.all_tasks if type(_id) is int)
-
-
-@app.get('/file', response_class=FileResponse)
-async def file(filepath: str):
-    return filepath
+def start_server():
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=8830)
 
 
 if __name__ == '__main__':
-    import uvicorn
-    tasks.task_executor_thr.start()
-    uvicorn.run(app, host='0.0.0.0', port=8830)
-    tasks.task_executor_q.put_nowait((None, None))
-    tasks.task_executor_thr.join()
+    start_server()

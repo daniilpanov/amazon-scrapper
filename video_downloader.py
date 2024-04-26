@@ -1,9 +1,6 @@
 import asyncio
 import json
 import re
-from pprint import pprint
-
-import aiohttp
 from bs4 import BeautifulSoup
 
 import amazon_requests
