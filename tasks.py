@@ -4,7 +4,6 @@ import enum
 import pymongo
 import pytz
 from bson import ObjectId
-from pymongo import mongo_client
 
 import database
 
@@ -18,14 +17,24 @@ class TaskStatusEnum(enum.IntEnum):
     critical_error = -1
 
 
+Tasks = database.db('amazon_scraper_features')['tasks']
+TasksLock = database.db('amazon_scraper_features')['tasks_lock']
+
+
+class StatusNotConfirmedError(Exception):
+    pass
+
+
 def add_task(script, alias=None, data=None):
     print(script, alias, data)
-    database.db('amazon_scraper_features')['tasks'].insert_one({
+    Tasks.insert_one({
         'script': script,
         'alias': alias,
         'data': data,
         'success': None,
+        'errors': [],
         'status': TaskStatusEnum.created,
+        'confirm_status': None,
         'progress': None,
         'hidden': None,
         'result': None,
@@ -36,7 +45,7 @@ def add_task(script, alias=None, data=None):
 
 
 def get_task(_id) -> dict:
-    return database.db('amazon_scraper_features')['tasks'].find_one(ObjectId(_id))
+    return Tasks.find_one(ObjectId(_id))
 
 
 def get_tasks(script: str, with_status: int | None = None, locked: bool | None = None):
@@ -47,18 +56,19 @@ def get_tasks(script: str, with_status: int | None = None, locked: bool | None =
         locked = False
         locks = set()
     else:
-        locks = {task['_id'] for task in database.db('amazon_scraper_features')['tasks_lock'].find()}
-    return [task for task in database.db('amazon_scraper_features')['tasks'].find(filters) if (task['_id'] in locks) is locked]
+        locks = {task['_id'] for task in TasksLock.find()}
+    return [task for task in Tasks.find(filters) if
+            (task['_id'] in locks) is locked]
 
 
 def get_all():
-    return database.db('amazon_scraper_features')['tasks'].find()
+    return Tasks.find()
 
 
 def stop_task(_id, pause=False):
-    data = database.db('amazon_scraper_features')['tasks'].find_one(ObjectId(_id))
-    if data['status'] < 2:
-        database.db('amazon_scraper_features')['tasks'].update_one({'_id': ObjectId(_id)}, {'$set': {
+    data = Tasks.find_one(ObjectId(_id))
+    if -1 < data['status'] < 2 + (not pause):
+        Tasks.update_one({'_id': ObjectId(_id)}, {'$set': {
             'status': 2 + (not pause),
         }})
         if not pause:
@@ -67,11 +77,25 @@ def stop_task(_id, pause=False):
 
 def acquire_task(_id):
     try:
-        database.db('amazon_scraper_features')['tasks_lock'].insert_one({'task_id': _id})
+        TasksLock.insert_one({'task_id': _id})
         return True
     except pymongo.errors.DuplicateKeyError:
         return False
 
 
 def release_task(_id):
-    database.db('amazon_scraper_features')['tasks_lock'].delete_one({'task_id': _id})
+    TasksLock.delete_one({'task_id': _id})
+
+
+def delete_task(_id):
+    data = get_task(_id)
+    if not data:
+        return True
+    created_right_now = data.get('confirm_status') is None or data['status'] == 0
+    if data.get('confirm_status') != data['status'] and not created_right_now:
+        raise StatusNotConfirmedError
+    if data['status'] > 2 or created_right_now:
+        Tasks.delete_one({'_id': ObjectId(_id)})
+        TasksLock.delete_one({'task_id': ObjectId(_id)})
+        return True
+    return False
