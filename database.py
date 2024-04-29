@@ -32,7 +32,7 @@ def init(username, password):
     if 'proxy' in config and config['proxy']:
         import os
         os.environ['MONGO_PROXY'] = config['proxy']
-    # Create a new client and connect to the server
+    # Create a new client and connect to the server_module
     client = MongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where())
     # Send a ping to confirm a successful connection
     try:
@@ -66,34 +66,6 @@ def spec_db(dbname=None) -> Database:
 
 def db(dbname=None) -> Database:
     return inst()[dbname or config['database']]
-
-
-def write_reviews(reviews):
-    revs = []
-    if type(reviews) is list:
-        revs = reviews
-    else:
-        for i, row in reviews.iterrows():
-            revs.append({
-                'asin': row['asin'],
-                'product_url': row['product_url'],
-                'date': row['date'],
-                'country': row['country'],
-                'name': row['name'],
-                'title': row['title'],
-                'description': row['content'],
-                'rating': row['rating'],
-                'helpful': row['helpful'],
-                'options': row['options'],
-                'review_id': row['review_id'],
-                'scrap_datetime': row['scrap_datetime'],
-            })
-    if not revs:
-        return False
-    try:
-        return db()['customer_reviews'].insert_many(revs, ordered=False)
-    except (BulkWriteError, DuplicateKeyError) as e:
-        return True
 
 
 def write_product_parsed(asin, product_url, title, descr, picture_url, parse_datetime, features, top5phr, price):

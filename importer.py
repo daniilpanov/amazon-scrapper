@@ -1,11 +1,9 @@
 import io
-import json
 from hashlib import sha256
-from typing import Annotated
 
 import fastapi
 import pandas as pd
-from fastapi import HTTPException, File, Form, UploadFile
+from fastapi import HTTPException, File, UploadFile
 from pymongo.errors import BulkWriteError
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request

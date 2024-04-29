@@ -2,28 +2,22 @@ import asyncio
 import datetime
 import json
 import re
-import urllib
 from asyncio import Semaphore
 from builtins import Exception
 from json import JSONDecodeError
 from queue import Queue
 from threading import Thread
-from time import sleep
 
 import pytz
 from bs4 import BeautifulSoup
-from pandas import DataFrame
 
 import amazon_requests
 import database
 import parser
-import settings
 from amazon_requests import Requests
-from functions import base_chrome_init, WebDriver
 
 from helpers import log
 import tasks
-
 
 params = {
     'sortBy': ['', 'recent'],

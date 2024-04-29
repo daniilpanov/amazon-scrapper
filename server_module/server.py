@@ -144,9 +144,9 @@ async def product_get_cmd(asin: str):
         raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
-def start_server():
+def start_server(host='0.0.0.0', port=8830):
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8830)
+    uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == '__main__':
