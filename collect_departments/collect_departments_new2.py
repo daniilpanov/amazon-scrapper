@@ -62,7 +62,7 @@ async def iteration(link, parent_id, parent_link):
             print('Kek.. captcha :)')
             if r.sessid in Requests.all_cookies:
                 del Requests.all_cookies[r.sessid]
-            database.db('amazon_data')['__cookies'].delete_one({'session-id': r.sessid})
+                database.db('amazon_data')['__cookies'].delete_one({'session-id': r.sessid})
             await asyncio.sleep(1)
             html = await get_html(r, link, parent_link)
             soup = BeautifulSoup(html, features='lxml')
