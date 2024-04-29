@@ -12,11 +12,11 @@ domain = 'amazon.com'
 
 async def start(deps: list[Department] | None = None):
     if not deps:
-        deps = list(Department.select().where(Department.checked == False))
+        deps = list(Department.select().where(Department.collected == False))
     semaphore = asyncio.Semaphore(20)
     coro = []
     for dep in deps:
-        coro.append(collect(dep.url, dep.parent_id, semaphore))
+        coro.append(collect(dep.url, dep.id, semaphore))
     await asyncio.gather(*coro)
 
 
@@ -81,9 +81,10 @@ async def collect(link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783
             Department.bulk_create(models)
         except peewee.IntegrityError as e:
             print(e)
+            print(parent_id, parent_link)
         try:
             parent = Department.get_by_id(parent_id)
-            parent.checked = True
+            parent.collected = True
             parent.save()
         except peewee.DoesNotExist:
             pass

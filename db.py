@@ -31,7 +31,7 @@ class Department(BaseModel):
     name = CharField(255)
     url = CharField(1000)
     internal_id = CharField(100)
-    checked = BooleanField(default=False, column_name='collected')
+    collected = BooleanField(default=False)
     items: list
 
     def __init__(self, *args, **kwargs):
