@@ -1,13 +1,10 @@
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from time import sleep
 
 import peewee
 from bs4 import BeautifulSoup
 from selenium.common import WebDriverException
 
 import settings
-from amazon_requests import Requests
 from db import Department
 from functions import base_chrome_init
 
@@ -29,34 +26,6 @@ def reverse_start(deps=None):
         with ThreadPoolExecutor(limit) as threader:
             for dep in deps:
                 threader.submit(iteration, model=dep)
-        print('ok')
-
-
-async def get_html(link, parent_link=None):
-    r = Requests()
-    try:
-        await r.init()
-        html = await r.get_html(link, ref=parent_link)
-    except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError,
-            ConnectionAbortedError) as e:
-        print(e)
-        await asyncio.sleep(1)
-        html = None
-    while not html:
-        await r.close()
-        sleep(1)
-        r = Requests()
-        await r.init()
-        try:
-            html = await r.get_html(link, ref=parent_link)
-            await r.close()
-        except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError,
-                ConnectionAbortedError) as e:
-            print(e)
-            sleep(1)
-            html = None
-    await r.close()
-    return r, html
 
 
 def iteration(*, link=None, _id=0, model=None, ret=False):
@@ -67,14 +36,21 @@ def iteration(*, link=None, _id=0, model=None, ret=False):
     if not link:
         link = model.url
         _id = model.id
+    link = f'https://www.{domain}{link}'
+    _id = int(_id)
     while True:
+        wd = None
         try:
             wd = base_chrome_init(False, goto='https://www.amazon.com', proxy=settings.PROXY)
-            print('wd created')
+            wd.change_loc()
+            print(link)
             wd.get(link)
             html = wd.get_page_source()
             wd.full_close()
         except WebDriverException:
+            if wd:
+                wd.full_close()
+            raise
             continue
         soup = BeautifulSoup(html, features='lxml')
         group = soup.find('div', {'role': 'group'})
