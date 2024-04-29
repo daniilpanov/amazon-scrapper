@@ -42,26 +42,28 @@ async def init(link, parent_link=None):
             print(e)
             await asyncio.sleep(1)
             html = None
-    return html
+    return r, html
 
 
 async def collect(link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783011_2', parent_id=0, semaphore=None, parent_link=None):
     if not semaphore:
         semaphore = asyncio.Semaphore(20)
     async with semaphore:
-        r = Requests()
-        await r.init()
         while True:
-            html = await init(link, parent_link)
+            r, html = await init(link, parent_link)
             soup = BeautifulSoup(html, features='lxml')
             while Requests.check_captcha(soup):
                 print('Kek.. captcha :)')
                 if r.sessid in Requests.all_cookies:
+                    if r.request:
+                        await r.request.close()
                     del Requests.all_cookies[r.sessid]
                     database.db('amazon_data')['__cookies'].delete_one({'session-id': r.sessid})
                 await asyncio.sleep(5)
-                html = await init(link, parent_link)
+                r, html = await init(link, parent_link)
                 soup = BeautifulSoup(html, features='lxml')
+                if r.request:
+                    await r.request.close()
             group = soup.find('div', {'role': 'group'})
             if group:
                 items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
