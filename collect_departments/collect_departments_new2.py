@@ -11,39 +11,34 @@ from db import Department
 domain = 'amazon.com'
 
 
-async def start():
-    models = await iteration(link='bestsellers', _id=0, parent_link='https://www.amazon.com/')
-    if not models:
-        print('No one department can be found :/')
-        return
-    coros = []
-    for internal_id, model in models.items():
-        if model:
-            _id = model.id
-        else:
-            _id = 0
-        coros.append(collect(model.url, _id, 'https://www.amazon.com/bestsellers'))
-    await asyncio.gather(*coros)
-
-
 async def reverse_start(deps=None):
-    if not deps:
-        deps = list(Department.select().where(Department.collected == False))
-    coro = []
-    base_count = 30
-    count = base_count
-    for dep in deps:
-        coro.append(collect(model=dep))
-        count -= 1
-        if count <= 0:
-            await asyncio.gather(*coro)
-            count = base_count
-            coro = []
-    await asyncio.gather(*coro)
+    limit = 30
+    while True:
+        if not deps:
+            deps = list(Department.select().where(Department.collected == False).limit(limit))
+        if not deps:
+            try:
+                Department.get()
+                print('Collected!')
+                return
+            except peewee.DoesNotExist:
+                deps = await iteration(link='bestsellers', _id=0, parent_link='https://www.amazon.com/')
+        coro = []
+        count = limit
+        for dep in deps:
+            coro.append(iteration(model=dep, parent_link=dep.url))
+            count -= 1
+            if count <= 0:
+                await asyncio.gather(*coro)
+                count = limit
+                coro = []
+        await asyncio.gather(*coro)
 
 
-async def get_html(r, link, parent_link=None):
+async def get_html(link, parent_link=None):
+    r = Requests()
     try:
+        await r.init()
         html = await r.get_html(link, ref=parent_link)
     except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError,
             ConnectionAbortedError) as e:
@@ -57,12 +52,14 @@ async def get_html(r, link, parent_link=None):
         await r.init()
         try:
             html = await r.get_html(link, ref=parent_link)
+            await r.close()
         except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError,
                 ConnectionAbortedError) as e:
             print(e)
             sleep(1)
             html = None
-    return html
+    await r.close()
+    return r, html
 
 
 async def iteration(*, link=None, _id=0, model=None, parent_link=None):
@@ -73,10 +70,8 @@ async def iteration(*, link=None, _id=0, model=None, parent_link=None):
     if not link:
         link = model.url
         _id = model.id
-    r = Requests()
-    await r.init()
     while True:
-        html = await get_html(r, link, parent_link)
+        r, html = await get_html(link, parent_link)
         soup = BeautifulSoup(html, features='lxml')
         while Requests.check_captcha(soup):
             print('Kek.. captcha :)')
@@ -84,7 +79,7 @@ async def iteration(*, link=None, _id=0, model=None, parent_link=None):
                 del Requests.all_cookies[r.sessid]
                 database.db('amazon_data')['__cookies'].delete_one({'session-id': r.sessid})
             await asyncio.sleep(1)
-            html = await get_html(r, link, parent_link)
+            r, html = await get_html(link, parent_link)
             soup = BeautifulSoup(html, features='lxml')
         group = soup.find('div', {'role': 'group'})
         if group:
@@ -106,26 +101,6 @@ async def iteration(*, link=None, _id=0, model=None, parent_link=None):
         Department.bulk_create(models)
     except peewee.IntegrityError as e:
         print(e)
-    return {i.internal_id: i for i in Department.select().where(Department.parent_id == _id)}
-
-
-async def collect(*, link=None, _id=0, model=None, parent_link=None):
-    if model:
-        models = await iteration(model=model, parent_link=parent_link)
-        link = model.url
-        _id = model.id
-    else:
-        models = await iteration(link=link, _id=_id, parent_link=parent_link)
-    if models is None:
-        return None
-    print('models: ', models)
-    parent_link = link
-    for model in models.values():
-        if model:
-            _id = model.id
-        else:
-            _id = 0
-        await collect(model=model, parent_link='https://www.amazon.com/' + parent_link)
 
 
 if __name__ == '__main__':
