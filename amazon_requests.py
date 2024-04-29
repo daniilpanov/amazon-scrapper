@@ -94,6 +94,11 @@ class Requests:
             return await res.text()
         return None
 
+    async def close(self):
+        if self.request:
+            await self.request.close()
+            self.request = None
+
     @staticmethod
     def check_captcha(soup):
         return bool(soup.select('body > div > div[style*="width: 350px"]'))

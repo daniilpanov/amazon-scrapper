@@ -25,18 +25,20 @@ async def init(link, parent_link=None):
     await r.init()
     try:
         html = await r.get_html(link, ref=parent_link)
+        await r.close()
     except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError,
             ConnectionAbortedError) as e:
         print(e)
         await asyncio.sleep(1)
         html = None
     while not html:
-        await r.request.close()
+        await r.close()
         await asyncio.sleep(1)
         r = Requests()
         await r.init()
         try:
             html = await r.get_html(link, ref=parent_link)
+            await r.close()
         except (asyncio.exceptions.CancelledError, asyncio.TimeoutError, TimeoutError, ConnectionResetError,
                 ConnectionAbortedError) as e:
             print(e)
@@ -55,15 +57,11 @@ async def collect(link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783
             while Requests.check_captcha(soup):
                 print('Kek.. captcha :)')
                 if r.sessid in Requests.all_cookies:
-                    if r.request:
-                        await r.request.close()
                     del Requests.all_cookies[r.sessid]
                     database.db('amazon_data')['__cookies'].delete_one({'session-id': r.sessid})
                 await asyncio.sleep(5)
                 r, html = await init(link, parent_link)
                 soup = BeautifulSoup(html, features='lxml')
-                if r.request:
-                    await r.request.close()
             group = soup.find('div', {'role': 'group'})
             if group:
                 items = group.find_all('div', {'role': 'treeitem'}, recursive=False)
@@ -101,7 +99,6 @@ async def collect(link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783
             else:
                 _id = 0
             coroutines.append(collect(link, _id, semaphore, parent_link))
-        await r.request.close()
     await asyncio.gather(*coroutines)
 
 
