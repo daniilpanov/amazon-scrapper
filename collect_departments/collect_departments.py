@@ -11,8 +11,8 @@ from functions import base_chrome_init
 domain = 'amazon.com'
 
 
-def reverse_start(deps=None):
-    limit = 1
+def start(deps=None):
+    limit = 10
     while True:
         if not deps:
             deps = list(Department.select().where(Department.collected == False).limit(limit).order_by(~Department.id))
@@ -41,7 +41,7 @@ def iteration(*, link=None, _id=0, model=None, ret=False):
     while True:
         wd = None
         try:
-            wd = base_chrome_init(False, goto='https://www.amazon.com', proxy=settings.PROXY)
+            wd = base_chrome_init(goto='https://www.amazon.com', proxy=settings.PROXY)
             wd.change_loc()
             print(link)
             wd.get(link)
@@ -78,5 +78,4 @@ def iteration(*, link=None, _id=0, model=None, ret=False):
 
 
 if __name__ == '__main__':
-    # asyncio.run(start())
-    reverse_start()
+    start()
