@@ -50,7 +50,6 @@ def iteration(*, link=None, _id=0, model=None, ret=False):
         except WebDriverException:
             if wd:
                 wd.full_close()
-            raise
             continue
         soup = BeautifulSoup(html, features='lxml')
         group = soup.find('div', {'role': 'group'})
