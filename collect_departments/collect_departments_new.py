@@ -10,7 +10,9 @@ from db import Department
 domain = 'amazon.com'
 
 
-async def start(deps: list[Department]):
+async def start(deps: list[Department] | None = None):
+    if not deps:
+        deps = list(Department.select().where(Department.checked == False))
     semaphore = asyncio.Semaphore(20)
     coro = []
     for dep in deps:
@@ -95,5 +97,5 @@ async def collect(link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783
 
 
 if __name__ == '__main__':
-    asyncio.run(start(list(Department.select().where(Department.checked == False))))
+    asyncio.run(start())
     # asyncio.run(start(link='Best-Sellers-Beauty-Personal-Care-Perfumes-Fragrances/zgbs/beauty/11056591/ref=zg_bs_unv_beauty_2_11056761_1'))
