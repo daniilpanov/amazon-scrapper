@@ -81,6 +81,12 @@ async def collect(link='/Best-Sellers/zgbs/ref=zg_bs_unv_amazon-devices_0_370783
             Department.bulk_create(models)
         except peewee.IntegrityError as e:
             print(e)
+        try:
+            parent = Department.get_by_id(parent_id)
+            parent.checked = True
+            parent.save()
+        except peewee.DoesNotExist:
+            pass
         models = {i.internal_id: i for i in Department.select().where(Department.parent_id == parent_id)}
         print('models: ', models)
         coroutines = []
