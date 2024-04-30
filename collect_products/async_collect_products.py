@@ -1,6 +1,5 @@
 import asyncio
 import io
-from pprint import pprint
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -9,7 +8,7 @@ from pymongo.errors import BulkWriteError
 import amazon_requests
 import database as db
 from functions import base_chrome_init, Amazon404Exception
-from google_drive_helper import load_file, get_files
+from google_drive_helper import load_file, delete_duplicate_files
 from helpers import log
 from parser import parse_product, parse_aspects
 from video_downloader import collect_media
@@ -87,11 +86,14 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
                 for i, (lnk, img) in enumerate(zip(media[0], images_content)):
                     name = lnk.split('/')[-1]
                     ext = name.split('.')[-1]
-                    load_file(img, asin + '-' + str(i) + '.' + ext, f'image/{ext}')
+                    name = asin + '-' + str(i) + '.' + ext
+                    load_file(img, name, f'image/{ext}')
                 for i, (lnk, vid) in enumerate(zip(media[1], video_content)):
                     name = lnk.split('/')[-1]
                     ext = name.split('.')[-1]
-                    load_file(vid, asin + '-' + str(i) + '.' + ext, f'video/{ext}')
+                    name = asin + '-' + str(i) + '.' + ext
+                    load_file(vid, name, f'video/{ext}')
+                delete_duplicate_files()
             if task:
                 task.result['asins'].append(asin)
                 task.add_progress(1)
