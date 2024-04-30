@@ -43,7 +43,6 @@ def iteration(*, link=None, _id=0, model=None, ret=False):
         try:
             wd = base_chrome_init(goto='https://www.amazon.com', proxy=settings.PROXY)
             wd.change_loc()
-            print(link)
             wd.get(link)
             html = wd.get_page_source()
             wd.full_close()
