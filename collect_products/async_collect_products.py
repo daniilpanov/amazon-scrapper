@@ -65,11 +65,15 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
                 media = await collect_media(asin, html, sess.domain)
                 task.result['media_links'] = media
                 try:
-                    db.db('amazon_data')['products_media'].insert_many([{'asin': asin, 'type': 'img', 'media_link': lnk} for lnk in media[0]], ordered=False)
+                    db.db('amazon_data')['products_media'].insert_many([{
+                        'asin': asin, 'type': 'img', 'media_link': lnk, 'position': i + 1,
+                    } for i, lnk in enumerate(media[0])], ordered=False)
                 except BulkWriteError:
                     pass
                 try:
-                    db.db('amazon_data')['products_media'].insert_many([{'asin': asin, 'type': 'vid', 'media_link': lnk} for lnk in media[1]], ordered=False)
+                    db.db('amazon_data')['products_media'].insert_many([{
+                        'asin': asin, 'type': 'vid', 'media_link': lnk, 'position': i + 1
+                    } for i, lnk in enumerate(media[1])], ordered=False)
                 except BulkWriteError:
                     pass
                 coro = []
