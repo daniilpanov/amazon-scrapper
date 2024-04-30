@@ -207,11 +207,13 @@ $(document).ready(function () {
                     asins: usual_asins,
                     collect_aspects: amazon_aspects,
                 });
-                add_task('collect_products', (task_name ?? 'Get all') + '#target', {
-                    asins: [target_asin],
-                    collect_aspects: amazon_aspects,
-                    need_collect_media: Boolean(target_asin),
-                });
+                if (target_asin) {
+                    add_task('collect_products', (task_name ?? 'Get all') + '#target', {
+                        asins: [target_asin],
+                        collect_aspects: amazon_aspects,
+                        need_collect_media: true,
+                    });
+                }
                 add_task('collect_reviews', (task_name ?? 'Get all') + '#reviews', {
                     asins: data['result']['asins'],
                     current_format: true,
@@ -225,6 +227,58 @@ $(document).ready(function () {
                 }))
             })();
         });
+    });
+    $('form[action="/cmd/alias/collect_all_info"]').submit(function (e) {
+        e.preventDefault();
+        const raw_data = $(this).serializeArray();
+        let data = {};
+        for (let i in raw_data) {
+            data[raw_data[i].name] = raw_data[i].value;
+        }
+        const amazon_aspects = Boolean(Number(data.amazon_aspects));
+        const task_name = data.alias;
+        const category = data.category;
+        const client_alias = data.client_alias;
+        const asins = [...data.asins.matchAll(/B0[A-Z0-9]{8}/g)];
+        const target_asin = data.target_asin;
+
+        let all_asins = [];
+        let usual_asins = [];
+        let target_found = false;
+        for (let i in asins) {
+            if (asins[i][0] === target_asin) {
+                target_found = true;
+                continue;
+            }
+            usual_asins.push(asins[i][0]);
+            all_asins.push(asins[i][0]);
+        }
+        if (!target_found) {
+            all_asins.push(target_asin);
+        }
+
+        add_task('collect_products', (task_name ?? 'Get info') + '#prods', {
+            asins: usual_asins,
+            collect_aspects: amazon_aspects,
+        });
+        if (target_asin) {
+            add_task('collect_products', (task_name ?? 'Get info') + '#target', {
+                asins: [target_asin],
+                collect_aspects: amazon_aspects,
+                need_collect_media: true,
+            });
+        }
+        add_task('collect_reviews', (task_name ?? 'Get info') + '#revs', {
+            asins: all_asins,
+            current_format: true,
+        });
+        $.post(base_url + '/cmd/category/set', JSON.stringify({
+            cat_name: category,
+            client_name: client_alias,
+            asins: all_asins,
+            top5_asins: [],
+            target: target_asin || null,
+        }));
     });
     $('form[action="/cmd/alias/get_bsr"]').submit(function (e) {
         e.preventDefault();

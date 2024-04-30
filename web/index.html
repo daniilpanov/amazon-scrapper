@@ -13,6 +13,8 @@
     <script src='/file?filepath=web/js/bootstrap.bundle.min.js'></script>
     <!--suppress HtmlUnknownTarget -->
     <script src="/file?filepath=web/js/script.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 
 <body>
@@ -28,9 +30,12 @@
             <button class='nav-link' id='nav-product-tab' data-bs-toggle='tab' data-bs-target='#nav-products'
                     type='button' role='tab' aria-controls='nav-products' aria-selected='false'>Products
             </button>
+            <button class='nav-link' id='nav-full-collect-tab' data-bs-toggle='tab' data-bs-target='#nav-full-collect'
+                    type='button' role='tab' aria-controls='nav-full-collect' aria-selected='false'>Full collect
+            </button>
             <a class='nav-link' id='nav-extra-tab' href="http://45.14.245.223/ai.html" target="_blank"
                     aria-selected='false'>
-                Goto AI module
+                Goto AI module <i class="bi bi-arrow-up-right-square-fill"></i>
             </a>
         </div>
     </nav>
@@ -289,6 +294,55 @@
                                               placeholder='ASINs or links list'></textarea>
                                 </label>
                                 <button type='submit' class='btn btn-success'>Set category</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class='tab-pane fade' id='nav-full-collect' role='tabpanel' aria-labelledby='nav-full-collect-tab'>
+                <h2>Collect all info about ASINs</h2>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div>
+                            <form method='post' action='/cmd/alias/collect_all_info' data-bs-special='true'>
+                                <p></p>
+                                <div>
+                                    <label>
+                                        Task name (optional)
+                                        <input type='text' name='alias' class='form-control' placeholder='Task name'>
+                                    </label>
+                                    <label>
+                                        Category name
+                                        <input type='text' name='category' class='form-control' placeholder='Category name'
+                                               required>
+                                    </label>
+                                    <label>
+                                        Client alias (optional)
+                                        <input type='text' name='client_alias' class='form-control'
+                                               placeholder='Client alias'>
+                                    </label>
+                                    <label>
+                                        Target ASIN (optional)
+                                        <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN'>
+                                    </label>
+                                </div>
+                                <div>
+                                    <label>
+                                        ASINs list
+                                        <textarea name='asins' class='form-control' placeholder='ASIN...'
+                                               required></textarea>
+                                    </label>
+                                </div>
+                                <p></p>
+                                <div>
+                                    <p>
+                                        <label>
+                                            <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect amazon aspects
+                                        </label>
+                                    </p>
+                                    <button type='submit' class='btn btn-success'>Create task</button>
+                                </div>
                             </form>
                         </div>
                     </div>

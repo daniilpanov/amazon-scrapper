@@ -128,7 +128,6 @@ async def product_get_cmd(asin: str):
             'Picture': product_card['picture_url'],
         }
     except Exception as e:
-        raise
         raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
