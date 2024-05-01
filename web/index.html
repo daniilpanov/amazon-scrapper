@@ -257,6 +257,32 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-md-12">
+                        <div>
+                            <form method='post' action='/cmd/alias/collect_target' data-bs-special='true'>
+                                <p></p>
+                                <div>
+                                    <label>
+                                        Task name (optional)
+                                        <input type='text' name='alias' class='form-control' placeholder='Task name'>
+                                    </label>
+                                    <label>
+                                        Target ASIN (optional)
+                                        <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN' required>
+                                    </label>
+                                </div>
+                                <p></p>
+                                <div>
+                                    <p>
+                                        <label>
+                                            <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect amazon aspects
+                                        </label>
+                                    </p>
+                                    <button type='submit' class='btn btn-success'>Create task</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                     <div class='col-md-6'>
                         <div>
                             <h4>Collect products data</h4>

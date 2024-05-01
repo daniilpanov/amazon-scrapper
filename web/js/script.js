@@ -280,6 +280,26 @@ $(document).ready(function () {
             target: target_asin || null,
         }));
     });
+    $('form[action="/cmd/alias/collect_target"]').submit(function (e) {
+        e.preventDefault();
+        const raw_data = $(this).serializeArray();
+        let data = {};
+        for (let i in raw_data) {
+            data[raw_data[i].name] = raw_data[i].value;
+        }
+
+        const amazon_aspects = Boolean(Number(data.amazon_aspects));
+        const task_name = data.alias;
+        const target_asin = data.target_asin;
+
+        if (target_asin) {
+            add_task('collect_products', (task_name ?? 'Get target'), {
+                asins: [target_asin],
+                collect_aspects: amazon_aspects,
+                need_collect_media: true,
+            });
+        }
+    });
     $('form[action="/cmd/alias/get_bsr"]').submit(function (e) {
         e.preventDefault();
         const raw_data = $(this).serializeArray();

@@ -98,7 +98,7 @@ def write_reviews(reviews):
 
 def write_product_parsed(asin, product_url, title, descr, picture_url, parse_datetime, features, top5phr, price):
     try:
-        return db()['product_card'].insert_one({
+        return db()['product_card'].replace_one({'asin': asin}, {
             'asin': asin,
             'product_url': product_url,
             'product_title': title,
@@ -108,7 +108,7 @@ def write_product_parsed(asin, product_url, title, descr, picture_url, parse_dat
             'features': features,
             'top_5_phrases': top5phr,
             'product_price': price,
-        })
+        }, upsert=True)
     except (BulkWriteError, DuplicateKeyError):
         return True
 
