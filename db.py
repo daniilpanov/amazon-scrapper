@@ -1,5 +1,5 @@
 import settings
-from peewee import CharField, ForeignKeyField, AutoField, Model, MySQLDatabase
+from peewee import CharField, ForeignKeyField, AutoField, Model, MySQLDatabase, BooleanField
 
 conn = MySQLDatabase(
     settings.DB_NAME,
@@ -27,10 +27,11 @@ class Department(BaseModel):
         table_name = 'departments'
 
     id = AutoField()
-    parent_id = ForeignKeyField('self', backref='departments', null=True)
+    parent = ForeignKeyField('self', backref='departments', null=True)
     name = CharField(255)
     url = CharField(1000)
     internal_id = CharField(100)
+    collected = BooleanField(default=False)
     items: list
 
     def __init__(self, *args, **kwargs):

@@ -30,8 +30,7 @@ class Requests:
         return inst
 
     async def init(self, retry=True, proxy=None):
-        if self.request:
-            await self.request.close()
+        await self.close()
         if not Requests.all_cookies or not Requests.last_update or datetime.datetime.now(
                 pytz.UTC) - Requests.last_update > datetime.timedelta(minutes=5):
             Requests.all_cookies = {i['session-id']: i for i in db('amazon_data')['__cookies'].find()
@@ -93,6 +92,11 @@ class Requests:
         if res and res.status == 200:
             return await res.text()
         return None
+
+    async def close(self):
+        if self.request:
+            await self.request.close()
+            self.request = None
 
     @staticmethod
     def check_captcha(soup):

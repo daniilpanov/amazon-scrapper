@@ -1,6 +1,5 @@
 import asyncio
 import io
-from pprint import pprint
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -9,7 +8,7 @@ from pymongo.errors import BulkWriteError
 import amazon_requests
 import database as db
 from functions import base_chrome_init, Amazon404Exception
-from google_drive_helper import load_file, get_files
+from google_drive_helper import load_file, delete_duplicate_files
 from helpers import log
 from parser import parse_product, parse_aspects
 from video_downloader import collect_media
@@ -65,11 +64,15 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
                 media = await collect_media(asin, html, sess.domain)
                 task.result['media_links'] = media
                 try:
-                    db.db('amazon_data')['products_media'].insert_many([{'asin': asin, 'type': 'img', 'media_link': lnk} for lnk in media[0]], ordered=False)
+                    db.db('amazon_data')['products_media'].insert_many([{
+                        'asin': asin, 'type': 'img', 'media_link': lnk, 'position': i + 1,
+                    } for i, lnk in enumerate(media[0])], ordered=False)
                 except BulkWriteError:
                     pass
                 try:
-                    db.db('amazon_data')['products_media'].insert_many([{'asin': asin, 'type': 'vid', 'media_link': lnk} for lnk in media[1]], ordered=False)
+                    db.db('amazon_data')['products_media'].insert_many([{
+                        'asin': asin, 'type': 'vid', 'media_link': lnk, 'position': i + 1
+                    } for i, lnk in enumerate(media[1])], ordered=False)
                 except BulkWriteError:
                     pass
                 coro = []
@@ -83,11 +86,14 @@ async def get_item(ev, asin, sess, task, collected, collect_aspects=True, need_c
                 for i, (lnk, img) in enumerate(zip(media[0], images_content)):
                     name = lnk.split('/')[-1]
                     ext = name.split('.')[-1]
-                    load_file(img, asin + '-' + str(i) + '.' + ext, f'image/{ext}')
+                    name = asin + '-' + str(i) + '.' + ext
+                    load_file(img, name, f'image/{ext}')
                 for i, (lnk, vid) in enumerate(zip(media[1], video_content)):
                     name = lnk.split('/')[-1]
                     ext = name.split('.')[-1]
-                    load_file(vid, asin + '-' + str(i) + '.' + ext, f'video/{ext}')
+                    name = asin + '-' + str(i) + '.' + ext
+                    load_file(vid, name, f'video/{ext}')
+                delete_duplicate_files()
             if task:
                 task.result['asins'].append(asin)
                 task.add_progress(1)

@@ -74,16 +74,9 @@ def send_bot_msg(user, msg=None, files=None):
             pass
 
 
-def end_task(_id):
-    try:
-        requests.post('http://localhost:8080/end_task', {'_id': _id})
-    except (ConnectionError, MaxRetryError, ConnectionRefusedError, ConnectionResetError, NewConnectionError):
-        pass
-
-
 def captcha_solve(url):
     try:
-        result = requests.post('http://localhost:8090/solve/url', {'url': url})
+        result = requests.post('http://localhost:8090/solve/url', json={'url': url}, headers={'Content-Type': 'application/json'})
     except (ConnectionError, MaxRetryError, ConnectionRefusedError, ConnectionResetError, NewConnectionError):
         return None
     if result.status_code == 200:
