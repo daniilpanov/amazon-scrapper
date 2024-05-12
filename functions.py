@@ -2,9 +2,8 @@ import os
 import random
 from time import sleep
 
-from random_user_agent.params import SoftwareName, OperatingSystem
-from random_user_agent.user_agent import UserAgent
-from selenium.common import JavascriptException, NoSuchElementException
+import fake_useragent
+from selenium.common.exceptions import JavascriptException, NoSuchElementException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -13,6 +12,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from seleniumwire import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
+from capmonstercloudclient import CapMonsterClient, ClientOptions
+from capmonstercloudclient.requests import RecaptchaV2Request
 
 import database
 import helpers
@@ -27,8 +28,11 @@ class WebDriver:
     auto_captcha_check: bool
     auto_waiting: bool
     auto_jquery_insert: bool
+    capsolver = None
+    proxy_conf: dict[str, str]
 
     def __init__(self, driver, auto_captcha_check=True, auto_waiting=True, auto_jquery_insert=True):
+        self.proxy_conf = {}
         self.driver = driver
         self.auto_captcha_check = auto_captcha_check
         self.auto_waiting = auto_waiting
@@ -94,6 +98,71 @@ class WebDriver:
 
     def activate_jquery(self):
         return insert_jquery(self)
+
+    def init_capsolver(self, api_key):
+        _id = self.get_extension_id('CapMonster Cloud')
+        self.driver.get('chrome-extension://{}/popup.html'.format(_id))
+        self.sleep(1)
+        self.type('#client-key-input', api_key)
+        self.click('#client-key-save-btn')
+        old_element = self.get_element('#settings-repeat-solve-attempts')
+        for i in range(1, 11):
+            self.sleep(0.2)
+            old_element.send_keys(Keys.DOWN)
+        old_element.send_keys(Keys.ENTER)
+        self.sleep(1)
+
+    def set_capsolver(self, capsolver):
+        self.capsolver = capsolver
+
+    def set_proxy_conf(self, proxy_conf):
+        self.proxy_conf = proxy_conf
+
+    async def recaptcha_solve_capsolver(self):
+        try:
+            iframe = self.get_element('iframe[title="reCAPTCHA"]')
+            if not iframe:
+                return True
+            recaptcha = self.driver.find_element(By.CLASS_NAME, 'g-recaptcha')
+            res = await self.capsolver.solve_captcha(RecaptchaV2Request(
+                websiteUrl=self.driver.current_url,
+                websiteKey=recaptcha.get_attribute('data-sitekey'),
+                recaptchaDataSValue=recaptcha.get_attribute('data-s'),
+                proxyType=self.proxy_conf.get('protocol', 'socks5'),
+                proxyAddress=self.proxy_conf.get('addr'),
+                proxyPort=self.proxy_conf.get('port', '80'),
+                proxyLogin=self.proxy_conf.get('user'),
+                proxyPassword=self.proxy_conf.get('pass'),
+                userAgent=self.driver.execute_script("return navigator.userAgent;"),
+                cookies=';'.join((el['name'] + '=' + el['value'] for el in self.get_cookies())),
+            ))
+            if not res or not res.get('gRecaptchaResponse'):
+                return False
+            res = res['gRecaptchaResponse']
+            self.driver.execute_script(f"document.getElementById('g-recaptcha-response').innerHTML = '{res}';")
+            return res
+        except (NoSuchElementException, JavascriptException):
+
+            return True
+
+    def recaptcha_solve(self):
+        try:
+            iframe = self.get_element('iframe[title="reCAPTCHA"]')
+            if not iframe:
+                return True
+            self.switch_to.frame(iframe)
+            res = False
+            while True:
+                if 'style' in self.get_element('.recaptcha-checkbox-checkmark').get_attribute('outerHTML'):
+                    res = True
+                    break
+                if self.get_element('.rc-anchor-error-msg').text:
+                    break
+                self.sleep(1)
+            self.switch_to.default_content()
+            return res
+        except NoSuchElementException:
+            return True
 
     def get_extension_id(self, name_contains):
         self.get('chrome://extensions')
@@ -204,7 +273,11 @@ class WebDriver:
                 js_link = js_link.replace("'", "\\'")
             if js_link.count('"') != js_link.count('\\"'):
                 js_link = js_link.replace('"', '\\"')
-        self.execute_script(script_to_add_js % js_link)
+        try:
+            self.execute_script(script_to_add_js % js_link)
+            return True
+        except JavascriptException:
+            return False
 
     def sleep(self, sec):
         sleep(sec)
@@ -221,8 +294,14 @@ class WebDriver:
         el.click()
         return True
 
-    def type(self, selector, text, by=By.CSS_SELECTOR):
-        self.find_element(by, selector).send_keys(text)
+    def type(self, selector, text, by=By.CSS_SELECTOR, clear=False, textarea=False):
+        el = self.driver.find_element(by, selector)
+        if clear:
+            if textarea:
+                self.driver.execute_script('arguments[0].innerHTML = "";', el)
+            else:
+                self.driver.execute_script('arguments[0].value = "";', el)
+        el.send_keys(text)
 
     def submit(self, selector, by=By.CSS_SELECTOR):
         self.find_element(by, selector).submit()
@@ -281,9 +360,9 @@ def captcha_solve(wd: WebDriver):
 def insert_jquery(wd):
     try:
         wd.execute_script('jQuery("html")')
+        return True
     except JavascriptException:
-        wd.add_js_link('https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js')
-        wd.sleep(3)
+        return wd.add_js_link('https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js') and not sleep(3)
 
 
 def user_emulate(wd, ev):
@@ -313,13 +392,25 @@ class RetryException(Exception):
     pass
 
 
-def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False, tor=False, logs=False, proxy=None):
+ua = fake_useragent.UserAgent(browsers=['chrome'], min_version=119.0, platforms=['pc'])
+
+
+def base_chrome_init(
+        headless=True, goto=None,
+        extension=None, get_ext_id=False,
+        logs=False, proxy=None, proxy_conf=None,
+        user_profile=None, capsolver_api_key=None,
+):
     opts = Options()
     wire_opts = {}
     if extension:
         opts.add_extension(os.path.abspath(extension))
-    if tor:
-        opts.add_argument('proxy-server=socks5://104.154.150.173:9050')
+    if not proxy:
+        if proxy_conf and type(proxy_conf) is dict:
+            proxy = proxy_conf.get('protocol', 'socks5') + '://'
+            if 'user' in proxy_conf and 'pass' in proxy_conf:
+                proxy += proxy_conf['user'] + ':' + proxy_conf['pass'] + '@'
+            proxy += proxy_conf['addr'] + ':' + str(proxy_conf.get('port', 80))
     if proxy:
         # opts.add_argument(f'proxy-server={proxy}')
         wire_opts = {'proxy': {'http': proxy, 'https': proxy}}
@@ -337,12 +428,12 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
         switches.append('enable-logging')
     opts.add_experimental_option('excludeSwitches', switches)
     opts.add_argument('--disable-blink-features=AutomationControlled')
-    opts.add_argument('user-agent={}'.format(
-        UserAgent(software_names=(SoftwareName.CHROME.value,),
-                  operating_systems=(OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value),
-                  limit=120).get_random_user_agent(),
-    ))
+    opts.add_argument('user-agent={}'.format(ua.random))
     wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=opts, seleniumwire_options=wire_opts))
+    wd.set_proxy_conf(proxy_conf or {})
+    client_options = ClientOptions(api_key=capsolver_api_key)
+    cap_monster_client = CapMonsterClient(options=client_options)
+    wd.set_capsolver(cap_monster_client)
     ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         wd.get(goto, False)

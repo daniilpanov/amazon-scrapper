@@ -13,7 +13,7 @@ def get_data():
 
     for item in data:
         _id = int(str(item.id))
-        parent_id = int(str(item.parent_id)) if item.parent_id_id > 0 else None
+        parent_id = int(str(item.parent_id)) if item.parent_id > 0 else None
         data_dict[_id] = item
         if parent_id not in data_parent_dict:
             data_parent_dict[parent_id] = [item]
@@ -68,4 +68,4 @@ def export(filename: str, *, delimiter=',', quotechar='"', lim=None, _in=None):
 
 
 if __name__ == '__main__':
-    export('result.csv', lim=(641,))
+    export('result.csv')
