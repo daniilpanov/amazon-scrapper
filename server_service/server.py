@@ -10,7 +10,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 
 import amazon_requests
-import tasks
+import tasks_manager as tasks
 from database import db
 from helpers import get_all_asins_from_text
 
@@ -31,6 +31,7 @@ async def cp_show():
 
 
 # USUAL ENDPOINTS
+# TODO: change everything
 @app.post('/tasks/add/{script}')
 async def add_task_req(script: str, data=Body()):
     data = json.loads(data)
@@ -39,13 +40,13 @@ async def add_task_req(script: str, data=Body()):
         del data['alias']
     else:
         alias = None
-    _id = tasks.add_task(script, alias, data)
+    _id = tasks.add_task(script, {'alias': alias}, data)
     return _id
 
 
 @app.delete('/tasks/delete/{task_id}')
-async def delete_task_req(task_id: int, pause: bool = False):
-    tasks.stop_task(task_id, pause)
+async def delete_task_req(task_id: int):
+    tasks.stop_task(task_id)
 
 
 @app.get('/tasks/get/{task_id}')
@@ -55,7 +56,7 @@ async def get_task_req(task_id: int):
 
 @app.get('/tasks/get')
 async def get_tasks_req():
-    return tasks.get_all()
+    return tasks.get_all_tasks()
 
 
 @app.get('/file', response_class=FileResponse)

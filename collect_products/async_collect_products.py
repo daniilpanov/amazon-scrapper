@@ -11,7 +11,7 @@ from functions import base_chrome_init, Amazon404Exception
 from google_drive_helper import load_file, delete_duplicate_files
 from helpers import log
 from parser import parse_product, parse_aspects
-from video_downloader import collect_media
+from media_service.media_downloader import collect_media
 
 
 async def get_and_put_media_content(i, link, arr):

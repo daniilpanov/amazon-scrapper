@@ -319,9 +319,9 @@ def base_chrome_init(headless=True, goto=None, extension=None, get_ext_id=False,
     if extension:
         opts.add_extension(os.path.abspath(extension))
     if tor:
-        opts.add_argument('proxy-server_module=socks5://104.154.150.173:9050')
+        opts.add_argument('proxy-server=socks5://104.154.150.173:9050')
     if proxy:
-        # opts.add_argument(f'proxy-server_module={proxy}')
+        # opts.add_argument(f'proxy-server_service={proxy}')
         wire_opts = {'proxy': {'http': proxy, 'https': proxy}}
     if headless:
         opts.add_argument('--headless')

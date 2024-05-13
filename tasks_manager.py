@@ -1,5 +1,7 @@
+import datetime
 import enum
 
+import pytz
 from bson import ObjectId
 from pymongo.errors import OperationFailure, PyMongoError, DuplicateKeyError
 
@@ -29,10 +31,24 @@ def add_task(script, view, data):
         'script': script,
         'status': TaskStatusEnum.created,
         'confirmed_status': TaskStatusEnum.created,
+        'all_items': len(data) or 1,  # all quantity of subtasks
+        'progress': 0,  # how many subtasks are ready
+        'result': {},  # summary result
+        'created_at': datetime.datetime.now(pytz.UTC),
+        'started_at': None,
+        'ended_at': None,
         **view,
     })
     nd_res = TasksBodies.insert_many(
-        [{'script': script, 'header_id': ObjectId(res.inserted_id), 'data': datum} for datum in data],
+        [{
+            'script': script,
+            'header_id': ObjectId(res.inserted_id),
+            'data': datum,
+            'errors': {},  # key -- variable param, value -- error body
+            'created_at': datetime.datetime.now(pytz.UTC),
+            'started_at': None,
+            'ended_at': None,
+        } for datum in data],
     )
     return res.inserted_id, nd_res.inserted_ids
 
@@ -106,8 +122,19 @@ def get_task(task_id, with_header=False):
         if with_header:
             return TasksListView.find_one({'_id': task_id})
         return TasksBodies.find_one({'_id': task_id})
-    except:
+    except PyMongoError:
         raise
+
+
+def get_one_task(_filters=None):
+    try:
+        return TasksListLockView.find_one(_filters or {})
+    except OperationFailure:
+        # TODO: log
+        return False
+    except PyMongoError:
+        # TODO: log
+        return None
 
 
 def get_header(header_id, with_many_bodies=False):
@@ -125,7 +152,7 @@ def get_all_tasks(_filters=None):
         return TasksListLockView.find(_filters or {})
     except OperationFailure:
         # TODO: log
-        pass
+        return False
     except PyMongoError:
         # TODO: log
         return None
