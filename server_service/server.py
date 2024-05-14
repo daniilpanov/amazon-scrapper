@@ -128,8 +128,8 @@ async def stop_task_req(task_id: str):
 
 
 @app.patch('/tasks/finish/{task_id}')
-async def finish_task_req(task_id: str):
-    return tasks.finish_task(task_id)
+async def finish_task_req(task_id: str, confirm: bool = True):
+    return tasks.finish_task(task_id, confirm)
 
 
 @app.get('/tasks/get/{task_id}')
