@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from pymongo.errors import BulkWriteError
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse, JSONResponse
-from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
 
 import amazon_requests
 import tasks_manager
@@ -154,7 +154,9 @@ async def filter_tasks_req(_filter: str):
 
 @app.post('/tasks/acquire/{script}/{header_id}/{task_id}')
 async def acquire_task_req(script: str, header_id: str, task_id: str):
-    res = tasks.acquire_task(script, header_id, task_id)
+    res = tasks.acquire_task(script, task_id, header_id)
+    if not res:
+        raise HTTPException(HTTP_409_CONFLICT)
     if res:
         tasks.set_status(task_id, tasks.TaskStatusEnum.started, True)
     return JSONResponse(json.loads(json_util.dumps(res)))
