@@ -103,9 +103,9 @@ def stop_task(task_id, **params):
     return set_status(task_id, TaskStatusEnum.stopped, **params)
 
 
-def finish_task(task_id, **params):
+def finish_task(task_id, confirm=True, **params):
     task_id = ObjectId(task_id)
-    return set_status(task_id, TaskStatusEnum.finished, ended_at=datetime.datetime.now(pytz.UTC), **params)
+    return set_status(task_id, TaskStatusEnum.finished, confirm, ended_at=datetime.datetime.now(pytz.UTC), **params)
 
 
 def set_status(task_id, status, confirmation=False, **params):
