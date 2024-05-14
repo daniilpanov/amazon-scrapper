@@ -171,7 +171,9 @@ async def release_task_req(task_id: str):
 @app.get('/tasks/get_available')
 @app.get('/tasks/get_available/{script}')
 async def get_available_tasks_req(script: str | None = None):
-    res = list(tasks.get_all_tasks(({'script': script} if script else {}) | {'taskLock': {'$exists': False}}))
+    res = list(tasks.get_all_tasks(
+        ({'script': script} if script else {}) | {'status': {'$lt': tasks.TaskStatusEnum.stopped},
+                                                  'taskLock': {'$exists': False}}))
     return JSONResponse(json.loads(json_util.dumps(res)))
 
 
