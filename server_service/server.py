@@ -1,4 +1,5 @@
 import json
+import os.path
 import re
 from collections import defaultdict
 
@@ -262,7 +263,7 @@ async def product_get_cmd(asin: str):
 
 def start_server(host='0.0.0.0', port=8832):
     import uvicorn
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run(app, host=host, port=port, ssl_keyfile='./certificate.key', ssl_certfile='./certificate.crt')
 
 
 if __name__ == '__main__':
