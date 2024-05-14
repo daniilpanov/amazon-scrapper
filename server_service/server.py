@@ -94,7 +94,8 @@ async def get_helium(config: HeliumTask):
     data = json.loads(json_util.dumps(
         tasks.add_task('h10', {'alias': config.alias or ','.join(config.asins) + '#h10'}, [{'asins': config.asins}]),
     ))
-    return data[0]['_id']['$oid'] + '--' + data[1][0]['_id']['$oid']
+    print(data)
+    return data[0]['$oid'] + '--' + data[1][0]['$oid']
 
 
 @app.get('/helium/result/{helium_id}')
