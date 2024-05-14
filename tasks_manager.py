@@ -27,13 +27,10 @@ TasksLock = database.db('scrap_process')['tasks_lock']
 
 
 def add_task(script, view, data):
+    if not data:
+        return False
     res = TasksHeaders.insert_one({
         'script': script,
-        'status': TaskStatusEnum.created,
-        'confirmed_status': TaskStatusEnum.created,
-        'all_items': len(data) or 1,  # all quantity of subtasks
-        'progress': 0,  # how many subtasks are ready
-        'result': {},  # summary result
         'created_at': datetime.datetime.now(pytz.UTC),
         'started_at': None,
         'ended_at': None,
@@ -44,10 +41,13 @@ def add_task(script, view, data):
             'script': script,
             'header_id': ObjectId(res.inserted_id),
             'data': datum,
+            'status': TaskStatusEnum.created,
+            'confirmed_status': TaskStatusEnum.created,
             'errors': {},  # key -- variable param, value -- error body
             'created_at': datetime.datetime.now(pytz.UTC),
             'started_at': None,
             'ended_at': None,
+            'result': {},
         } for datum in data],
     )
     return res.inserted_id, nd_res.inserted_ids
@@ -70,49 +70,57 @@ def release_task(task_id):
     return TasksLock.delete_one({'task_id': ObjectId(task_id)}).deleted_count
 
 
-def remove_task(header_id):
+def remove_task(header_id, force_delete=False):
     _id = ObjectId(header_id)
-    tasks = TasksListLockView.find({
-        'header_id': header_id,
-        '$or': [
-            {'taskLock': {'$exists': True}},
-            {'status': {'$lte': TaskStatusEnum.started}},
-            {'$expr': {'$ne': ['$status', '$confirmed_status']}}
-        ],
-    })
-    try:
-        next(tasks)
-    except StopIteration:
-        # Есть активные задачи
-        return False
+    if not force_delete:
+        tasks = TasksListLockView.find({
+            'header_id': _id,
+            '$or': [
+                {'taskLock': {'$exists': True}},
+                {'status': {'$lte': TaskStatusEnum.started}},
+                {'$expr': {'$ne': ['$status', '$confirmed_status']}}
+            ],
+        })
+        try:
+            # Есть активные задачи
+            next(tasks)
+            return False
+        except StopIteration:
+            pass
 
     try:
-        TasksHeaders.delete_one({'_id': header_id})
-        TasksBodies.delete_many({'header_id': header_id})
-        TasksLock.delete_many({'header_id': header_id})
-        return True
+        res = TasksHeaders.delete_one({'_id': _id}).deleted_count
+        res += TasksHeaders.delete_one({'_id': _id}).deleted_count
+        res += TasksBodies.delete_many({'header_id': _id}).deleted_count
+        return res
     except PyMongoError:
-        raise
+        # TODO: log
+        return None
 
 
-def stop_task(task_id):
+def stop_task(task_id, **params):
     task_id = ObjectId(task_id)
-    return set_status(task_id, TaskStatusEnum.stopped)
+    return set_status(task_id, TaskStatusEnum.stopped, **params)
 
 
-def set_status(task_id, status, confirmation=False):
+def finish_task(task_id, **params):
+    task_id = ObjectId(task_id)
+    return set_status(task_id, TaskStatusEnum.finished, ended_at=datetime.datetime.now(pytz.UTC), **params)
+
+
+def set_status(task_id, status, confirmation=False, **params):
     task_id = ObjectId(task_id)
     return TasksBodies.update_one(
         {'_id': task_id},
-        {'$set': ({'status': status} | ({'confirmed_status': status} if confirmation else {}))},
+        {'$set': ({'status': status} | ({'confirmed_status': status} if confirmation else {}) | params)},
     ).modified_count
 
 
-def confirm_status(task_id, status):
+def confirm_status(task_id, status, **params):
     task_id = ObjectId(task_id)
     return TasksBodies.update_one(
         {'_id': task_id},
-        {'$set': {'confirmed_status': status}},
+        {'$set': {'confirmed_status': status} | params},
     ).modified_count
 
 
@@ -143,8 +151,12 @@ def get_header(header_id, with_many_bodies=False):
         if with_many_bodies:
             return TasksListView.find_one({'header_id': header_id})
         return TasksHeaders.find_one({'_id': header_id})
-    except:
-        raise
+    except OperationFailure:
+        # TODO: log
+        return None
+    except PyMongoError:
+        # TODO: log
+        return None
 
 
 def get_all_tasks(_filters=None):

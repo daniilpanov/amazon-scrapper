@@ -4,12 +4,16 @@ from collections import defaultdict
 
 import fastapi
 from bs4 import BeautifulSoup
+from bson import json_util
 from fastapi import HTTPException, Body
+from pydantic import BaseModel
 from pymongo.errors import BulkWriteError
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, JSONResponse
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 
 import amazon_requests
+import tasks_manager
 import tasks_manager as tasks
 from database import db
 from helpers import get_all_asins_from_text
@@ -24,6 +28,30 @@ app.add_middleware(
 )
 
 
+# ANNOTATIONS
+class TaskConfig(BaseModel):
+    alias: str | None = None
+
+
+class AmazonTaskConfig(TaskConfig):
+    domain: str = 'amazon.com'
+
+
+class AsinsItemCollectConfig(BaseModel):
+    asin: str
+    keywords: list[str] | None = None
+    collect_aspects: bool | None = None
+    current_format: bool | None = None
+    collect_media_config: bool | None = None
+
+
+class AsinsCollectingConfig(AmazonTaskConfig):
+    asins: list[AsinsItemCollectConfig]
+    collect_aspects: bool = True
+    current_format: bool = True
+    collect_media_config: bool = False
+
+
 # WEB VERSION
 @app.get('/cp', response_class=FileResponse)
 async def cp_show():
@@ -31,32 +59,109 @@ async def cp_show():
 
 
 # USUAL ENDPOINTS
-# TODO: change everything
-@app.post('/tasks/add/{script}')
-async def add_task_req(script: str, data=Body()):
-    data = json.loads(data)
-    if data and 'alias' in data:
-        alias = data['alias']
-        del data['alias']
-    else:
-        alias = None
-    _id = tasks.add_task(script, {'alias': alias}, data)
-    return _id
+@app.post('/products/collect')
+async def collect_products_task(config: AsinsItemCollectConfig):
+    default_row = {
+        'current_format': config.current_format,
+        'collect_aspects': config.collect_aspects,
+        'collect_media_config': config.collect_media_config,
+    }
+    data = []
+    for item in config.asins:
+        item: AsinsItemCollectConfig
+        if item.keywords:
+            for keyword in item.keywords:
+                row = default_row.copy()
+                row['asin'] = item.asin
+                row['keywords'] = keyword
+                data.append(row)
+        else:
+            row = default_row.copy()
+            row['asin'] = item.asin
+            row['keywords'] = ''
+            data.append(row)
+    tasks_manager.add_task('reviews', {
+        'alias': config.alias,
+    }, data)
 
 
-@app.delete('/tasks/delete/{task_id}')
-async def delete_task_req(task_id: int):
-    tasks.stop_task(task_id)
+class HeliumTask(TaskConfig):
+    asins: tuple[str, ...]
+
+
+@app.post('/helium/get')
+async def get_helium(config: HeliumTask):
+    data = json.loads(json_util.dumps(
+        tasks.add_task('h10', {'alias': config.alias or ','.join(config.asins) + '#h10'}, [{'asins': config.asins}]),
+    ))
+    return data[0]['_id']['$oid'] + '--' + data[1][0]['_id']['$oid']
+
+
+@app.get('/helium/result/{helium_id}')
+async def get_helium_result(helium_id: str):
+    if '--' not in helium_id:
+        raise HTTPException(HTTP_400_BAD_REQUEST)
+    header_id, body_id = helium_id.split('--')
+    task = tasks.get_task(body_id, True)
+    if not task or task['status'] == tasks.TaskStatusEnum.stopped:
+        raise HTTPException(HTTP_404_NOT_FOUND)
+    if task['status'] < tasks.TaskStatusEnum.finished:
+        return None
+    return task['result']
+
+
+@app.delete('/tasks/delete/{header_id}')
+async def delete_task_req(header_id: str, force_delete: bool = False):
+    return tasks.remove_task(header_id, force_delete)
+
+
+@app.patch('/tasks/confirm/{task_id}')
+async def confirm_task_status_req(task_id: str, confirm_status: int):
+    return tasks.confirm_status(task_id, confirm_status)
+
+
+@app.patch('/tasks/stop/{task_id}')
+async def stop_task_req(task_id: str):
+    return tasks.stop_task(task_id)
+
+
+@app.patch('/tasks/finish/{task_id}')
+async def finish_task_req(task_id: str):
+    return tasks.finish_task(task_id)
 
 
 @app.get('/tasks/get/{task_id}')
-async def get_task_req(task_id: int):
-    return tasks.get_task(task_id)
+async def get_task_req(task_id: str, with_header: bool = True, body_only: bool = False):
+    data = tasks.get_task(task_id, with_header)
+    if body_only:
+        data = data['result']
+    return JSONResponse(json.loads(json_util.dumps(data)))
 
 
 @app.get('/tasks/get')
 async def get_tasks_req():
-    return tasks.get_all_tasks()
+    res = list(tasks.get_all_tasks())
+    return JSONResponse(json.loads(json_util.dumps(res)))
+
+
+@app.post('/tasks/acquire/{script}/{header_id}/{task_id}')
+async def acquire_task_req(script: str, header_id: str, task_id: str):
+    res = tasks.acquire_task(script, header_id, task_id)
+    if res:
+        tasks.set_status(task_id, tasks.TaskStatusEnum.started, True)
+    return JSONResponse(json.loads(json_util.dumps(res)))
+
+
+@app.post('/tasks/release/{task_id}')
+async def release_task_req(task_id: str):
+    return tasks.release_task(task_id)
+
+
+@app.get('/tasks/get_available')
+@app.get('/tasks/get_available/{script}')
+async def get_tasks_req(script: str | None = None):
+    res = list(tasks.get_all_tasks(({'script': script} if script else {}) | {'taskLock': {'$exists': False}}))
+    return JSONResponse(json.loads(json_util.dumps(res)))
 
 
 @app.get('/file', response_class=FileResponse)

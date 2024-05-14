@@ -10,7 +10,6 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 import database
-import tasks
 
 app = fastapi.FastAPI()
 app.add_middleware(
@@ -40,8 +39,4 @@ async def import_report(request: Request, document: UploadFile = File(...)):
 
 if __name__ == '__main__':
     import uvicorn
-
-    tasks.task_executor_thr.start()
     uvicorn.run(app, host='0.0.0.0', port=8831)
-    tasks.task_executor_q.put_nowait((None, None))
-    tasks.task_executor_thr.join()
