@@ -263,7 +263,11 @@ async def product_get_cmd(asin: str):
 
 def start_server(host='0.0.0.0', port=8832):
     import uvicorn
-    uvicorn.run(app, host=host, port=port, ssl_keyfile='./certificate.key', ssl_certfile='./certificate.crt')
+    prefix = './'
+    if not os.path.exists(prefix + 'certificate.key'):
+        prefix = 'server_service/'
+    # uvicorn.run(app, host=host, port=port, ssl_keyfile=prefix + 'certificate.key', ssl_certfile=prefix + 'certificate.crt')
+    uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == '__main__':
