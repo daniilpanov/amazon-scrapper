@@ -110,7 +110,7 @@ async def get_helium_result(helium_id: str):
         raise HTTPException(HTTP_404_NOT_FOUND)
     if task['status'] < tasks.TaskStatusEnum.finished:
         return None
-    return task['result'].get('csv_data')
+    return task['result']
 
 
 @app.post('/helium/set/{helium_id}')
@@ -118,10 +118,13 @@ async def set_helium_result(request: Request, helium_id: str):
     if '--' not in helium_id:
         raise HTTPException(HTTP_400_BAD_REQUEST)
     header_id, body_id = helium_id.split('--')
-    data = pd.DataFrame(request.json())
+    request_data = await request.json()
+    data = pd.DataFrame(request_data['export'])
     csv = data.to_csv(index=False)
     try:
-        res = tasks.TasksBodies.update_one({'_id': ObjectId(body_id)}, {'$set': {'result': {'csv_data': csv}}}).modified_count
+        res = tasks.TasksBodies.update_one({'_id': ObjectId(body_id)}, {'$set': {'result': {
+            'titles': request_data['titles'], 'csv_data': csv,
+        }}}).modified_count
     except PyMongoError:
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)
     tasks.finish_task(body_id, True)
