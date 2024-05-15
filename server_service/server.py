@@ -12,6 +12,7 @@ from fastapi import HTTPException, Body, Request
 from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.responses import FileResponse, JSONResponse
 from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -29,6 +30,7 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+app.add_middleware(GZipMiddleware)
 
 
 # ANNOTATIONS
