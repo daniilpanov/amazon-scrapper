@@ -2,6 +2,7 @@ import json
 import os.path
 import re
 from collections import defaultdict
+from json import JSONDecodeError
 
 import fastapi
 import pandas as pd
@@ -115,10 +116,17 @@ async def get_helium_result(helium_id: str):
 
 @app.post('/helium/set/{helium_id}')
 async def set_helium_result(request: Request, helium_id: str):
-    request_data = await request.json()
+    request_data = {}
+    try:
+        request_data = await request.json()
+    except JSONDecodeError:
+        pass
     if 'export' not in request_data or 'titles' not in request_data:
         raise HTTPException(HTTP_400_BAD_REQUEST)
-    data = pd.DataFrame(request_data['export'])
+    try:
+        data = pd.DataFrame(request_data['export'])
+    except ValueError:
+        raise HTTPException(HTTP_400_BAD_REQUEST)
     csv = data.to_csv(index=False)
     try:
         res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result': {
