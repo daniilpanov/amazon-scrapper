@@ -4,14 +4,15 @@ import re
 from collections import defaultdict
 
 import fastapi
+import pandas as pd
 from bs4 import BeautifulSoup
-from bson import json_util
-from fastapi import HTTPException, Body
+from bson import json_util, ObjectId
+from fastapi import HTTPException, Request
 from pydantic import BaseModel
-from pymongo.errors import BulkWriteError
+from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse, JSONResponse
-from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, HTTP_500_INTERNAL_SERVER_ERROR
 
 import amazon_requests
 import tasks_manager
@@ -112,6 +113,22 @@ async def get_helium_result(helium_id: str):
     return task['result']
 
 
+@app.post('/helium/set/{helium_id}')
+async def set_helium_result(request: Request, helium_id: str):
+    if '--' not in helium_id:
+        raise HTTPException(HTTP_400_BAD_REQUEST)
+    header_id, body_id = helium_id.split('--')
+    data = pd.DataFrame(request.json())
+    csv = data.to_csv(index=False)
+    try:
+        res = tasks.TasksBodies.update_one({'_id': ObjectId(body_id)}, {'$set': {'result': csv}}).modified_count
+    except PyMongoError:
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)
+    tasks.finish_task(body_id, True)
+    tasks.release_task(body_id)
+    return res
+
+
 @app.delete('/tasks/delete/{header_id}')
 async def delete_task_req(header_id: str, force_delete: bool = False):
     return tasks.remove_task(header_id, force_delete)
@@ -166,6 +183,7 @@ async def acquire_task_req(script: str, header_id: str, task_id: str):
 @app.post('/tasks/release/{task_id}')
 async def release_task_req(task_id: str):
     return tasks.release_task(task_id)
+
 
 
 @app.get('/tasks/get_available')
