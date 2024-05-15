@@ -58,6 +58,12 @@ def acquire_task(script, task_id, header_id):
     header_id = ObjectId(header_id)
     try:
         res = TasksLock.insert_one({'script': script, 'task_id': task_id, 'header_id': header_id})
+        task_body = TasksBodies.find_one({'_id': task_id})
+        if not task_body['started_at']:
+            TasksBodies.update_one(
+                {'_id': task_id},
+                {'$set': {'started_at': datetime.datetime.now(pytz.UTC)}},
+            )
         return res.inserted_id
     except DuplicateKeyError:
         return False
