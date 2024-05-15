@@ -7,7 +7,7 @@ import fastapi
 import pandas as pd
 from bs4 import BeautifulSoup
 from bson import json_util, ObjectId
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Body, Request
 from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.middleware.cors import CORSMiddleware
