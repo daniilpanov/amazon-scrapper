@@ -124,10 +124,13 @@ async def set_helium_result(request: Request, helium_id: str):
     except JSONDecodeError:
         pass
     if 'export' not in request_data or 'titles' not in request_data:
+        print('no needle data!')
         raise HTTPException(HTTP_400_BAD_REQUEST)
+    print(request_data['export'].splitlines()[:10])
     try:
-        data = pd.DataFrame(request_data['export'])
-    except ValueError:
+        data = pd.read_csv(request_data['export'], index_col=None)
+    except ValueError as e:
+        print(e)
         raise HTTPException(HTTP_400_BAD_REQUEST)
     csv = data.to_csv(index=False)
     try:
