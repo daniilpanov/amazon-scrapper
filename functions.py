@@ -412,7 +412,7 @@ def base_chrome_init(
                 proxy += proxy_conf['user'] + ':' + proxy_conf['pass'] + '@'
             proxy += proxy_conf['addr'] + ':' + str(proxy_conf.get('port', 80))
     if proxy:
-        # opts.add_argument(f'proxy-server={proxy}')
+        # opts.add_argument(f'proxy-server_service={proxy}')
         wire_opts = {'proxy': {'http': proxy, 'https': proxy}}
     if headless:
         opts.add_argument('--headless')

@@ -17,7 +17,7 @@ from selenium.common import NoSuchElementException, StaleElementReferenceExcepti
 import database
 import parser
 import settings
-import tasks
+import tasks_manager
 from functions import base_chrome_init, WebDriver, Amazon404Exception
 from helpers import log
 
@@ -187,8 +187,7 @@ def collect(ev, _id, asin, keywords='', domain='amazon.com', params_seed=0, curr
             try:
                 wd = wd_init(domain, asin)
                 prod_link = (wd.current_url
-                             + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm'
-                               f'?ie=UTF8&reviewerType=all_reviews?filterByKeyword={keywords}')
+                             + f'product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
                 wd.get(prod_link)
                 canonical_link_item = wd.get_element('link[rel="canonical"]')
                 if canonical_link_item:

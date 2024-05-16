@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from starlette.responses import Response
 from starlette.status import HTTP_200_OK, HTTP_500_INTERNAL_SERVER_ERROR
 
-from captcha_solver.solve_captcha_with_model import CaptchaSolver
+from .captcha_solver.solve_captcha_with_model import CaptchaSolver
 
 capsolver = CaptchaSolver('captcha_solver')
 app = fastapi.FastAPI()

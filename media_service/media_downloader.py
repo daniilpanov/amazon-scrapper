@@ -1,13 +1,11 @@
 import asyncio
 import json
 import re
-from pprint import pprint
-
-import aiohttp
 from bs4 import BeautifulSoup
 
 import amazon_requests
 import database
+import helpers
 from amazon_requests import Requests
 
 
@@ -37,12 +35,12 @@ async def collect_media(asin, html=None, domain='amazon.com'):
     try:
         js = soup.find('div', id='imageBlockVariations_feature_div').find('script').text
     except AttributeError:
-        with open('error-parse-video.html', 'w', encoding='utf-8') as f:
+        with open('../error-parse-video.html', 'w', encoding='utf-8') as f:
             f.write(html)
         return [], []
     data_json = re.search(r"var obj = jQuery.parseJSON\('(.+)'\)", js)
     if not data_json:
-        with open('error-parse-video.html', 'w', encoding='utf-8') as f:
+        with open('../error-parse-video.html', 'w', encoding='utf-8') as f:
             f.write(html)
         return [], []
     data = json.loads(data_json.group(1))
@@ -53,7 +51,7 @@ async def collect_media(asin, html=None, domain='amazon.com'):
             title = t
             break
     if not title:
-        with open('error-parse-video.html', 'w', encoding='utf-8') as f:
+        with open('../error-parse-video.html', 'w', encoding='utf-8') as f:
             f.write(html)
         return [], []
     images_links = []
@@ -77,8 +75,13 @@ async def collect_media(asin, html=None, domain='amazon.com'):
     return images_links, video_links
 
 
+def loop_iter(task_data):
+    asyncio.run(collect_media(task_data['data']['asin'], domain=task_data['data'].get('domain', 'amazon.com')))
+
+
+def run():
+    helpers.get_task_loop(loop_iter, 'video_downloader')
+
+
 if __name__ == '__main__':
-    with open('test-video2.html', encoding='utf-8') as f:
-        print(asyncio.run(collect_media(asin='B019ZZB3O2', html=f.read())))
-    with open('test-video.html', encoding='utf-8') as f:
-        print(asyncio.run(collect_media(asin='B08YKB6VMN', html=f.read())))
+    run()
