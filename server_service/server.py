@@ -125,7 +125,6 @@ async def set_helium_result(request: Request, helium_id: str):
     if 'export' not in request_data or 'titles' not in request_data:
         print('no needle data!')
         raise HTTPException(HTTP_400_BAD_REQUEST)
-    print('ok1')
     try:
         res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result': {
             'titles': request_data['titles'], 'csv_data': request_data['export'],
@@ -134,10 +133,8 @@ async def set_helium_result(request: Request, helium_id: str):
     except PyMongoError as e:
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)
-    print('ok3')
     tasks.finish_task(helium_id, True)
     tasks.release_task(helium_id)
-    print('ok5')
     return res
 
 
