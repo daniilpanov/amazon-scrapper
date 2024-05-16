@@ -30,7 +30,7 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
-app.add_middleware(GZipMiddleware)
+# app.add_middleware(GZipMiddleware)
 
 
 # ANNOTATIONS
@@ -99,7 +99,6 @@ async def get_helium(config: HeliumTask):
     data = json.loads(json_util.dumps(
         tasks.add_task('h10', {'alias': config.alias or ','.join(config.asins) + '#h10'}, [{'asins': config.asins}]),
     ))
-    print(data)
     return data[0]['$oid'] + '--' + data[1][0]['$oid']
 
 
@@ -126,7 +125,7 @@ async def set_helium_result(request: Request, helium_id: str):
     if 'export' not in request_data or 'titles' not in request_data:
         print('no needle data!')
         raise HTTPException(HTTP_400_BAD_REQUEST)
-    print(request_data['export'].splitlines()[:10])
+    print(request_data['export'][:100])
     try:
         data = pd.read_csv(request_data['export'], index_col=None)
     except ValueError as e:
@@ -137,7 +136,8 @@ async def set_helium_result(request: Request, helium_id: str):
         res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result': {
             'titles': request_data['titles'], 'csv_data': csv,
         }}}).modified_count
-    except PyMongoError:
+    except PyMongoError as e:
+        print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)
     tasks.finish_task(helium_id, True)
     tasks.release_task(helium_id)
