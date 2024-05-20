@@ -15,7 +15,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, \
-    HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT
+    HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT, HTTP_200_OK
 
 import amazon_requests
 import tasks_manager
@@ -100,7 +100,7 @@ async def get_helium(config: HeliumTask):
     data = json.loads(json_util.dumps(
         tasks.add_task('h10', {'alias': config.alias or ','.join(config.asins) + '#h10'}, [{'asins': config.asins}]),
     ))
-    return data[0]['$oid'] + '--' + data[1][0]['$oid']
+    return Response(data[0]['$oid'] + '--' + data[1][0]['$oid'], status_code=HTTP_200_OK)
 
 
 @app.get('/helium/result/{helium_id}')
