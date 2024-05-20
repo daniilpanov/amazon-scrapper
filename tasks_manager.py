@@ -1,5 +1,6 @@
 import datetime
 import enum
+from time import sleep
 
 import pytz
 from bson import ObjectId
@@ -174,3 +175,37 @@ def get_all_tasks(_filters=None):
     except PyMongoError:
         # TODO: log
         return None
+
+
+def get_task_loop(func, script, delay=5000, ev=None, *, pre_func=None, post_func=None):
+    task = None
+    if pre_func:
+        pre_func()
+    try:
+        while not ev or not ev.is_set():
+            task = get_one_task({
+                'script': script,
+                'taskLock': {'$exists': False},
+                'status': {'$lte': TaskStatusEnum.started},
+                '$expr': {'$eq': ['$status', '$confirmed_status']},
+            })
+            if task:
+                # Если не получается захватить задачу -- пропускаем
+                if not acquire_task(script, task['_id'], task['taskHeader']['_id']):
+                    task = None
+                    continue
+                # Если захватили -- запускаем функцию
+                try:
+                    func(task)
+                # Ошибки логируем
+                except Exception:
+                    # TODO: log
+                    pass
+                # Отпускаем задачу
+                release_task(task['_id'])
+                task = None
+            sleep(delay / 1000)
+    except KeyboardInterrupt:
+        if post_func:
+            post_func(task)
+        raise

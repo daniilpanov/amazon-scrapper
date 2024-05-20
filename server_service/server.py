@@ -13,8 +13,9 @@ from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
-from starlette.responses import FileResponse, JSONResponse
-from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, HTTP_500_INTERNAL_SERVER_ERROR
+from starlette.responses import FileResponse, JSONResponse, Response
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, \
+    HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT
 
 import amazon_requests
 import tasks_manager
@@ -111,7 +112,7 @@ async def get_helium_result(helium_id: str):
     if not task or task['status'] == tasks.TaskStatusEnum.stopped:
         raise HTTPException(HTTP_404_NOT_FOUND)
     if task['status'] < tasks.TaskStatusEnum.finished:
-        return None
+        return Response(status_code=HTTP_204_NO_CONTENT)
     return task['result']
 
 

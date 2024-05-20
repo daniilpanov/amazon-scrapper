@@ -431,9 +431,10 @@ def base_chrome_init(
     opts.add_argument('user-agent={}'.format(ua.random))
     wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=opts, seleniumwire_options=wire_opts))
     wd.set_proxy_conf(proxy_conf or {})
-    client_options = ClientOptions(api_key=capsolver_api_key)
-    cap_monster_client = CapMonsterClient(options=client_options)
-    wd.set_capsolver(cap_monster_client)
+    if capsolver_api_key:
+        client_options = ClientOptions(api_key=capsolver_api_key)
+        cap_monster_client = CapMonsterClient(options=client_options)
+        wd.set_capsolver(cap_monster_client)
     ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         wd.get(goto, False)

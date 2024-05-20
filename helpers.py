@@ -11,8 +11,6 @@ import requests
 from urllib3.exceptions import NewConnectionError, MaxRetryError
 from requests.exceptions import ConnectionError
 
-import tasks_manager
-
 DEBUG = True
 
 
@@ -99,37 +97,3 @@ def path(*p: str, last_dir=False, filecontent: bool | str = ''):
             with open(curr, 'w') as f:
                 f.write(filecontent if type(filecontent) is str else '')
     return curr
-
-
-def get_task_loop(func, script, delay=5000, ev=None, *, pre_func=None, post_func=None):
-    task = None
-    if pre_func:
-        pre_func()
-    try:
-        while not ev or not ev.is_set():
-            task = tasks_manager.get_one_task({
-                'script': script,
-                'taskLock': {'$exists': False},
-                'status': {'$lte': tasks_manager.TaskStatusEnum.started},
-                '$expr': {'$eq': ['$status', '$confirmed_status']},
-            })
-            if task:
-                # Если не получается захватить задачу -- пропускаем
-                if not tasks_manager.acquire_task(script, task['_id'], task['taskHeader']['_id']):
-                    task = None
-                    continue
-                # Если захватили -- запускаем функцию
-                try:
-                    func(task)
-                # Ошибки логируем
-                except Exception:
-                    # TODO: log
-                    pass
-                # Отпускаем задачу
-                tasks_manager.release_task(task['_id'])
-                task = None
-            sleep(delay / 1000)
-    except KeyboardInterrupt:
-        if post_func:
-            post_func(task)
-        raise

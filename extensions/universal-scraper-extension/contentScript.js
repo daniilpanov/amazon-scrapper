@@ -1,9 +1,21 @@
 let interval_id = setInterval(() => {
+    // TODO: set limits! active tasks IDs from local storage
     fetch('http://195.201.194.213:8832/tasks/get_available').then((res) => {
         res.json().then((data) => {
             for (let i in data) {
-                if (data[i].script === 'h10') {
-                    setTimeout(h10scrap, 500, data[i]);
+                switch (data[i].script) {
+                    case 'h10':
+                        setTimeout(h10scrap, 500, data[i]);
+                        break;
+                    case 'products':
+                        console.log('Will be released soon');
+                        break;
+                    case 'product_media':
+                        console.log('Will be released soon');
+                        break;
+                    default:
+                        console.log('Unknown script:', data[i].script);
+                        break;
                 }
             }
         });

@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 
 import amazon_requests
 import database
-import helpers
+import tasks_manager
 from amazon_requests import Requests
 
 
@@ -80,7 +80,7 @@ def loop_iter(task_data):
 
 
 def run():
-    helpers.get_task_loop(loop_iter, 'video_downloader')
+    tasks_manager.get_task_loop(loop_iter, 'video_downloader')
 
 
 if __name__ == '__main__':
