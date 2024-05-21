@@ -1,6 +1,6 @@
 {
-  "name": "UniScrap",
-  "description": "Scraper addon works with AmaScrap",
+  "name": "Amazon Sellercentral Scrap",
+  "description": "Amazon Sellercentral Scraper addon works with AmaScrap",
   "version": "1.0",
   "manifest_version": 3,
   "icons": {},
