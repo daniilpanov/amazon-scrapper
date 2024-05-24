@@ -115,6 +115,20 @@ def finish_task(task_id, confirm=True, **params):
     return set_status(task_id, TaskStatusEnum.finished, confirm, ended_at=datetime.datetime.now(pytz.UTC), **params)
 
 
+def report_task(task_id, errors, confirm=True, stop=False, **params):
+    task_id = ObjectId(task_id)
+    if confirm and 'ended_at' not in params:
+        params['ended_at'] = datetime.datetime.now(pytz.UTC)
+    if stop:
+        res = set_status(task_id, TaskStatusEnum.critical_error, confirm, errors=errors, **params)
+        release_task(task_id)
+        return res
+    return TasksBodies.update_one(
+        {'_id': task_id},
+        {'$set': ({'errors': errors} | params)},
+    ).modified_count
+
+
 def set_status(task_id, status, confirmation=False, **params):
     task_id = ObjectId(task_id)
     return TasksBodies.update_one(

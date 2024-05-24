@@ -5,14 +5,12 @@ from collections import defaultdict
 from json import JSONDecodeError
 
 import fastapi
-import pandas as pd
 from bs4 import BeautifulSoup
 from bson import json_util, ObjectId
 from fastapi import HTTPException, Body, Request
 from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.middleware.cors import CORSMiddleware
-from starlette.middleware.gzip import GZipMiddleware
 from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, \
     HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT, HTTP_200_OK
@@ -31,7 +29,6 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
-# app.add_middleware(GZipMiddleware)
 
 
 # ANNOTATIONS
@@ -56,6 +53,17 @@ class AsinsCollectingConfig(AmazonTaskConfig):
     collect_aspects: bool = True
     current_format: bool = True
     collect_media_config: bool = False
+
+
+class ReportForm(BaseModel):
+    confirm: bool = True
+    errors: list
+    stop: bool = False
+
+
+class HeliumResult(BaseModel):
+    titles: dict[str, str]
+    export: str
 
 
 # WEB VERSION
@@ -117,20 +125,11 @@ async def get_helium_result(helium_id: str):
 
 
 @app.post('/helium/set/{helium_id}')
-async def set_helium_result(request: Request, helium_id: str):
-    request_data = {}
-    try:
-        request_data = await request.json()
-    except JSONDecodeError:
-        pass
-    if 'export' not in request_data or 'titles' not in request_data:
-        print('no needle data!')
-        raise HTTPException(HTTP_400_BAD_REQUEST)
+async def set_helium_result(helium_id: str, result: HeliumResult):
     try:
         res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result': {
-            'titles': request_data['titles'], 'csv_data': request_data['export'],
+            'titles': result.titles, 'csv_data': result.export,
         }}}).modified_count
-        print('res', res)
     except PyMongoError as e:
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)
@@ -157,6 +156,11 @@ async def stop_task_req(task_id: str):
 @app.patch('/tasks/finish/{task_id}')
 async def finish_task_req(task_id: str, confirm: bool = True):
     return tasks.finish_task(task_id, confirm)
+
+
+@app.patch('/tasks/report/{task_id}')
+async def report_task_req(task_id: str, error: ReportForm):
+    return tasks.report_task(task_id, error.errors, error.confirm, error.stop)
 
 
 @app.get('/tasks/get/{task_id}')
@@ -192,7 +196,7 @@ async def acquire_task_req(script: str, header_id: str, task_id: str):
 
 @app.post('/tasks/release/{task_id}')
 async def release_task_req(task_id: str):
-    return tasks.release_task(task_id)
+    return Response(tasks.release_task(task_id), status_code=HTTP_200_OK)
 
 
 @app.get('/tasks/get_available')

@@ -1,0 +1,25 @@
+{
+  "name": "TestExp",
+  "description": "TestExp",
+  "version": "1.0",
+  "manifest_version": 3,
+  "icons": {},
+  "action": {},
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "permissions": [
+    "webNavigation",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "alarms",
+    "declarativeContent",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
