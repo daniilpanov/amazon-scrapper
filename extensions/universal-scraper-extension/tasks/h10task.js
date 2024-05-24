@@ -235,9 +235,10 @@ function main(task_id) {
                         return;
                     }
                     // Get only titles
-                    let result = {'titles': {}, 'export': []};
+                    let result = {'titles': {}, 'image_urls': {}, 'export': []};
                     for (const details of data.data.productDetails) {
                         result.titles[details.asin] = details.title;
+                        result.image_urls[details.asin] = details.imageUrl;
                     }
                     // The sixth query -- export-data
                     fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/exported-data?accountId=1545531519&include-all=0&include-any=1&sort=default`, {

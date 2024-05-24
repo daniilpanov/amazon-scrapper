@@ -62,6 +62,7 @@ class ReportForm(BaseModel):
 
 
 class HeliumResult(BaseModel):
+    image_urls: dict[str, str]
     titles: dict[str, str]
     export: str
 
@@ -128,7 +129,7 @@ async def get_helium_result(helium_id: str):
 async def set_helium_result(helium_id: str, result: HeliumResult):
     try:
         res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result': {
-            'titles': result.titles, 'csv_data': result.export,
+            'titles': result.titles, 'image_urls': result.image_urls, 'csv_data': result.export,
         }}}).modified_count
     except PyMongoError as e:
         print(e)
