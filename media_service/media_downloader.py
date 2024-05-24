@@ -29,7 +29,7 @@ async def collect_media(asin, html=None, domain='amazon.com'):
     if Requests.check_captcha(soup):
         if sess:
             await sess.request.close()
-            database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
+            db_mongo.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
         print('Kek.. kaptcha :)')
         return await collect_media(asin, None, domain)
     try:

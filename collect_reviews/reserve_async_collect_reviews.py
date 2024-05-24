@@ -42,7 +42,7 @@ def write_data(q: Queue):
         data_res = q.get()
         if data_res is None:
             return
-        database.write_reviews(data_res)
+        db_mongo.write_reviews(data_res)
 
 
 def logger(q: Queue):
@@ -277,7 +277,7 @@ def collect(ev, _id, asin, keywords='', domain='amazon.com', params_seed=0, curr
                     })
                     task.result['asins'].append(asin)
                     task.result['count'].append(
-                        database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin})
+                        db_mongo.db('amazon_data')['customer_reviews'].count_documents({'asin': asin})
                     )
                     task.add_progress(1)
                 data_queue.put(None)

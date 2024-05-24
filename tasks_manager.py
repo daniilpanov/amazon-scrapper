@@ -18,13 +18,13 @@ class TaskStatusEnum(enum.IntEnum):
 
 
 # Aggregations
-TasksListView = database.db('scrap_process')['tasks_list_view']
-TasksLockView = database.db('scrap_process')['tasks_lock_view']
-TasksListLockView = database.db('scrap_process')['tasks_list_lock_view']
+TasksListView = db_mongo.db('scrap_process')['tasks_list_view']
+TasksLockView = db_mongo.db('scrap_process')['tasks_lock_view']
+TasksListLockView = db_mongo.db('scrap_process')['tasks_list_lock_view']
 # Collections
-TasksHeaders = database.db('scrap_process')['tasks_headers']
-TasksBodies = database.db('scrap_process')['tasks_bodies']
-TasksLock = database.db('scrap_process')['tasks_lock']
+TasksHeaders = db_mongo.db('scrap_process')['tasks_headers']
+TasksBodies = db_mongo.db('scrap_process')['tasks_bodies']
+TasksLock = db_mongo.db('scrap_process')['tasks_lock']
 
 
 def add_task(script, view, data):

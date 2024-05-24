@@ -36,7 +36,7 @@ def write_data(q: Queue):
         data_res = q.get()
         if data_res is None:
             return
-        database.write_reviews(data_res)
+        db_mongo.write_reviews(data_res)
 
 
 def logger(q: Queue):
@@ -132,18 +132,18 @@ async def send_request(sess: amazon_requests.Requests, asin, seed, page, keyword
         res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=False, **kwargs)
         if not res or 'BAAAAAAD ASIN!' in res:
             log('..fff..')
-            # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
+            # db_mongo.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
             # del Requests.all_cookies[sess.sessid]
-            Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find() if 'session-id' in i}
+            Requests.all_cookies = {i['session-id']: i for i in db_mongo.db('amazon_data')['__cookies'].find() if 'session-id' in i}
             await asyncio.sleep(1)
             await sess.init()
             return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq, **kwargs)
         r = await process_data_from_page(asin, seed, res, domain, dq, lq)
         if r == -3:
             log('...captcha...')
-            # database.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
+            # db_mongo.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
             # del Requests.all_cookies[sess.sessid]
-            Requests.all_cookies = {i['session-id']: i for i in database.db('amazon_data')['__cookies'].find() if 'session-id' in i}
+            Requests.all_cookies = {i['session-id']: i for i in db_mongo.db('amazon_data')['__cookies'].find() if 'session-id' in i}
             await asyncio.sleep(1)
             await sess.init()
             return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq, **kwargs)
@@ -225,7 +225,7 @@ async def collect(_id, asin, keywords='', domain='amazon.com', index=0, current_
             task = tasks.get_task(_id)
             if task:
                 task.result['asins'].append(asin)
-                task.result['count'].append(database.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}))
+                task.result['count'].append(db_mongo.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}))
                 task.add_progress(1)
             data_queue.put(None)
             logging_queue.put(None)

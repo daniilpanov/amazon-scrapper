@@ -241,7 +241,7 @@ class WebDriver:
             for datum in cookies:
                 processed[datum['name']] = datum['value']
             try:
-                database.db('amazon_data')['__cookies'].insert_one(processed)
+                db_mongo.db('amazon_data')['__cookies'].insert_one(processed)
             except Exception:
                 pass
             return True

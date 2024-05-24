@@ -30,8 +30,8 @@ async def import_report(request: Request, document: UploadFile = File(...)):
         raise HTTPException(status_code=403, detail='Invalid API KEY')
     df = pd.read_csv(io.BytesIO(await document.read()), header=0, index_col=None, delimiter=';')
     try:
-        # database.db('Keywords')['Amazon_keyword_tracker'].insert_many(list(df.T.to_dict().values()))
-        database.db('Keywords')['keyword_tracker'].insert_many(list(df.T.to_dict().values()))
+        # db_mongo.db('Keywords')['Amazon_keyword_tracker'].insert_many(list(df.T.to_dict().values()))
+        db_mongo.db('Keywords')['keyword_tracker'].insert_many(list(df.T.to_dict().values()))
     except BulkWriteError:
         pass
     return Response(status_code=204)
