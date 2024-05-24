@@ -190,7 +190,7 @@ function main(task_id, asins) {
         // The third query (collection of queries) -- wait for ready state
         waitStatus(id, my_bearer, (data) => {
             if (data.status !== 1) {
-                fetch('http://195.201.194.213:8832/tasks/report', {
+                fetch('http://195.201.194.213:8832/tasks/report/' + task_id, {
                     method: 'PATCH',
                     body: JSON.stringify({
                         confirm: true,
@@ -222,7 +222,7 @@ function main(task_id, asins) {
                     "method": "GET",
                 }).then(data => {data.json().then(data => {
                     if (!data.data.productDetails) {
-                        fetch('http://195.201.194.213:8832/tasks/report', {
+                        fetch('http://195.201.194.213:8832/tasks/report/' + task_id, {
                             method: 'PATCH',
                             body: JSON.stringify({
                                 confirm: true,
