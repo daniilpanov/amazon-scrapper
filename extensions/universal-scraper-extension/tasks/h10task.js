@@ -163,18 +163,18 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                 "method": "GET",
             }).then(data => {
                 data.json().then(data => {
-                    main(task);
+                    main(task, asins);
                 }).catch(reason => {
-                    main(task, reason);
+                    main(task, asins, reason);
                 });
             }).catch(reason => {
-                main(task, reason);
+                main(task, asins, reason);
             });
         }, 500);
     }, (counter) => {return counter >= 500});
 });
 
-function main(task_id) {
+function main(task_id, asins) {
     // [ignore response]
     // The second query -- create-multiple-search
     fetch("https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple?accountId=1545531519", {
