@@ -122,6 +122,8 @@ async def get_helium_result(helium_id: str):
         raise HTTPException(HTTP_404_NOT_FOUND)
     if task['status'] < tasks.TaskStatusEnum.finished:
         return Response(status_code=HTTP_204_NO_CONTENT)
+    if task['status'] == tasks.TaskStatusEnum.critical_error:
+        return {'errors': task['errors']}
     return task['result']
 
 
