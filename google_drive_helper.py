@@ -6,8 +6,10 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 
+import settings
+
 SCOPES = ['https://www.googleapis.com/auth/drive']
-SERVICE_ACCOUNT_FILE = 'amascrap3-421123-bf6920748193.json'
+SERVICE_ACCOUNT_FILE = settings.SERVICE_ACCOUNT_FILE
 
 try:
     credentials = service_account.Credentials.from_service_account_file(
