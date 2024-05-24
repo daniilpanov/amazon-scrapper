@@ -190,16 +190,29 @@ function main(task_id, asins) {
         // The third query (collection of queries) -- wait for ready state
         waitStatus(id, my_bearer, (data) => {
             if (data.data.status !== 1) {
-                fetch('http://195.201.194.213:8832/tasks/report/' + task_id, {
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                        confirm: true,
-                        errors: [
-                            'Invalid ASINs!',
-                        ],
-                        stop: true,
-                    }),
-                });
+                chrome.runtime.sendMessage(
+                    {
+                        fetch: [
+                            'http://195.201.194.213:8832/tasks/report/' + task_id,
+                            {
+                                headers: {
+                                    // 'Content-Encoding': 'gzip',
+                                    'Content-Type': 'application/json',
+                                },
+                                method: 'PATCH',
+                                body: JSON.stringify({
+                                    confirm: true,
+                                    errors: [
+                                        'Invalid ASINs!',
+                                    ],
+                                    stop: true,
+                                }),
+                            },
+                        ]
+                    },
+                    (response) => {
+                    },
+                );
                 return;
             }
             // The fourth query -- get-end-task-body
@@ -222,16 +235,29 @@ function main(task_id, asins) {
                     "method": "GET",
                 }).then(data => {data.json().then(data => {
                     if (!data.data.productDetails) {
-                        fetch('http://195.201.194.213:8832/tasks/report/' + task_id, {
-                            method: 'PATCH',
-                            body: JSON.stringify({
-                                confirm: true,
-                                errors: [
-                                    'No data received from Helium10!',
-                                ],
-                                stop: true,
-                            }),
-                        });
+                        chrome.runtime.sendMessage(
+                            {
+                                fetch: [
+                                    'http://195.201.194.213:8832/tasks/report/' + task_id,
+                                    {
+                                        headers: {
+                                            // 'Content-Encoding': 'gzip',
+                                            'Content-Type': 'application/json',
+                                        },
+                                        method: 'PATCH',
+                                        body: JSON.stringify({
+                                            confirm: true,
+                                            errors: [
+                                                'No data received from Helium10!',
+                                            ],
+                                            stop: true,
+                                        }),
+                                    },
+                                ]
+                            },
+                            (response) => {
+                            },
+                        );
                         return;
                     }
                     // Get only titles
@@ -262,8 +288,9 @@ function main(task_id, asins) {
                             "method": "POST",
                         }).then(data => {
                             // HURRAY! All requests done!
-                            chrome.runtime.sendMessage({fetch: [
-                                    'http://195.201.194.213:8832/helium/set/' + task._id.$oid,
+                            chrome.runtime.sendMessage({
+                                fetch: [
+                                    'http://195.201.194.213:8832/helium/set/' + task_id,
                                     {
                                         headers: {
                                             // 'Content-Encoding': 'gzip',
@@ -272,10 +299,12 @@ function main(task_id, asins) {
                                         method: 'POST',
                                         body: JSON.stringify(result),
                                     },
-                                ]}, (response) => {
-                                // Close the window!!!
-                                window.close();
-                            });
+                                ]},
+                                (response) => {
+                                    // Close the window!!!
+                                    window.close();
+                                }
+                            );
                         });
                     })});
                 })});
