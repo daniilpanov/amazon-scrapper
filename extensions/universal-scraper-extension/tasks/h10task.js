@@ -189,7 +189,7 @@ function main(task_id, asins) {
         const id = data.data.id;
         // The third query (collection of queries) -- wait for ready state
         waitStatus(id, my_bearer, (data) => {
-            if (data.status !== 1) {
+            if (data.data.status !== 1) {
                 fetch('http://195.201.194.213:8832/tasks/report/' + task_id, {
                     method: 'PATCH',
                     body: JSON.stringify({
