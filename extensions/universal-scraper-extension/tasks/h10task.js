@@ -195,7 +195,7 @@ function main(task_id) {
                     body: JSON.stringify({
                         confirm: true,
                         errors: [
-                            'No data received from Helium10!',
+                            'Invalid ASINs!',
                         ],
                         stop: true,
                     }),
