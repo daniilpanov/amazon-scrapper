@@ -4,9 +4,9 @@ from time import sleep
 import peewee
 from bs4 import BeautifulSoup
 
-import database
+import db_mongo
 from amazon_requests import Requests
-from db import Department
+from db_sql import Department
 
 domain = 'amazon.com'
 

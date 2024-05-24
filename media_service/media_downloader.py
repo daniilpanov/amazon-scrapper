@@ -4,7 +4,7 @@ import re
 from bs4 import BeautifulSoup
 
 import amazon_requests
-import database
+import db_mongo
 import tasks_manager
 from amazon_requests import Requests
 

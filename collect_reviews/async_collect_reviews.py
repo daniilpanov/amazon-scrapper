@@ -12,7 +12,7 @@ import pytz
 from bs4 import BeautifulSoup
 
 import amazon_requests
-import database
+import db_mongo
 import parser
 from amazon_requests import Requests
 

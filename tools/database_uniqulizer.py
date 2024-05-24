@@ -1,5 +1,5 @@
 import pandas as pd
-import database as db
+import db_mongo as db
 
 if __name__ == '__main__':
     if input('Are you sure?').lower() == 'yes':

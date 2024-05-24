@@ -9,7 +9,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-import database
+import db_mongo
 
 app = fastapi.FastAPI()
 app.add_middleware(

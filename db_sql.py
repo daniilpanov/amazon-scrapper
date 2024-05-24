@@ -2,11 +2,11 @@ import settings
 from peewee import CharField, ForeignKeyField, AutoField, Model, MySQLDatabase, BooleanField
 
 conn = MySQLDatabase(
-    settings.DB_NAME,
-    user=settings.DB_USER,
-    password=settings.DB_PASS,
-    host=settings.DB_HOST,
-    port=settings.DB_PORT,
+    settings.SQL_DB_NAME,
+    user=settings.SQL_DB_USER,
+    password=settings.SQL_DB_PASS,
+    host=settings.SQL_DB_HOST,
+    port=settings.SQL_DB_PORT,
 )
 conn.connect()
 

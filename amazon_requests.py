@@ -7,7 +7,7 @@ from random_user_agent.params import SoftwareName, OperatingSystem
 from random_user_agent.user_agent import UserAgent
 
 import settings
-from database import db
+from db_mongo import db
 
 
 class Requests:
@@ -45,7 +45,7 @@ class Requests:
         else:
             cookies = {}
         if proxy is not False:
-            self.proxy = proxy or settings.PROXY
+            self.proxy = proxy or settings.WEB_PROXY
         self.request = aiohttp.ClientSession(cookies=cookies)
         await self.req(retry=retry)
 

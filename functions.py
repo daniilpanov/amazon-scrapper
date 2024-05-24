@@ -15,7 +15,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from capmonstercloudclient import CapMonsterClient, ClientOptions
 from capmonstercloudclient.requests import RecaptchaV2Request
 
-import database
+import db_mongo
 import helpers
 
 

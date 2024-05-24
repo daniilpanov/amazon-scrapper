@@ -14,7 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 from selenium.common import NoSuchElementException, StaleElementReferenceException, WebDriverException
 
-import database
+import db_mongo
 import parser
 import settings
 import tasks_manager

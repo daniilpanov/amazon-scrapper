@@ -1,4 +1,4 @@
-import database as db
+import db_mongo as db
 import pandas as pd
 
 df = pd.read_csv('test2.csv', index_col=0)

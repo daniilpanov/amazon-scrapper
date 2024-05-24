@@ -1,8 +1,7 @@
-import os
 import csv
 import typing
 
-from db import Department
+from db_sql import Department
 
 
 def get_data():

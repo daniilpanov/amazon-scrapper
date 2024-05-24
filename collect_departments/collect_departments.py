@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from selenium.common import WebDriverException
 
 import settings
-from db import Department
+from db_sql import Department
 from functions import base_chrome_init
 
 domain = 'amazon.com'
@@ -41,7 +41,7 @@ def iteration(*, link=None, _id=0, model=None, ret=False):
     while True:
         wd = None
         try:
-            wd = base_chrome_init(goto='https://www.amazon.com', proxy=settings.PROXY)
+            wd = base_chrome_init(goto='https://www.amazon.com', proxy=settings.WEB_PROXY)
             wd.change_loc()
             wd.get(link)
             html = wd.get_page_source()

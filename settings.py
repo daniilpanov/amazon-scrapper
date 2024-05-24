@@ -15,12 +15,23 @@ THREADS = {
 THREADS['collect_reviews'] = THREADS['reviews']
 THREADS['collect_products'] = THREADS['products']
 THREADS['collect_departments'] = THREADS['departments']
-DB_NAME = os.environ.get('DB_NAME')
-DB_USER = os.environ.get('DB_USER')
-DB_PASS = os.environ.get('DB_PASS')
-DB_HOST = os.environ.get('DB_HOST')
-DB_PORT = int(os.environ.get('DB_PORT') or 3306)
-PROXY = os.environ.get('PROXY')
+MAX_PROCESSES = os.environ.get('MAX_PROCESSES')
+
+SQL_DB_NAME = os.environ.get('DB_NAME')
+SQL_DB_USER = os.environ.get('DB_USER')
+SQL_DB_PASS = os.environ.get('DB_PASS')
+SQL_DB_HOST = os.environ.get('DB_HOST')
+SQL_DB_PORT = int(os.environ.get('DB_PORT') or 3306)
+
+MONGO_DB_USER = os.environ.get('MONGO_DB_USER')
+MONGO_DB_PASS = os.environ.get('MONGO_DB_PASS')
+MONGO_DB_USER_RESERVE = os.environ.get('MONGO_BD_USER_RESERVE')
+MONGO_DB_PASS_RESERVE = os.environ.get('MONGO_BD_PASS_RESERVE')
+MONGO_DB_HOST = os.environ.get('MONGO_DB_HOST')
+MONGO_DB_HOST_SCHEMA = os.environ.get('MONGO_DB_HOST_SCHEMA')
+MONGO_DB_PROXY = os.environ.get('MONGO_DB_PROXY')
+
+WEB_PROXY = os.environ.get('WEB_PROXY')
 OPENVPN = os.environ.get('OPENVPN')
 OPENVPN_LOGIN = os.environ.get('OPENVPN_LOGIN')
 OPENVPN_PASSWORD = os.environ.get('OPENVPN_PASSWORD')

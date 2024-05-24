@@ -6,7 +6,7 @@ import pytz
 from bson import ObjectId
 from pymongo.errors import OperationFailure, PyMongoError, DuplicateKeyError
 
-import database
+import db_mongo
 
 
 class TaskStatusEnum(enum.IntEnum):

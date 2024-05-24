@@ -4,13 +4,13 @@ from threading import Thread
 from time import sleep
 
 import settings
-from database import db
+from db_mongo import db
 from functions import base_chrome_init
 
 
 def collect(wqp):
     while True:
-        wd = base_chrome_init(goto='https://www.amazon.com', proxy=settings.PROXY)
+        wd = base_chrome_init(goto='https://www.amazon.com', proxy=settings.WEB_PROXY)
         wd.change_loc()
         wqp.put(wd.driver.get_cookies())
         wd.full_close()

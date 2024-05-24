@@ -1,7 +1,7 @@
 from threading import Thread
 from queue import Queue
 from pymongo.errors import BulkWriteError, DuplicateKeyError
-from database import db
+from db_mongo import db
 
 _writing_queue = Queue()
 _writer_thr: Thread | None = None

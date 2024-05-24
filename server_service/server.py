@@ -18,7 +18,7 @@ from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_
 import amazon_requests
 import tasks_manager
 import tasks_manager as tasks
-from database import db
+from db_mongo import db
 from helpers import get_all_asins_from_text
 
 app = fastapi.FastAPI()

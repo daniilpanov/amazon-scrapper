@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from pymongo.errors import BulkWriteError
 
 import amazon_requests
-import database as db
+import db_mongo as db
 from functions import base_chrome_init, Amazon404Exception
 from google_drive_helper import load_file, delete_duplicate_files
 from helpers import log

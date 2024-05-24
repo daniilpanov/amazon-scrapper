@@ -4,18 +4,22 @@ from pymongo.database import Database
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient
 
+import settings
+
 client: MongoClient | None = None
 client_spec: MongoClient | None = None
 
 config = {
-    'url': 'cluster0.tcwqk03.mongodb.net/?retryWrites=true&w=majority',
-    'username': 'scrape_processing',
-    'database': 'amazon_data',
-    'password': 'gxYSEvBIDTgy6RIg',
-    'proxy': 'http://proxydb:StdInp0101@95.216.25.100:3128',
-    'url_prefix': 'mongodb+srv',
+    'url': settings.MONGO_DB_HOST,
+    'username': settings.MONGO_DB_USER,
+    'password': settings.MONGO_DB_PASS,
+    'proxy': settings.MONGO_DB_PROXY,
+    'url_prefix': settings.MONGO_DB_HOST_SCHEMA,
 }
-config_special = {'username': 'ai_operator', 'password': 'jEWVWuNrgrqTkn7w'}
+config_special = {
+    'username': settings.MONGO_DB_USER_RESERVE,
+    'password': settings.MONGO_DB_PASS_RESERVE,
+}
 
 
 def set_config(**kwargs):
@@ -60,17 +64,17 @@ def spec_inst():
     return client_spec
 
 
-def spec_db(dbname=None) -> Database:
-    return spec_inst()[dbname or config['database']]
+def spec_db(dbname: str) -> Database:
+    return spec_inst()[dbname]
 
 
-def db(dbname=None) -> Database:
-    return inst()[dbname or config['database']]
+def db(dbname: str) -> Database:
+    return inst()[dbname]
 
 
 def write_product_parsed(asin, product_url, title, descr, picture_url, parse_datetime, features, top5phr, price):
     try:
-        return db()['product_card'].replace_one({'asin': asin}, {
+        return db('amazon_data')['product_card'].replace_one({'asin': asin}, {
             'asin': asin,
             'product_url': product_url,
             'product_title': title,
@@ -90,26 +94,6 @@ def write_aspects(asin, aspects):
     for aspect in aspects:
         data.append({'ASIN': asin, 'Aspect': aspect[0], 'positive': aspect[1], 'negative': aspect[2]})
     try:
-        return db()['amazon_aspects'].insert_many(data, False)
+        return db('amazon_data')['amazon_aspects'].insert_many(data, False)
     except (BulkWriteError, DuplicateKeyError):
         return True
-
-
-if __name__ == '__main__':
-    dab = db('amazon_data')
-    dab['categories'].find()	
-    # dab['categories_all'].delete_many({})
-    #
-    # def d(group, cat=None):
-    #     r = DataFrame(list(dab[cat or ('categories_for_' + group)].find()))
-    #     r['relation_to_category'] = group
-    #     return r
-    #
-    # groups = [c[15:] for c in dab.list_collection_names() if c.startswith('categories_for_')]
-    # df = pandas.concat([
-    #     DataFrame(columns=['Category', 'ASIN', 'relation_to_category', 'relation_to_TOP5']),
-    #     *(d(group) for group in groups),
-    #     d('1', 'categories'),
-    # ], ignore_index=True).drop_duplicates('ASIN').drop('_id', axis=1)
-    # df['relation_to_TOP5'] = False
-    # dab['categories_all'].insert_many(list(df.T.to_dict().values()))

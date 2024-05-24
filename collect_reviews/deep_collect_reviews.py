@@ -1,4 +1,4 @@
-from database import spec_db
+from db_mongo import spec_db
 from .reserve_async_collect_reviews import collect
 
 
