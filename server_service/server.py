@@ -1,13 +1,13 @@
 import json
 import os.path
 import re
+import typing
 from collections import defaultdict
-from json import JSONDecodeError
 
 import fastapi
 from bs4 import BeautifulSoup
 from bson import json_util, ObjectId
-from fastapi import HTTPException, Body, Request
+from fastapi import HTTPException, Body
 from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.middleware.cors import CORSMiddleware
@@ -61,6 +61,13 @@ class ReportForm(BaseModel):
     stop: bool = False
 
 
+class StageForm(BaseModel):
+    release: bool = False
+    stage: int = None
+    result: typing.Any = None
+    result_key: str = None
+
+
 class HeliumResult(BaseModel):
     image_urls: dict[str, str]
     titles: dict[str, str]
@@ -75,7 +82,7 @@ async def cp_show():
 
 # USUAL ENDPOINTS
 @app.post('/products/collect')
-async def collect_products_task(config: AsinsItemCollectConfig):
+async def collect_products_task(config: AsinsCollectingConfig):
     default_row = {
         'current_format': config.current_format,
         'collect_aspects': config.collect_aspects,
@@ -83,7 +90,6 @@ async def collect_products_task(config: AsinsItemCollectConfig):
     }
     data = []
     for item in config.asins:
-        item: AsinsItemCollectConfig
         if item.keywords:
             for keyword in item.keywords:
                 row = default_row.copy()
@@ -138,32 +144,44 @@ async def set_helium_result(helium_id: str, result: HeliumResult):
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)
     tasks.finish_task(helium_id, True)
     tasks.release_task(helium_id)
-    return res
+    return Response(res)
 
 
 @app.delete('/tasks/delete/{header_id}')
 async def delete_task_req(header_id: str, force_delete: bool = False):
-    return tasks.remove_task(header_id, force_delete)
+    return Response(tasks.remove_task(header_id, force_delete))
 
 
 @app.patch('/tasks/confirm/{task_id}')
 async def confirm_task_status_req(task_id: str, confirm_status: int):
-    return tasks.confirm_status(task_id, confirm_status)
+    return Response(tasks.confirm_status(task_id, confirm_status))
 
 
 @app.patch('/tasks/stop/{task_id}')
 async def stop_task_req(task_id: str):
-    return tasks.stop_task(task_id)
+    return Response(tasks.stop_task(task_id))
 
 
 @app.patch('/tasks/finish/{task_id}')
 async def finish_task_req(task_id: str, confirm: bool = True):
-    return tasks.finish_task(task_id, confirm)
+    return Response(tasks.finish_task(task_id, confirm))
 
 
 @app.patch('/tasks/report/{task_id}')
 async def report_task_req(task_id: str, error: ReportForm):
-    return tasks.report_task(task_id, error.errors, error.confirm, error.stop)
+    return Response(tasks.report_task(task_id, error.errors, error.confirm, error.stop))
+
+
+@app.patch('/tasks/stage/{task_id}')
+async def set_task_stage_req(task_id: str, stage: StageForm):
+    if not (stage.stage or (stage.result and stage.result_key or stage.result is stage.result_key is None)):
+        raise HTTPException(HTTP_400_BAD_REQUEST)
+    params = (({
+        'stage': stage.stage,
+    } if stage.stage else {}) | ({
+        'result.' + stage.result_key: stage.result,
+    }) if (stage.result_key and stage.result) else {})
+    return Response(tasks.set_task_stage(task_id, release=stage.release, **params))
 
 
 @app.get('/tasks/get/{task_id}')
@@ -176,8 +194,8 @@ async def get_task_req(task_id: str, with_header: bool = True, body_only: bool =
 
 @app.get('/tasks/get')
 @app.get('/tasks/get/{script}')
-async def get_tasks_req(script: str | None = None):
-    res = list(tasks.get_all_tasks({'script': script} if script else None))
+async def get_tasks_req(script: str | None = None, all_or_vis: bool = True):
+    res = list(tasks.get_all_tasks(({'script': script} if script else {}) | ({'visible': True} if all_or_vis else {})))
     return JSONResponse(json.loads(json_util.dumps(res)))
 
 

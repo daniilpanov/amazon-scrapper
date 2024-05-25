@@ -27,11 +27,12 @@ TasksBodies = db_mongo.db('scrap_process')['tasks_bodies']
 TasksLock = db_mongo.db('scrap_process')['tasks_lock']
 
 
-def add_task(script, view, data):
+def add_task(script, view, data, visible: bool = True):
     if not data:
         return False
     res = TasksHeaders.insert_one({
         'script': script,
+        'visible': visible,
         'created_at': datetime.datetime.now(pytz.UTC),
         'started_at': None,
         'ended_at': None,
@@ -44,6 +45,7 @@ def add_task(script, view, data):
             'data': datum,
             'status': TaskStatusEnum.created,
             'confirmed_status': TaskStatusEnum.created,
+            'stage': 1,
             'errors': {},  # key -- variable param, value -- error body
             'created_at': datetime.datetime.now(pytz.UTC),
             'started_at': None,
@@ -143,6 +145,13 @@ def confirm_status(task_id, status, **params):
         {'_id': task_id},
         {'$set': {'confirmed_status': status} | params},
     ).modified_count
+
+
+def set_task_stage(task_id, stage, release=False, **params):
+    return TasksBodies.update_one(
+        {'_id': task_id},
+        {'$set': ({'stage': stage} | params)},
+    ).modified_count and release and release_task(task_id)
 
 
 def get_task(task_id, with_header=False):
