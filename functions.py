@@ -2,7 +2,6 @@ import os
 import random
 from time import sleep
 
-import fake_useragent
 from selenium.common.exceptions import JavascriptException, NoSuchElementException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.chrome.options import Options
@@ -17,6 +16,7 @@ from capmonstercloudclient.requests import RecaptchaV2Request
 
 import db_mongo
 import helpers
+import settings
 
 
 class Amazon404Exception(Exception):
@@ -392,9 +392,6 @@ class RetryException(Exception):
     pass
 
 
-ua = fake_useragent.UserAgent(browsers=['chrome'], min_version=119.0, platforms=['pc'])
-
-
 def base_chrome_init(
         headless=True, goto=None,
         extension=None, get_ext_id=False,
@@ -428,7 +425,7 @@ def base_chrome_init(
         switches.append('enable-logging')
     opts.add_experimental_option('excludeSwitches', switches)
     opts.add_argument('--disable-blink-features=AutomationControlled')
-    opts.add_argument('user-agent={}'.format(ua.random))
+    opts.add_argument('user-agent={}'.format(settings.ua.random))
     wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=opts, seleniumwire_options=wire_opts))
     wd.set_proxy_conf(proxy_conf or {})
     if capsolver_api_key:

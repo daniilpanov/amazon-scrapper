@@ -24,16 +24,15 @@ def to_async(func):
     return run
 
 
-def get_proxies_list():
-    r = requests.get(
-        'https://proxy.webshare.io/api/v2/proxy/list/download/fylqlgwtujdvttnfaorztplrphexumivqxzmwiof/-/any/username/direct/-/')
+def get_proxy():
+    r = requests.get('http://localhost:8833/proxy/alive')
     if r.status_code == 200:
-        res = []
-        for i in r.text.splitlines():
-            res.append(i.split(':'))
-        return res
-    sleep(10)
-    return get_proxies_list()
+        return r.json()
+    return requests.get('http://localhost:8833/proxy/random').json()
+
+
+def deprecate_proxy(ip):
+    return requests.delete('http://localhost:8833/proxy/' + ip).status_code == 204
 
 
 def chunk_asins(asins_raw):

@@ -3,8 +3,6 @@ import random
 
 import aiohttp
 import pytz
-from random_user_agent.params import SoftwareName, OperatingSystem
-from random_user_agent.user_agent import UserAgent
 
 import settings
 from db_mongo import db
@@ -57,10 +55,7 @@ class Requests:
                 method, url,
                 proxy=self.proxy, params=params,
                 headers={
-                    'User-Agent': UserAgent(
-                        100, software_names=[SoftwareName.CHROME.value],
-                        operating_systems=[OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]
-                    ).get_random_user_agent(),
+                    'User-Agent': settings.ua.random,
                     'Access-Control-Allow-Origin': '*',
                     'Origin': f'https://{self.domain}',
                     'Referer': ref or f'https://{self.domain}/',

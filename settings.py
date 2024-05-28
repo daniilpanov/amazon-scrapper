@@ -1,6 +1,8 @@
 import dotenv
 import os
 
+import fake_useragent
+
 if not dotenv.load_dotenv('.env'):
     dotenv.load_dotenv('../.env')
 
@@ -34,6 +36,10 @@ MONGO_DB_HOST_SCHEMA = os.environ.get('MONGO_DB_HOST_SCHEMA')
 MONGO_DB_PROXY = os.environ.get('MONGO_DB_PROXY')
 
 WEB_PROXY = os.environ.get('WEB_PROXY')
+PROXY_AUTH_TOKEN = os.environ.get('PROXY_AUTH_TOKEN')
 OPENVPN = os.environ.get('OPENVPN')
 OPENVPN_LOGIN = os.environ.get('OPENVPN_LOGIN')
 OPENVPN_PASSWORD = os.environ.get('OPENVPN_PASSWORD')
+
+# UserAgent Maker
+ua = fake_useragent.UserAgent(browsers=['chrome'], min_version=119.0, platforms=['pc'])
