@@ -12,4 +12,6 @@ def start(service: str, *args, **kwargs):
 if __name__ == '__main__':
     import helpers
     params = helpers.parse_args(sys.argv)
+    if 'service' in params and not params['service'].endswith('_service'):
+        params['service'] += '_service'
     start(**params)

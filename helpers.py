@@ -11,6 +11,8 @@ import requests
 from urllib3.exceptions import NewConnectionError, MaxRetryError
 from requests.exceptions import ConnectionError
 
+import settings
+
 DEBUG = True
 
 
@@ -21,18 +23,48 @@ def to_async(func):
             loop = asyncio.get_event_loop()
         pfunc = partial(func, *args, **kwargs)
         return await loop.run_in_executor(executor, pfunc)
+
     return run
 
 
-def get_proxy():
+def get_proxy(only_alive=False):
     r = requests.get('http://localhost:8833/proxy/alive')
     if r.status_code == 200:
         return r.json()
-    return requests.get('http://localhost:8833/proxy/random').json()
+    if not only_alive:
+        return requests.get('http://localhost:8833/proxy/random').json()
+    return None
 
 
 def deprecate_proxy(ip):
     return requests.delete('http://localhost:8833/proxy/' + ip).status_code == 204
+
+
+def get_request_headers(xmlhttp=False, domain='amazon.com', ref=None, headers=None):
+    return {
+        'User-Agent': settings.ua.random,
+        'Access-Control-Allow-Origin': '*',
+        'Origin': f'https://{domain}',
+        'Referer': ref or f'https://{domain}/',
+    } | ({
+        'Rtt': '100',
+        'Sec-Ch-Device-Memory': '8',
+        'Sec-Ch-Dpr': '1.25',
+        'Sec-Ch-Ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': 'Windows',
+        'Sec-Ch-Ua-Platform-Version': '14.0.0',
+        'Sec-Ch-Viewport-Width': '810',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'Viewport-Width': '810',
+        'X-Requested-With': 'XMLHttpRequest',
+    } if xmlhttp else {}) | (headers or {})
+
+
+def check_captcha(soup):
+    return bool(soup.select('body > div > div[style*="width: 350px"]'))
 
 
 def chunk_asins(asins_raw):
@@ -75,7 +107,8 @@ def send_bot_msg(user, msg=None, files=None):
 
 def captcha_solve(url):
     try:
-        result = requests.post('http://localhost:8090/solve/url', json={'url': url}, headers={'Content-Type': 'application/json'})
+        result = requests.post('http://localhost:8090/solve/url', json={'url': url},
+                               headers={'Content-Type': 'application/json'})
     except (ConnectionError, MaxRetryError, ConnectionRefusedError, ConnectionResetError, NewConnectionError):
         return None
     if result.status_code == 200:

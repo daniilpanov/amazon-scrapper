@@ -193,7 +193,15 @@ def parse_aspects(asin, html):
 
 
 def parse_product(asin, html, tiny=False, domain='amazon.com'):
-    bs = BeautifulSoup(html, features='html.parser')
+    if isinstance(html, str):
+        bs = BeautifulSoup(html, features='lxml')
+    else:
+        bs = html
+    canonical_link_item = bs.select_one('link[rel="canonical"]')
+    if canonical_link_item:
+        canonical_link = canonical_link_item['href']
+    else:
+        canonical_link = None
     if not bs:
         print('NO BS! ASIN:', asin)
         return False
@@ -242,7 +250,7 @@ def parse_product(asin, html, tiny=False, domain='amazon.com'):
     else:
         price = None
     return [
-        asin, f'https://{domain}/dp/{asin}',
+        asin, f'https://{domain}/dp/{asin}', canonical_link,
         title, descr, pic, datetime.datetime.now(pytz.UTC),
         features, top5, price,
     ]

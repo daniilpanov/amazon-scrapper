@@ -1,3 +1,4 @@
+import datetime
 import json
 import os.path
 import re
@@ -11,6 +12,7 @@ from fastapi import HTTPException, Body
 from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, \
     HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT, HTTP_200_OK
@@ -74,6 +76,10 @@ class HeliumResult(BaseModel):
     export: str
 
 
+class HeliumTask(TaskConfig):
+    asins: tuple[str, ...]
+
+
 # WEB VERSION
 @app.get('/cp', response_class=FileResponse)
 async def cp_show():
@@ -87,6 +93,7 @@ async def collect_products_task(config: AsinsCollectingConfig):
         'current_format': config.current_format,
         'collect_aspects': config.collect_aspects,
         'collect_media_config': config.collect_media_config,
+        'domain': config.domain,
     }
     data = []
     for item in config.asins:
@@ -101,13 +108,33 @@ async def collect_products_task(config: AsinsCollectingConfig):
             row['asin'] = item.asin
             row['keywords'] = ''
             data.append(row)
-    tasks_manager.add_task('reviews', {
+    return JSONResponse(json.loads(json_util.dumps(tasks_manager.add_task('products', {
         'alias': config.alias,
-    }, data)
+    }, data, stage=1))))
 
 
-class HeliumTask(TaskConfig):
-    asins: tuple[str, ...]
+@app.post('/products/set_result/reviews')
+async def set_reviews_result(request: Request):
+    data = await request.json()
+    try:
+        db('amazon_data')['customer_reviews'].insert_many(data, ordered=False)
+    except BulkWriteError:
+        pass
+    except PyMongoError as e:
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
+    return Response(status_code=HTTP_204_NO_CONTENT)
+
+
+@app.post('/products/set_result/card/{asin}')
+async def set_product_result(request: Request, asin: str):
+    data = await request.json()
+    if 'parse_datetime' in data:
+        data['parse_datetime'] = datetime.datetime.fromisoformat(data['parse_datetime'])
+    try:
+        db('amazon_data')['product_card'].replace_one({'asin': asin}, data, upsert=True)
+    except PyMongoError as e:
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
+    return Response(status_code=HTTP_204_NO_CONTENT)
 
 
 @app.post('/helium/get')
@@ -174,14 +201,14 @@ async def report_task_req(task_id: str, error: ReportForm):
 
 @app.patch('/tasks/stage/{task_id}')
 async def set_task_stage_req(task_id: str, stage: StageForm):
-    if not (stage.stage or (stage.result and stage.result_key or stage.result is stage.result_key is None)):
+    if not (stage.stage or (stage.result or stage.result is None)):
         raise HTTPException(HTTP_400_BAD_REQUEST)
     params = (({
-        'stage': stage.stage,
-    } if stage.stage else {}) | ({
-        'result.' + stage.result_key: stage.result,
-    }) if (stage.result_key and stage.result) else {})
-    return Response(tasks.set_task_stage(task_id, release=stage.release, **params))
+                   'stage': stage.stage,
+               } if stage.stage else {'stage': 0}) | (({
+        ('result.' + stage.result_key if stage.result_key else 'result'): stage.result,
+    }) if stage.result else {}))
+    return Response(str(tasks.set_task_stage(task_id, release=stage.release, **params)))
 
 
 @app.get('/tasks/get/{task_id}')
@@ -222,10 +249,13 @@ async def release_task_req(task_id: str):
 
 @app.get('/tasks/get_available')
 @app.get('/tasks/get_available/{script}')
-async def get_available_tasks_req(script: str | None = None):
-    res = list(tasks.get_all_tasks(
-        ({'script': script} if script else {}) | {'status': {'$lt': tasks.TaskStatusEnum.stopped},
-                                                  'taskLock': {'$exists': False}}))
+@app.get('/tasks/get_available/{script}/{stage}')
+async def get_available_tasks_req(script: str | None = None, stage: int = -1):
+    _filters = ({'script': script} if script else {}) | {'status': {'$lt': tasks.TaskStatusEnum.stopped},
+                                                         'taskLock': {'$exists': False}} | (
+                   {'stage': stage} if stage > -1 else {})
+    print(_filters)
+    res = list(tasks.get_all_tasks(_filters))
     return JSONResponse(json.loads(json_util.dumps(res)))
 
 

@@ -27,7 +27,7 @@ TasksBodies = db_mongo.db('scrap_process')['tasks_bodies']
 TasksLock = db_mongo.db('scrap_process')['tasks_lock']
 
 
-def add_task(script, view, data, visible: bool = True):
+def add_task(script, view, data, visible: bool = True, stage=0):
     if not data:
         return False
     res = TasksHeaders.insert_one({
@@ -45,7 +45,7 @@ def add_task(script, view, data, visible: bool = True):
             'data': datum,
             'status': TaskStatusEnum.created,
             'confirmed_status': TaskStatusEnum.created,
-            'stage': 1,
+            'stage': stage,
             'errors': {},  # key -- variable param, value -- error body
             'created_at': datetime.datetime.now(pytz.UTC),
             'started_at': None,
@@ -127,7 +127,7 @@ def report_task(task_id, errors, confirm=True, stop=False, **params):
         return res
     return TasksBodies.update_one(
         {'_id': task_id},
-        {'$set': ({'errors': errors} | params)},
+        {'$push': {'errors': errors}} | params,
     ).modified_count
 
 
@@ -148,10 +148,12 @@ def confirm_status(task_id, status, **params):
 
 
 def set_task_stage(task_id, stage, release=False, **params):
-    return TasksBodies.update_one(
-        {'_id': task_id},
+    res1 = TasksBodies.update_one(
+        {'_id': ObjectId(task_id)},
         {'$set': ({'stage': stage} | params)},
-    ).modified_count and release and release_task(task_id)
+    ).modified_count
+    res2 = release and release_task(task_id)
+    return res1 and res2
 
 
 def get_task(task_id, with_header=False):

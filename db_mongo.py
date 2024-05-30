@@ -72,11 +72,12 @@ def db(dbname: str) -> Database:
     return inst()[dbname]
 
 
-def write_product_parsed(asin, product_url, title, descr, picture_url, parse_datetime, features, top5phr, price):
+def write_product_parsed(asin, product_url, canonical_link, title, descr, picture_url, parse_datetime, features, top5phr, price):
     try:
         return db('amazon_data')['product_card'].replace_one({'asin': asin}, {
             'asin': asin,
             'product_url': product_url,
+            'canonical_link': canonical_link,
             'product_title': title,
             'product_descr': descr,
             'picture_url': picture_url,

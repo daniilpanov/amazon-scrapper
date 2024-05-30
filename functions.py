@@ -397,6 +397,7 @@ def base_chrome_init(
         extension=None, get_ext_id=False,
         logs=False, proxy=None, proxy_conf=None,
         user_profile=None, capsolver_api_key=None,
+        cookies=None, user_agent=None,
 ):
     opts = Options()
     wire_opts = {}
@@ -425,7 +426,7 @@ def base_chrome_init(
         switches.append('enable-logging')
     opts.add_experimental_option('excludeSwitches', switches)
     opts.add_argument('--disable-blink-features=AutomationControlled')
-    opts.add_argument('user-agent={}'.format(settings.ua.random))
+    opts.add_argument('user-agent={}'.format(user_agent or settings.ua.random))
     wd = WebDriver(webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=opts, seleniumwire_options=wire_opts))
     wd.set_proxy_conf(proxy_conf or {})
     if capsolver_api_key:
@@ -435,6 +436,10 @@ def base_chrome_init(
     ext_id = wd.get_extension_id(get_ext_id) if get_ext_id else None
     if goto:
         wd.get(goto, False)
+        if cookies:
+            for cookie_key, cookie_value in cookies.items():
+                wd.driver.add_cookie({'name': cookie_key, 'value': cookie_value})
+            wd.get(goto, False)
         while not captcha_solve(wd):
             print('Result of solving captcha:', False)
         print('Result of solving captcha:', True)

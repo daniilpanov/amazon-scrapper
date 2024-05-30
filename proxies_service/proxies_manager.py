@@ -35,15 +35,18 @@ class AmazonProxy:
     def __hash__(self):
         return hash(self.addr)
 
+    def __str__(self):
+        return f'{self.username}:{self.password}@{self.addr}:{self.port}'
+
     @classmethod
     def update_proxies(cls, query_builder):
         cls.proxies = set()
-        _next = "https://proxy.webshare.io/api/v2/proxy/list/?mode=direct"
+        _next = 'https://proxy.webshare.io/api/v2/proxy/list/?mode=backbone'
         while True:
             res = requests.get(
                 _next,
                 headers={
-                     "Authorization": "Token " + settings.PROXY_AUTH_TOKEN,
+                     'Authorization': 'Token ' + settings.PROXY_AUTH_TOKEN,
                 },
             ).json()
             for item in res['results']:
@@ -56,6 +59,8 @@ class AmazonProxy:
         try:
             for proxy in cls.proxies:
                 proxy.cookies = next(cookies)
+                del proxy.cookies['_id']
+                del proxy.cookies['session-id-time']
         finally:
             return cls.proxies
 
@@ -77,19 +82,26 @@ class AmazonProxy:
             'cookies': self.cookies,
         }
 
+    @staticmethod
+    def to_str(obj):
+        return f'socks5://{obj["username"]}:{obj["password"]}@{obj["addr"]}:{obj["port"]}'
+
 
 def updating():
     while True:
-        cookies = db_mongo.db('amazon_data')['__cookies'].find({})
-        AmazonProxy.update_proxies(cookies)
-        time.sleep(2000)
+        cookies = db_mongo.db('amazon_data')['__cookies'].find({'session-id': {'$exists': True}, 'sp-cdn': {'$exists': False}})
+        print(list(str(i) for i in AmazonProxy.update_proxies(cookies)))
+        for i in range(60):
+            if all([proxy.deprecated for proxy in AmazonProxy.proxies]):
+                break
+            time.sleep(1)
 
 
 app = fastapi.FastAPI()
 
 
 @app.get('/proxy/alive')
-def get_alive_proxy():
+async def get_alive_proxy():
     try:
         return AmazonProxy.get_proxy().to_dict()
     except AttributeError:
@@ -97,7 +109,7 @@ def get_alive_proxy():
 
 
 @app.get('/proxy/random')
-def get_random_proxy():
+async def get_random_proxy():
     try:
         return random.choice(list(AmazonProxy.proxies)).to_dict()
     except (KeyError, IndexError):
@@ -105,11 +117,12 @@ def get_random_proxy():
 
 
 @app.delete('/proxy/{addr}')
-def deprecate_proxy(addr: str):
+async def deprecate_proxy(addr: str):
     found = False
     for proxy in AmazonProxy.proxies:
         if proxy.addr == addr:
             proxy.deprecated = True
+
             return Response(status_code=HTTP_204_NO_CONTENT)
     if not found:
         raise HTTPException(HTTP_404_NOT_FOUND)
