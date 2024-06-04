@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
             for (const tr of trs) {
                 const cells = tr.getElementsByTagName('td');
                 if (cells.length && cells.length > 1) {
-                    characteristics[cells[0]] = cells[1];
+                    characteristics[cells[0].innerText.trim()] = cells[1].innerText.trim();
                 }
             }
         }
