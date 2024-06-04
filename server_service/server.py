@@ -183,7 +183,7 @@ async def set_helium_result(helium_id: str, result: HeliumResult):
     if 'amazon_data' in task['result']:
         tasks.finish_task(helium_id, True)
         tasks.release_task(helium_id)
-    return Response(res)
+    return Response(str(res))
 
 
 @app.post('/helium/set/{helium_id}/amazon')
@@ -204,7 +204,7 @@ async def set_helium_amazon_result(helium_id: str, result: HeliumAdditionalResul
     if 'helium_data' in task['result']:
         tasks.finish_task(helium_id, True)
         tasks.release_task(helium_id)
-    return Response(res)
+    return Response(str(res))
 
 
 @app.delete('/tasks/delete/{header_id}')
