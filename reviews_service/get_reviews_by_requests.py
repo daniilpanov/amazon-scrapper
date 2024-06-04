@@ -1,25 +1,32 @@
-import asyncio
-import datetime
-import re
-from asyncio import Semaphore
-from builtins import Exception
-from json import JSONDecodeError
 from queue import Queue
 from threading import Thread
 
-import pytz
-from bs4 import BeautifulSoup
+import requests
 
-import amazon_requests
-import db_mongo
 import helpers
-import parser
-import settings
-
-from helpers import log
-import tasks
-
+from .parse import *
 from proxies_service.proxies_manager import AmazonProxy
+
+
+def write_data(q: Queue):
+    data = -1
+    try:
+        while data:
+            data = q.get()
+            # requests.post('http://localhost:8832/products/set_result/reviews', json=data)
+            print('[write_res]:', data)
+    except KeyboardInterrupt:
+        print('ok??')
+        while not q.empty() and data:
+            data = q.get()
+            # requests.post('http://localhost:8832/products/set_result/reviews', json=data)
+            print('[__write_res__]', data)
+        raise
+
+
+class RequestsEndedException(Exception):
+    pass
+
 
 params = {
     'sortBy': ['', 'recent'],
@@ -31,16 +38,11 @@ requests_counter = 0
 params_len = 1
 for key in params:
     params_len *= len(params[key])
-cookie = db_mongo.db('amazon_data')['__cookies'].find_one({'session-id': {'$exists': True}, 'sp-cdn': {'$exists': False}})
-del cookie['_id']
 
 
-def request(session, asin, page=1, p=None, keywords='', xmlhttp=True, **kwargs):
-    global requests_counter
-    domain = kwargs.get('domain', 'amazon.com')
-    link = kwargs.get('canonical_link', f'https://www.{domain}/product-reviews/{asin}')
-    curr_params = {
-        'formatType': 'current_format' if kwargs.get('current_format') else '',
+def get_curr_params(asin, page, keywords, curr_format, seed):
+    p = {
+        'formatType': 'current_format' if curr_format else '',
         'filterByAge': '',
         'pageNumber': page,
         'filterByLanguage': '',
@@ -53,286 +55,98 @@ def request(session, asin, page=1, p=None, keywords='', xmlhttp=True, **kwargs):
         'asin': asin,
         'scope': 'reviewsAjax{}'.format(requests_counter),
     }
-    if not p:
-        p = {}
-    p |= curr_params
-    proxies = helpers.get_proxy(True)
-    for proxy in proxies:
-        if xmlhttp:
-            res = session.post(
-                f'https://www.{domain}/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt',
-                headers=helpers.get_request_headers(xmlhttp, domain, link),
-                proxies={
-                    'http://': AmazonProxy.to_str(proxy),
-                    'https://': AmazonProxy.to_str(proxy),
-                },
-                cookies=proxy['cookies'],
-                data=p,
-            )
-        else:
-            res = session.get(
-                link,
-                proxies={
-                    'http://': AmazonProxy.to_str(proxy),
-                    'https://': AmazonProxy.to_str(proxy),
-                },
-                cookies=proxy['cookies'],
-                data=params,
-            )
-        if res and res.status == 200:
-            requests_counter += 1
-            return res.text()
-        helpers.deprecate_proxy(proxy['addr'])
-    if xmlhttp:
-        res = session.post(
-            f'https://www.{domain}/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt',
-            headers=helpers.get_request_headers(xmlhttp, domain, link),
-            proxies={
-                'http://': settings.WEB_PROXY,
-                'https://': settings.WEB_PROXY,
-            },
-            cookies=cookie,
-            data=p,
-        )
-    else:
-        res = session.get(
-            link,
-            proxies={
-                'http://': settings.WEB_PROXY,
-                'https://': settings.WEB_PROXY,
-            },
-            cookies=cookie,
-            data=params,
-        )
-    if res and res.status == 200:
-        requests_counter += 1
-        return res.text()
-    return None
-
-
-def write_data(q: Queue):
-    while True:
-        data_res = q.get()
-        if data_res is None:
-            return
-        db_mongo.write_reviews(data_res)
-
-
-def logger(q: Queue):
-    while True:
-        data_res = q.get()
-        if not data_res:
-            return
-
-
-def process_data(asin, seed, process_data_res, domain, data_queue, logging_queue):
-    try:
-        process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', process_data_res.strip())
-        try:
-            raw = []
-            for s in [i for i in process_data_res.splitlines() if i.strip() and '&&&' != i.strip()]:
-                try:
-                    raw.append(json.loads(s.strip()))
-                except JSONDecodeError:
-                    pass
-        except Exception as e:
-            log(e)
-            return False
-        data_with_quantity = None
-        for item in raw:
-            if len(item) >= 3 and item[1] == '#filter-info-section':
-                data_with_quantity = item[2]
-                break
-        if not data_with_quantity:
-            return False
-
-        res = []
-
-        for item in raw:
-            if len(item) < 3 or item[1] != "#cm_cr-review_list" or not item[2].strip():
-                continue
-            item_parser = BeautifulSoup(item[2].strip(), features='lxml')
-            if not item_parser or not item_parser.find(attrs={'data-hook': 'review'}) \
-                    or item_parser.find('div', class_='a-divider-section') \
-                    or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
-                continue
-            res.append(parser.parse_reviews(asin, item[2].strip(), domain))
-        if not res:
-            logging_queue.put(process_data_res)
-        data_queue.put(res)
-        return bool(res) - (not bool(res))
-    except Exception as ex:
-        log(ex)
-        return False
-
-
-async def process_data_from_page(asin, seed, process_data_res, domain, data_queue, logging_queue):
-    soup = BeautifulSoup(process_data_res, features='lxml')
-    if Requests.check_captcha(soup):
-        return -3
-    reviews = soup.find_all('div', {'data-hook': 'review'})
-    res = []
-    for review in reviews:
-        res.append(parser.parse_reviews(asin, review, domain))
-        data_queue.put(res)
-        logging_queue.put(res)
-    return bool(res) - (not bool(res))
-
-
-async def send_request(sess: amazon_requests.Requests, asin, seed, page, keywords='', domain='amazon.com', current_format=True, dq=None, lq=None, **kwargs):
-    if seed >= params_len:
-        return True
-
-    global requests_counter
-
-    current_params = {
-        'formatType': 'current_format' if current_format else '',
-        'filterByAge': '',
-        'pageNumber': page,
-        'filterByLanguage': '',
-        'filterByKeyword': keywords,
-        'shouldAppend': 'undefined',
-        'deviceType': 'desktop',
-        'canShowIntHeader': 'undefined',
-        'reftag': 'cm_cr_arp_d_viewopt_srt',
-        'pageSize': 10,
-        'asin': asin,
-        'scope': 'reviewsAjax{}'.format(requests_counter),
-    }
-    requests_counter += 1
     s = seed
     for i in params:
         length = len(params[i])
-        current_params[i] = params[i][s % length]
+        p[i] = params[i][s % length]
         s //= length
-
-    try:
-        # res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=True)
-        res = await sess.get_reviews(asin, page, current_params, keywords, xmlhttp=False, **kwargs)
-        if not res or 'BAAAAAAD ASIN!' in res:
-            log('..fff..')
-            # db_mongo.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
-            # del Requests.all_cookies[sess.sessid]
-            Requests.all_cookies = {i['session-id']: i for i in db_mongo.db('amazon_data')['__cookies'].find() if 'session-id' in i}
-            await asyncio.sleep(1)
-            await sess.init()
-            return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq, **kwargs)
-        r = await process_data_from_page(asin, seed, res, domain, dq, lq)
-        if r == -3:
-            log('...captcha...')
-            # db_mongo.db('amazon_data')['__cookies'].delete_one({'session-id': sess.sessid})
-            # del Requests.all_cookies[sess.sessid]
-            Requests.all_cookies = {i['session-id']: i for i in db_mongo.db('amazon_data')['__cookies'].find() if 'session-id' in i}
-            await asyncio.sleep(1)
-            await sess.init()
-            return await send_request(sess, asin, seed, page, keywords, domain, current_format, dq, lq, **kwargs)
-        return r
-    except Exception as e:
-        log(e)
-        log('sending reviews request failed')
-        return False
+    return p
 
 
-async def load_reviews(_id, asin, keywords='', domain='amazon.com', index=0, current_format=True):
-    data_queue = Queue()
-    logging_queue = Queue()
-    writer_thr = Thread(target=write_data, args=(data_queue,))
-    logger_thr = Thread(target=logger, args=(logging_queue,))
+def req1(asin, keywords, domain, index, current_format, page, proxy, canonical_link=None):
+    global requests_counter
+    requests_counter += 1
+    res = requests.post(
+        f'https://www.{domain}/hz/reviews-render/ajax/reviews/get/ref=cm_cr_arp_d_viewopt_srt',
+        get_curr_params(asin, page, keywords, current_format, index),
+        headers=helpers.get_request_headers(True, domain, canonical_link, proxy['useragent']),
+        cookies=proxy['cookies'],
+        proxies={
+            'http://': AmazonProxy.to_str(proxy),
+            'https://': AmazonProxy.to_str(proxy),
+        },
+    )
+    if not res or res.status_code != 200:
+        return None
+    return res.text
+
+
+def req2(asin, keywords, domain, index, current_format, page, proxy, canonical_link=None):
+    global requests_counter
+    requests_counter += 1
+    res = requests.get(
+        canonical_link or f'https://www.{domain}/product-reviews/{asin}',
+        get_curr_params(asin, page, keywords, current_format, index),
+        headers=helpers.get_request_headers(True, domain, canonical_link, proxy['useragent']),
+        cookies=proxy['cookies'],
+        proxies={
+            'http://': AmazonProxy.to_str(proxy),
+            'https://': AmazonProxy.to_str(proxy),
+        },
+    )
+    if not res or res.status_code != 200:
+        return None
+    return res.text
+
+
+def load_reviews(asin, keywords='', domain='amazon.com', index=0, current_format=True, canonical_link=None):
+    queue = Queue()
+    writer_thr = Thread(target=write_data, args=(queue,))
     writer_thr.start()
-    logger_thr.start()
+    while proxy := helpers.get_proxy(True):
+        print('[current_proxy]:', proxy)
+        _exit = True
+        for index in range(index, params_len):
+            print('[current_index]:', index)
+            _break = False
+            for i in range(1, 11):
+                print('[current_page]:', i)
+                print('req2')
+                reqq = res = req2(asin, keywords, domain, index, current_format, i, proxy, canonical_link)
+                if res:
+                    if not canonical_link:
+                        print('[try to found canonical]')
+                        soup = BeautifulSoup(res, features='lxml')
+                        canonical_link_item = soup.select_one('link[rel="canonical"]')
+                        if canonical_link_item:
+                            print('found!')
+                            canonical_link = canonical_link_item['href'] + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
+                            print(canonical_link)
+                            helpers.deprecate_proxy(proxy['addr'])
+                            _exit = False
+                            _break = True
+                            break
+                    res = process_req2(asin, res, domain, queue)
+                if res == -1:
+                    print('no data')
+                    with open('test.html', 'w', encoding='utf-8') as f:
+                        f.write(reqq)
+                    break
+                if not res:
+                    print('captcha!')
+                    helpers.deprecate_proxy(proxy['addr'])
+                    _exit = False
+                    _break = True
+                    break
+            if _break:
+                break
+        if _exit:
+            break
+    queue.put(None)
+    writer_thr.join()
+    raise RequestsEndedException
 
-    if index == -1:
-        return -1
-    log('loading Requests')
-    sess = amazon_requests.Requests(domain)
-    await sess.init()
-    html = await sess.get_reviews(asin, xmlhttp=False)
-    while not html:
-        await sess.init()
-        html = await sess.get_reviews(asin, xmlhttp=False)
-    soup = BeautifulSoup(html, features='lxml')
-    while Requests.check_captcha(soup):
-        print('Kek. Captcha :)')
-        while not html:
-            await sess.init()
-            html = await sess.get_reviews(asin, xmlhttp=False)
-        soup = BeautifulSoup(html, features='lxml')
-    canonical_link_item = soup.select_one('link[rel="canonical"]')
-    if canonical_link_item:
-        canonical_link = canonical_link_item['href'] + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
-    else:
-        canonical_link = None
-    reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
-    reviews_count = 0
-    reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
-    if len(reviews_count_part) == 2:
-        reviews_count = int(float(reviews_count_part[1].replace(',', '').replace(' ', '')))
-    print('count:', reviews_count)
 
-    limit_semaphore = Semaphore(30)
-
-    try:
-        log('COLLECTING REVIEWS FOR ASIN', asin + ':')
-        ru = f'www.{domain}/product-reviews/{asin}/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
-        await sess.req(f'hz/rhf?currentPageType=CustomerReviews&currentSubPageType=remoteProduct&excludeAsin={asin}&fieldKeywords=&k=&keywords=&search=&auditEnabled=&previewCampaigns=&forceWidgets=&searchAlias=&isAUI=1&cardJSPresent=true&pageUrl={ru}')
-
-        async def send_wrapper(s, a, _p, _i, k, d, cf, dq, lq, retry=True, **kw):
-            await asyncio.sleep(0)
-            async with limit_semaphore:
-                print('*r*')
-                res = await send_request(s, a, _p, _i, k, d, cf, dq, lq, **kw)
-                if not res and retry:
-                    print('.f.')
-                    await asyncio.sleep(10)
-                    await sess.init()
-                    return await send_wrapper(s, a, _p, _i, k, d, cf, dq, lq, False, **kw)
-            return res
-
-        try:
-            req_tasks = []
-            ars = []
-            for params_seed in (range(index, params_len) if reviews_count > 100 else [0]):
-                r = amazon_requests.Requests(domain)
-                ars.append(r)
-                for i in range(1, 11):
-                    req_tasks.append(send_wrapper(r, asin, params_seed, i, keywords, domain, current_format, dq=data_queue, lq=logging_queue, canonical_link=canonical_link))
-                index += 1
-            await asyncio.gather(*req_tasks)
-            for r in ars:
-                await r.request.close()
-            await sess.request.close()
-            task = tasks.get_task(_id)
-            if task:
-                task.result['asins'].append(asin)
-                task.result['count'].append(db_mongo.db('amazon_data')['customer_reviews'].count_documents({'asin': asin}))
-                task.add_progress(1)
-            data_queue.put(None)
-            logging_queue.put(None)
-            writer_thr.join()
-            logger_thr.join()
-            return -1
-        except Exception as e:
-            if 'Bad ASIN' not in str(e):
-                if sess.request:
-                    await sess.request.close()
-                raise e
-            log(f'Skip {asin}')
-            if sess.request:
-                await sess.request.close()
-            task = tasks.get_task(_id)
-            task.success = False
-            task.ended_at = datetime.datetime.now(pytz.UTC)
-            data_queue.put(None)
-            logging_queue.put(None)
-            writer_thr.join()
-            logger_thr.join()
-            return index
-    except KeyboardInterrupt:
-        log('Script stopped')
-        if sess.request:
-            await sess.request.close()
-        data_queue.put(None)
-        logging_queue.put(None)
-        writer_thr.join()
-        logger_thr.join()
-        raise
+if __name__ == '__main__':
+    load_reviews('B08YKB6VMN', canonical_link='https://www.amazon.com/SIMO-Portable-International-Multi-Carrier-Connected/product-reviews/B08YKB6VMN/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
+ddqea3

@@ -6,7 +6,7 @@ def start(service: str, *args, **kwargs):
     try:
         importlib.import_module(service).run(*args, **kwargs)
     except ImportError:
-        print('Fail: service not found!')
+        print('Fail: service', service, 'not found!')
 
 
 if __name__ == '__main__':
