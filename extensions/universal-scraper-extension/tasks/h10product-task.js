@@ -75,7 +75,14 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
             },
             (response) => {
                 // Close the window!!!
-                window.close();
+                // window.close();
+                console.log(JSON.stringify({
+                    characteristics: characteristics,
+                    about: about,
+                    variant: variation,
+                    aplus: aplus_content,
+                    manufacturer: manufacturer,
+                }));
             },
         );
     });
