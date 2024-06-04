@@ -58,7 +58,7 @@ function h10scrap(task) {
             if (res.status === 409) {
                 // console.log('This task is busy');
             } else {
-                console.error('Error when try to aqcuire task:', res.statusText);
+                console.error('Error when try to acquire task:', res.statusText);
             }
             return;
         }
@@ -71,7 +71,7 @@ function h10scrap(task) {
                     files: ['tasks/h10task.js'],
                 });
 
-                sendMessageToTab(tab.id, task)
+                sendMessageToTab(tab.id, task);
             });
         });
     });

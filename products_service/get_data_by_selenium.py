@@ -28,5 +28,7 @@ def get_html_by_selenium(asin, full_link=None, domain='amazon.com'):
 
 
 def close():
+    global wd
     if wd:
         wd.full_close()
+        wd = None

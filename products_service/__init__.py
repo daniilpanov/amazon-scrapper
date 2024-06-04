@@ -1,10 +1,9 @@
-import datetime
 import time
 
 import requests
 
 import parser
-from products_service import get_data_by_requests, get_data_by_selenium
+from . import get_data_by_requests, get_data_by_selenium
 
 
 def do_task(task):

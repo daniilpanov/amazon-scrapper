@@ -1,3 +1,8 @@
+/// THERE IS INTERESTING ///
+
+// я хотел сделать, чтобы можно было с этой вкладки ввести URL на курсы, но теперь понимаю, что лучше сделать так,
+// чтобы пользователь сам зашёл на нужную страницу, нажал на расширение, нажал на кнопочку collect и всё запускалось
+// Тогда можно обойтись вообще без этой страницы, о чём я и говорил в background.js
 const scrap_process_table = document.getElementById('scrap-process');
 const repeat_urls = [];
 
@@ -11,14 +16,16 @@ document.querySelector('form[action="/scrap"]').addEventListener('submit', (ev) 
         sellerCentralTask(url);
     }
 });
-
+// здесь я допустил ошибку: нужно использовать не localStorage, а chrome.local.storage. погугли про это, кучу гайдов найдёшь
 function wait(key, func, apply = false, default_value = '[]') {
+    // Создание задач может показаться странным, но эта архитектура удобна при разнообразии фич. Что-то наподобие микросервисов, ожидающих новых задач
     if ((new Date()).getTime() - (new Date(Number(localStorage.getItem(key + 'Lock') || 0))).getTime() > 20 * 60 * 1000) {
-        localStorage.setItem(key + 'Lock', '');
+        localStorage.setItem(key + 'Lock', '');  // разблокируем задачи, которые очень долго заблокированы
     }
     if (localStorage.getItem(key + 'Lock') !== '') {
-        return setTimeout(wait, 500, key, func);
+        return setTimeout(wait, 500, key, func); // если все задачи заблоканы -- ждём дальше
     }
+    // иначе блокируем список, получаем задачу, устанавливаем статус и разблокируем
     localStorage.setItem(key + 'Lock', String((new Date()).getTime()));
     const data = JSON.parse(localStorage.getItem(key) || default_value);
     const res = func(data);
@@ -29,6 +36,7 @@ function wait(key, func, apply = false, default_value = '[]') {
     return res;
 }
 
+// здесь я допустил ошибку: нужно использовать не localStorage, а chrome.local.storage. погугли про это, кучу гайдов найдёшь
 function manageTasks() {
     wait('tasks', (tasks) => {
         for (const i in tasks) {
@@ -47,6 +55,8 @@ function manageTasks() {
                     chrome.scripting.executeScript({
                         target: {tabId: tab.id},
                         func: () => {
+                            // Тут уже начинается магия скрейпинга через chrome extensions. эта функция уже будет в другой вкладке, и к глобальным переменным этого скрипта доступа больше не будет
+                            // Её можно вынести в отдельный файл
                             // Wait for element by the CSS Selector using setTimeout
                             function waitForElement(path_to_element, callback, stop_callback, counter = 0) {
                                 const el = document.querySelectorAll(path_to_element);
@@ -59,6 +69,7 @@ function manageTasks() {
                                     return callback(el);
                                 }
                             }
+                            // Получаем задачу (ведь доступа к глобальным переменным больше нет)
                             chrome.runtime.onMessage.addListener((task_id, sender, sendResponse) => {
                                 sendResponse('OK');
                                 console.log(task_id);
@@ -71,6 +82,8 @@ function manageTasks() {
                                         break;
                                     }
                                 }
+                                // И пошёл скрейпинг
+                                // Помни! Нужно заменить localStorage на chrome.local.storage
                                 console.log('ok1');
                                 if (!task || !key) {
                                     tasks[key].status = 'nodata';
@@ -104,9 +117,11 @@ function manageTasks() {
                                     const f = () => {
                                         chrome.tabs.query({}, (tabs) => {
                                             console.log('ok5', tabs);
-                                            if (tabs.length > 35) {
+                                            // ограничитель на количество вкладок
+                                            if (tabs.length > 12) {
                                                 return setTimeout(f, 1000);
                                             }
+                                            // открываем вкладку для каждого модуля каждого курса
                                             chrome.tabs.create({
                                                 url: url,
                                                 active: false,
@@ -143,6 +158,7 @@ function manageTasks() {
                                                             if (details) {
                                                                 data.details = details.innerText.trim();
                                                             }
+                                                            // а вот и отправка на эндпоинт (возможно пока будет работать некорректно, я давно проверял)
                                                             fetch('http://195.201.194.213:8832/sellercentral/add', {
                                                                 method: 'PUT',
                                                                 body: JSON.stringify(data),
@@ -174,6 +190,7 @@ function manageTasks() {
     }, false);
 }
 
+// Эьто я хотел сделать табличку с текущими скрейпингами, но на текущем этапе это необязательно
 function sellerCentralTask(url, status = 'pending', write = true) {
     const id = scrap_process_table.getElementsByTagName('tr').length;
     const row = document.createElement('tr');
@@ -214,6 +231,7 @@ function sendMessageToTab(tabId, message, retryDelay = 500, maxRetries = 100) {
 
     sendMessage();
 }
+// Заменить на chrome.local.storage!!!
 if (typeof JSON.parse(localStorage.getItem('tasks')).length === 'undefined') {
     localStorage.setItem('tasks', '[]');
 }

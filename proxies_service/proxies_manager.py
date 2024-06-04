@@ -122,8 +122,26 @@ async def deprecate_proxy(addr: str):
     for proxy in AmazonProxy.proxies:
         if proxy.addr == addr:
             proxy.deprecated = True
-
+            await deprecate_cookie(addr)
             return Response(status_code=HTTP_204_NO_CONTENT)
+    if not found:
+        raise HTTPException(HTTP_404_NOT_FOUND)
+
+
+@app.delete('/proxy/{addr}/cookies')
+async def deprecate_cookie(addr: str):
+    found = False
+    i = 0
+    for proxy in AmazonProxy.proxies:
+        if proxy.addr == addr:
+            db_mongo.db('amazon_data')['__cookies'].delete_one({'session-id': proxy.cookies['session-id']})
+            cookies = list(db_mongo.db('amazon_data')['__cookies'].find({'session-id': {'$exists': True}, 'sp-cdn': {'$exists': False}}).limit(1).skip(10 + i))
+            if cookies:
+                del cookies[0]['_id']
+                del cookies[0]['session-id-time']
+                proxy.cookies = cookies[0]
+            return proxy.to_dict()
+        i += 1
     if not found:
         raise HTTPException(HTTP_404_NOT_FOUND)
 

@@ -40,9 +40,16 @@ def deprecate_proxy(ip):
     return requests.delete('http://localhost:8833/proxy/' + ip).status_code == 204
 
 
-def get_request_headers(xmlhttp=False, domain='amazon.com', ref=None, headers=None):
+def deprecate_proxy_cookies(ip):
+    res = requests.delete('http://localhost:8833/proxy/' + ip + '/cookies')
+    if res.status_code == 200:
+        return res.json()
+    return None
+
+
+def get_request_headers(xmlhttp=False, domain='amazon.com', ref=None, ua: str = None, headers=None):
     return {
-        'User-Agent': settings.ua.random,
+        'User-Agent': ua or settings.ua.random,
         'Access-Control-Allow-Origin': '*',
         'Origin': f'https://{domain}',
         'Referer': ref or f'https://{domain}/',

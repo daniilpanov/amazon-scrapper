@@ -55,6 +55,7 @@ class AsinsCollectingConfig(AmazonTaskConfig):
     collect_aspects: bool = True
     current_format: bool = True
     collect_media_config: bool = False
+    collect_reviews: bool = True
 
 
 class ReportForm(BaseModel):
@@ -74,6 +75,14 @@ class HeliumResult(BaseModel):
     image_urls: dict[str, str]
     titles: dict[str, str]
     export: str
+
+
+class HeliumAdditionalResult(BaseModel):
+    characteristics: dict[str, str] | None
+    about: list[str] | None
+    variant: dict[str, str] | None
+    aplus: str | None
+    manufacturer: str | None
 
 
 class HeliumTask(TaskConfig):
@@ -110,7 +119,7 @@ async def collect_products_task(config: AsinsCollectingConfig):
             data.append(row)
     return JSONResponse(json.loads(json_util.dumps(tasks_manager.add_task('products', {
         'alias': config.alias,
-    }, data, stage=1))))
+    }, data, stage=int(config.collect_reviews)))))
 
 
 @app.post('/products/set_result/reviews')
@@ -165,10 +174,29 @@ async def set_helium_result(helium_id: str, result: HeliumResult):
     try:
         res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result': {
             'titles': result.titles, 'image_urls': result.image_urls, 'csv_data': result.export,
+        }, 'stage': 2}}).modified_count
+    except PyMongoError as e:
+        print(e)
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
+    # Now this is not final...
+    # tasks.finish_task(helium_id, True)
+    # tasks.release_task(helium_id)
+    return Response(res)
+
+
+@app.post('/helium/set/{helium_id}/final')
+async def set_helium_final_result(helium_id: str, result: HeliumAdditionalResult):
+    try:
+        res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result.from_amazon': {
+            'characteristics': result.characteristics,
+            'about': result.about,
+            'variant': result.variant,
+            'manufacturer': result.manufacturer,
+            'aplus': result.aplus,
         }}}).modified_count
     except PyMongoError as e:
         print(e)
-        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     tasks.finish_task(helium_id, True)
     tasks.release_task(helium_id)
     return Response(res)

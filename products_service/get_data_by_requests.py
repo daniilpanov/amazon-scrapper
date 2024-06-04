@@ -25,8 +25,8 @@ def get_html_by_request(asin, full_link=None, domain='amazon.com'):
         cookies=cookie,
         headers=helpers.get_request_headers(domain=domain),
         proxies={
-            'http': settings.WEB_PROXY,
-            'https': settings.WEB_PROXY,
+            'http://': settings.WEB_PROXY,
+            'https://': settings.WEB_PROXY,
         },
     )
     if r.status_code == 200:
@@ -42,8 +42,8 @@ def get_html_by_request(asin, full_link=None, domain='amazon.com'):
                     cookies=proxy['cookies'],
                     headers=helpers.get_request_headers(domain=domain),
                     proxies={
-                        'http': AmazonProxy.to_str(proxy),
-                        'https': AmazonProxy.to_str(proxy),
+                        'http://': AmazonProxy.to_str(proxy),
+                        'https://': AmazonProxy.to_str(proxy),
                     },
                 )
                 if r.status_code != 200:
