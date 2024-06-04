@@ -68,7 +68,17 @@ function h10scrap(task) {
             }, (tab) => {
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
-                    files: ['tasks/h10task.js'],
+                    files: ['helper.js', 'tasks/h10task.js'],
+                });
+
+                sendMessageToTab(tab.id, task);
+            });
+            chrome.tabs.create({
+                url: 'https://www.amazon.com/dp/' + task.data.asins[0],
+            }, (tab) => {
+                chrome.scripting.executeScript({
+                    target: {tabId: tab.id},
+                    files: ['helper.js', 'tasks/h10product-task.js'],
                 });
 
                 sendMessageToTab(tab.id, task);
