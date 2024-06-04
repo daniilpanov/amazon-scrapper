@@ -56,7 +56,7 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
         chrome.runtime.sendMessage(
             {
                 fetch: [
-                    'http://195.201.194.213:8832/helium/set/' + task._id.$oid + '/final',
+                    'http://195.201.194.213:8832/helium/set/' + task._id.$oid + '/amazon',
                     {
                         headers: {
                             // 'Content-Encoding': 'gzip',

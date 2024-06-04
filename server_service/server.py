@@ -171,23 +171,26 @@ async def get_helium_result(helium_id: str):
 
 @app.post('/helium/set/{helium_id}')
 async def set_helium_result(helium_id: str, result: HeliumResult):
+    helium_id = ObjectId(helium_id)
     try:
-        res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result': {
+        res = tasks.TasksBodies.update_one({'_id': helium_id}, {'$set': {'result.helium_data': {
             'titles': result.titles, 'image_urls': result.image_urls, 'csv_data': result.export,
-        }, 'stage': 2}}).modified_count
+        }}}).modified_count
     except PyMongoError as e:
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    # Now this is not final...
-    # tasks.finish_task(helium_id, True)
-    # tasks.release_task(helium_id)
+    task = tasks.get_task(helium_id)
+    if 'amazon_data' in task['result']:
+        tasks.finish_task(helium_id, True)
+        tasks.release_task(helium_id)
     return Response(res)
 
 
-@app.post('/helium/set/{helium_id}/final')
-async def set_helium_final_result(helium_id: str, result: HeliumAdditionalResult):
+@app.post('/helium/set/{helium_id}/amazon')
+async def set_helium_amazon_result(helium_id: str, result: HeliumAdditionalResult):
+    helium_id = ObjectId(helium_id)
     try:
-        res = tasks.TasksBodies.update_one({'_id': ObjectId(helium_id)}, {'$set': {'result.from_amazon': {
+        res = tasks.TasksBodies.update_one({'_id': helium_id}, {'$set': {'result.amazon_data': {
             'characteristics': result.characteristics,
             'about': result.about,
             'variant': result.variant,
@@ -197,8 +200,10 @@ async def set_helium_final_result(helium_id: str, result: HeliumAdditionalResult
     except PyMongoError as e:
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    tasks.finish_task(helium_id, True)
-    tasks.release_task(helium_id)
+    task = tasks.get_task(helium_id)
+    if 'helium_data' in task['result']:
+        tasks.finish_task(helium_id, True)
+        tasks.release_task(helium_id)
     return Response(res)
 
 
