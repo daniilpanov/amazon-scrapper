@@ -8,10 +8,12 @@ function convertToCSV(arr) {
     const csvRows = [];
     let row0 = null, last_header = null;
     for (const row of arr) {
+        // Учитываем два варианта отображения позиции:
+        // 1) в виде объекта {asin: <>, position: <>}
         if (row.positionsRange && row.positionsRange.length) {
             row0 = {...row};
             break;
-        } else {
+        } else {  // 2) в виде отдельного столбца
             for (const key in row) {
                 if (key.length === 10 && key.startsWith('B0')) {
                     row0 = {...row};
@@ -21,6 +23,7 @@ function convertToCSV(arr) {
             }
         }
     }
+    // Снова определяем разницу между отображениями
     let range = null;
     if (!row0) {
         row0 = {...arr[0]};
@@ -29,6 +32,7 @@ function convertToCSV(arr) {
         row0[range[0].asin] = range[0].position;
         last_header = range[0].asin;
     }
+    // Удаляем всё ненужное
     delete row0.matchType;
     delete row0.resultsNumberUpdatedAt;
     delete row0.resultsNumberOver;
@@ -36,6 +40,7 @@ function convertToCSV(arr) {
     delete row0.newCprBroad;
     delete row0.searchFrequencyRank;
     delete row0.positionsRange;
+    // Переименовываем колонки
     let headers_map = {
         "phrase": "Keyword Phrase",
         "resultsNumber": "Competing Products",
@@ -82,6 +87,7 @@ function convertToCSV(arr) {
             const range = row.positionsRange;
             row[last_header] = range && range.length ? range[0].position : '';
         }
+        // Удаляем ненужное
         delete row.matchType;
         delete row.resultsNumberUpdatedAt;
         delete row.resultsNumberOver;
@@ -89,13 +95,17 @@ function convertToCSV(arr) {
         delete row.newCprBroad;
         delete row.searchFrequencyRank;
         delete row.positionsRange;
+        // Округляем
         row.sponsoredAvg = Math.round(row.sponsoredAvg);
         row.iq = Math.round(row.iq);
         row.newCprExact = Math.round(row.newCprExact);
+        // Приводим к нужному виду, доли
         row.cpc = row.cpc / 100;
         row.highCpc = row.highCpc / 100;
         row.lowCpc = row.lowCpc / 100;
+        // Форматируем
         row.phrase = `"${row.phrase.replace(/["\\]/g, '')}"`;
+        // Приводим к строке
         let values = headers.map(header => {
             const item = row[header] ?? '';
             return ''+item;
@@ -108,12 +118,12 @@ function convertToCSV(arr) {
 // Wait ready state
 function waitStatus(id, bearer, callback) {
     fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/status?accountId=1545531519`, {
-        "headers": {
-            "Accept": "application/json",
-            "Authorization": "Bearer " + bearer,
-            "Content-Type": "application/json",
+        'headers': {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ' + bearer,
+            'Content-Type': 'application/json',
         },
-        "method": "GET",
+        'method': 'GET',
     }).then(data => {data.json().then(data => {
         if (data.data.status < 1) {
             setTimeout(waitStatus, 500, id, bearer, callback);
@@ -191,6 +201,8 @@ function main(task_id, asins) {
                         ]
                     },
                     (response) => {
+                        // Close the window!!!
+                        window.close();
                     },
                 );
                 return;

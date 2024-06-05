@@ -17,7 +17,6 @@ from selenium.common import NoSuchElementException, StaleElementReferenceExcepti
 import db_mongo
 import parser
 import settings
-import tasks_manager
 from functions import base_chrome_init, WebDriver, Amazon404Exception
 from helpers import log
 
