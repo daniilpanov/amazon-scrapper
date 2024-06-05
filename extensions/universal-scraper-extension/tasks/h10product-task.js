@@ -29,7 +29,10 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                 }
             }
         }
-        const aplus_content = (aplus ?? aplus_feature_div).innerHTML || null;
+        let aplus_content = null;
+        if (typeof aplus !== 'undefined' || typeof aplus_feature_div !== 'undefined') {
+            aplus_content = (typeof aplus === 'undefined' ? aplus_feature_div : aplus).innerHTML || null;
+        }
         if (typeof detailBulletsWithExceptions_feature_div !== 'undefined') {
             const uls = detailBulletsWithExceptions_feature_div.getElementsByTagName('ul');
             if (uls.length) {
