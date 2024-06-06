@@ -20,14 +20,14 @@ except FileNotFoundError:
 service = build('drive', 'v3', credentials=credentials)
 
 
-def get_files(fields: str | None = None, q: str | None = None):
+def get_files(fields: str | None = None, q: str | None = None, serv=None):
     if fields is None:
         fields = 'id, name, mimeType, parents, createdTime, permissions, quotaBytesUsed'
-    results = service.files().list(pageSize=10, q=q,
-                                   fields=f'nextPageToken, files({fields})').execute()
+    results = (serv or service).files().list(pageSize=10, q=q,
+                                             fields=f'nextPageToken, files({fields})').execute()
     next_page_token = results.get('nextPageToken')
     while next_page_token:
-        next_page = service.files().list(
+        next_page = (serv or service).files().list(
             pageSize=10,
             fields=f'nextPageToken, files({fields})',
             pageToken=next_page_token,
@@ -38,12 +38,12 @@ def get_files(fields: str | None = None, q: str | None = None):
     return results.get('files')
 
 
-def get_files_about_asin(asin):
-    results = service.files().list(pageSize=10, q=f'name contains \'{asin}\'',
+def get_files_about_asin(asin, serv=None):
+    results = (serv or service).files().list(pageSize=10, q=f'name contains \'{asin}\'',
                                    fields='nextPageToken, files(id, name)').execute()
     next_page_token = results.get('nextPageToken')
     while next_page_token:
-        next_page = service.files().list(
+        next_page = (serv or service).files().list(
             pageSize=10,
             fields=f'nextPageToken, files(id, name)',
             pageToken=next_page_token,
@@ -54,9 +54,9 @@ def get_files_about_asin(asin):
     return results.get('files')
 
 
-def delete_duplicate_files():
+def delete_duplicate_files(serv=None):
     try:
-        results = service.files().list(fields="nextPageToken, files(id, name, createdTime)").execute()
+        results = (serv or service).files().list(fields="nextPageToken, files(id, name, createdTime)").execute()
         all_files = results.get('files', [])
 
         # Группируем файлы по имени
@@ -74,21 +74,21 @@ def delete_duplicate_files():
                 sorted_files = sorted(files, key=lambda x: x['createdTime'], reverse=True)
                 # Оставляем самый новый файл, удаляем остальные
                 for file in sorted_files[1:]:
-                    service.files().delete(fileId=file['id']).execute()
+                    (serv or service).files().delete(fileId=file['id']).execute()
     except HttpError as error:
         print(f'Произошла ошибка: {error}')
 
 
-def load_file(io: BinaryIO | BytesIO, filename: str, mimetype: str):
-    return service.files().create(body={
+def load_file(io: BinaryIO | BytesIO, filename: str, mimetype: str, serv=None):
+    return (serv or service).files().create(body={
         'name': filename,
     }, media_body=MediaIoBaseUpload(io, mimetype, resumable=True)).execute()
 
 
-def download_file(file_id):
+def download_file(file_id, serv=None):
     try:
         # pylint: disable=maybe-no-member
-        request = service.files().get_media(fileId=file_id)
+        request = (serv or service).files().get_media(fileId=file_id)
         file_content = BytesIO()
         downloader = MediaIoBaseDownload(file_content, request)
         done = False

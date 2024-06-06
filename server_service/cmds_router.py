@@ -1,0 +1,108 @@
+import asyncio
+import re
+from collections import defaultdict
+
+import fastapi
+import requests
+from bs4 import BeautifulSoup
+from fastapi import APIRouter, Body
+from pymongo.errors import BulkWriteError
+from starlette.exceptions import HTTPException
+from starlette.responses import Response
+from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_201_CREATED, \
+    HTTP_503_SERVICE_UNAVAILABLE
+
+import helpers
+from db_mongo import db
+from helpers import get_all_asins_from_text
+
+router = APIRouter(prefix='/cmd')
+
+
+@router.get('/reviews/count')
+async def reviews_count_cmd(asin: str, current_format: bool = True):
+    try:
+        cookie = db('amazon_data')['__cookies'].find_one(
+            {'session-id': {'$exists': True}, 'sp-cdn': {'$exists': False}})
+        count = db('amazon_data')['customer_reviews'].count_documents({'asin': asin})
+        data = db('amazon_data')['product_card'].find_one({'asin': asin})
+        soup = None
+        for i in range(30):
+            res = requests.get(
+                (data.get('canonical_link',
+                          'https://www.amazon.com/product-reviews/' + asin + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews') + '&formatType=' + (
+                     'current_format' if current_format else '')),
+                cookies=cookie,
+                headers=helpers.get_request_headers(),
+            )
+            if res.status_code and res.text:
+                html = res.text
+                soup = BeautifulSoup(html, features='lxml')
+                reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
+                if reviews_count_element:
+                    break
+            await asyncio.sleep(1)
+        if not soup:
+            raise HTTPException(HTTP_503_SERVICE_UNAVAILABLE)
+        reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
+        reviews_count = 0
+        reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
+        if len(reviews_count_part) == 2:
+            reviews_count = int(float(reviews_count_part[1].replace(',', '').replace(' ', '')))
+        return count, reviews_count, asin
+    except Exception as e:
+        raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
+
+
+@router.post('/category/set')
+async def category_set_cmd(data=Body()):
+    data = fastapi.responses.orjson.loads(data)
+    asins = data['asins']
+    if type(asins) is str:
+        asins = get_all_asins_from_text(asins)
+    top5_asins = set(data['top5_asins'])
+    try:
+        db('amazon_data')['all_categories'].insert_many([{
+            'Category': data['cat_name'],
+            'ASIN': asin,
+            'relation_to_category': data['client_name'] if asin == data.get('target') else None,
+            'relation_to_TOP5': asin in top5_asins,
+        } for asin in asins])
+        return Response(status_code=HTTP_201_CREATED)
+    except BulkWriteError:
+        pass
+    except Exception as e:
+        print(type(e), e)
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR) from e
+
+
+@router.get('/products/get/{asin}')
+async def product_get_cmd(asin: str):
+    try:
+        product_card = db('amazon_data')['product_card'].find_one({'asin': asin})
+        try:
+            aspects = [(i['Aspect'], i['positive'], i['negative']) for i in db('amazon_data')['amazon_aspects'].find({
+                'ASIN': asin,
+            })]
+        except:
+            aspects = None
+        try:
+            category = db('amazon_data')['all_categories'].find_one({'ASIN': asin}) or defaultdict(lambda: None)
+        except:
+            category = defaultdict(lambda: None)
+        if not product_card:
+            raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+        return {
+            'ASIN': asin,
+            'URL': product_card['product_url'],
+            'Title': product_card['product_title'],
+            'Description': product_card['product_descr'],
+            'Features': product_card['features'],
+            'Top 5 phrases': product_card['top_5_phrases'],
+            'Price': product_card['product_price'],
+            'Aspects': aspects,
+            'Category': [category['Category'], category['relation_to_category']],
+            'Picture': product_card['picture_url'],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR) from e

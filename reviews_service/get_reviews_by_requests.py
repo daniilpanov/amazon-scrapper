@@ -149,4 +149,3 @@ def load_reviews(asin, keywords='', domain='amazon.com', index=0, current_format
 
 if __name__ == '__main__':
     load_reviews('B08YKB6VMN', canonical_link='https://www.amazon.com/SIMO-Portable-International-Multi-Carrier-Connected/product-reviews/B08YKB6VMN/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews')
-ddqea3
