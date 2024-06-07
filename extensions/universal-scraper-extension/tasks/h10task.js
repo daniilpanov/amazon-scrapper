@@ -2,6 +2,7 @@ console.log('Hello! This tab is under the UniScrap control!');
 // Get the Bearer Auth token :)
 const bearers = JSON.parse(localStorage.getItem('CORE_BEARER_TOKEN'));
 const my_bearer = bearers['1545531519'];
+
 // JSON -> CSV
 function convertToCSV(arr) {
     // Взять заголовки из ключей первого объекта
@@ -77,7 +78,9 @@ function convertToCSV(arr) {
         headers_map[last_header] = last_header;
         headers.push(last_header);
     }
-    csvRows.push(headers.map(header => {return headers_map[header]}).join(','));
+    csvRows.push(headers.map(header => {
+        return headers_map[header]
+    }).join(','));
 
     // Преобразовать каждый объект в строку CSV
     for (let row of arr) {
@@ -108,13 +111,14 @@ function convertToCSV(arr) {
         // Приводим к строке
         let values = headers.map(header => {
             const item = row[header] ?? '';
-            return ''+item;
+            return '' + item;
         });
         csvRows.push(values.join(','));
     }
 
     return csvRows.join('\n');
 }
+
 // Wait ready state
 function waitStatus(id, bearer, callback) {
     fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/status?accountId=1545531519`, {
@@ -124,14 +128,17 @@ function waitStatus(id, bearer, callback) {
             'Content-Type': 'application/json',
         },
         'method': 'GET',
-    }).then(data => {data.json().then(data => {
-        if (data.data.status < 1) {
-            setTimeout(waitStatus, 500, id, bearer, callback);
-        } else {
-            callback(data);
-        }
-    })});
+    }).then(data => {
+        data.json().then(data => {
+            if (data.data.status < 1) {
+                setTimeout(waitStatus, 500, id, bearer, callback);
+            } else {
+                callback(data);
+            }
+        })
+    });
 }
+
 // Wait data
 chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
     sendResponse('OK');  // Success
@@ -152,6 +159,7 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                 },
                 "method": "GET",
             }).then(data => {
+                // [ignore response]
                 data.json().then(data => {
                     main(task._id, asins);
                 }).catch(reason => {
@@ -161,11 +169,12 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                 main(task._id, asins, reason);
             });
         }, 500);
-    }, (counter) => {return counter >= 500});
+    }, (counter) => {
+        return counter >= 500
+    });
 });
 
 function main(task_id, asins) {
-    // [ignore response]
     // The second query -- create-multiple-search
     fetch("https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple?accountId=1545531519", {
         "headers": {
@@ -175,134 +184,142 @@ function main(task_id, asins) {
         },
         "body": `{"marketplace":"ATVPDKIKX0DER","mainProductId":"${asins[0]}","productIds":${JSON.stringify(asins)},"adminSearch":false,"exactProduct":false}`,
         "method": "POST",
-    }).then(data => {data.json().then(data => {
-        const id = data.data.id;
-        // The third query (collection of queries) -- wait for ready state
-        waitStatus(id, my_bearer, (data) => {
-            if (data.data.status !== 1) {
-                chrome.runtime.sendMessage(
-                    {
-                        fetch: [
-                            'http://195.201.194.213:8832/tasks/report/' + task_id,
-                            {
-                                headers: {
-                                    // 'Content-Encoding': 'gzip',
-                                    'Content-Type': 'application/json',
+    }).then(data => {
+        data.json().then(data => {
+            const id = data.data.id;
+            // The third query (collection of queries) -- wait for ready state
+            waitStatus(id, my_bearer, (data) => {
+                if (data.data.status !== 1) {
+                    chrome.runtime.sendMessage(
+                        {
+                            fetch: [
+                                'http://195.201.194.213:8832/tasks/report/' + task_id,
+                                {
+                                    headers: {
+                                        // 'Content-Encoding': 'gzip',
+                                        'Content-Type': 'application/json',
+                                    },
+                                    method: 'PATCH',
+                                    body: JSON.stringify({
+                                        confirm: true,
+                                        errors: [
+                                            'Invalid ASINs!',
+                                        ],
+                                        stop: true,
+                                    }),
                                 },
-                                method: 'PATCH',
-                                body: JSON.stringify({
-                                    confirm: true,
-                                    errors: [
-                                        'Invalid ASINs!',
-                                    ],
-                                    stop: true,
-                                }),
-                            },
-                        ]
-                    },
-                    (response) => {
-                        // Close the window!!!
-                        window.close();
-                    },
-                );
-                return;
-            }
-            // The fourth query -- get-end-task-body
-            fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}?accountId=1545531519`, {
-                "headers": {
-                    "Accept": "application/json",
-                    "Authorization": "Bearer " + my_bearer,
-                    "Content-Type": "application/json",
-                },
-                "method": "GET",
-            }).then(data => {data.json().then(data => {
-                // [ignore response]
-                // The fifth query -- get additional data about ASINs
-                fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/data?accountId=1545531519&include-all=0&include-any=1&page=1&per_page=50&sort=default`, {
+                            ]
+                        },
+                        (response) => {
+                            // Close the window!!!
+                            window.close();
+                        },
+                    );
+                    return;
+                }
+                // The fourth query -- get-end-task-body
+                fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}?accountId=1545531519`, {
                     "headers": {
                         "Accept": "application/json",
                         "Authorization": "Bearer " + my_bearer,
                         "Content-Type": "application/json",
                     },
                     "method": "GET",
-                }).then(data => {data.json().then(data => {
-                    if (!data.data.productDetails) {
-                        chrome.runtime.sendMessage(
-                            {
-                                fetch: [
-                                    'http://195.201.194.213:8832/tasks/report/' + task_id,
-                                    {
-                                        headers: {
-                                            // 'Content-Encoding': 'gzip',
-                                            'Content-Type': 'application/json',
-                                        },
-                                        method: 'PATCH',
-                                        body: JSON.stringify({
-                                            confirm: true,
-                                            errors: [
-                                                'No data received from Helium10!',
-                                            ],
-                                            stop: true,
-                                        }),
-                                    },
-                                ]
-                            },
-                            (response) => {
-                            },
-                        );
-                        return;
-                    }
-                    // Get only titles
-                    let result = {'titles': {}, 'image_urls': {}, 'export': []};
-                    for (const details of data.data.productDetails) {
-                        result.titles[details.asin] = details.title;
-                        result.image_urls[details.asin] = details.imageUrl;
-                    }
-                    // The sixth query -- export-data
-                    fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/exported-data?accountId=1545531519&include-all=0&include-any=1&sort=default`, {
-                        "headers": {
-                            "Accept": "application/json",
-                            "Authorization": "Bearer " + my_bearer,
-                            "Content-Type": "application/json",
-                        },
-                        "method": "GET",
-                    }).then(data => {data.json().then(data => {
-                        // Make the CSV
-                        result.export = convertToCSV(data.data);
-                        // The last (seventh) query -- track-event
-                        fetch("https://research-tools.helium10.com/api/site/track-event?accountId=1545531519", {
+                }).then(data => {
+                    data.json().then(data => {
+                        // [ignore response]
+                        // The fifth query -- get additional data about ASINs
+                        fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/data?accountId=1545531519&include-all=0&include-any=1&page=1&per_page=50&sort=default`, {
                             "headers": {
                                 "Accept": "application/json",
                                 "Authorization": "Bearer " + my_bearer,
                                 "Content-Type": "application/json",
                             },
-                            "body": "{\"eventName\":\"Cerebro Export\",\"eventProperties\":{\"marketplace\":\"ATVPDKIKX0DER\",\"format\":\"csv\"}}",
-                            "method": "POST",
+                            "method": "GET",
                         }).then(data => {
-                            // HURRAY! All requests done!
-                            chrome.runtime.sendMessage(
-                                {
-                                    fetch: [
-                                        'http://195.201.194.213:8832/helium/set/' + task_id,
+                            data.json().then(data => {
+                                if (!data.data.productDetails) {
+                                    chrome.runtime.sendMessage(
                                         {
-                                            headers: {
-                                                // 'Content-Encoding': 'gzip',
-                                                'Content-Type': 'application/json',
-                                            },
-                                            method: 'POST',
-                                            body: JSON.stringify(result),
+                                            fetch: [
+                                                'http://195.201.194.213:8832/tasks/report/' + task_id,
+                                                {
+                                                    headers: {
+                                                        // 'Content-Encoding': 'gzip',
+                                                        'Content-Type': 'application/json',
+                                                    },
+                                                    method: 'PATCH',
+                                                    body: JSON.stringify({
+                                                        confirm: true,
+                                                        errors: [
+                                                            'No data received from Helium10!',
+                                                        ],
+                                                        stop: true,
+                                                    }),
+                                                },
+                                            ]
                                         },
-                                    ]
-                                },
-                                (response) => {
-                                    // Close the window!!!
-                                    window.close();
-                                },
-                            );
+                                        (response) => {
+                                        },
+                                    );
+                                    return;
+                                }
+                                // Get only titles
+                                let result = {'titles': {}, 'image_urls': {}, 'export': []};
+                                for (const details of data.data.productDetails) {
+                                    result.titles[details.asin] = details.title;
+                                    result.image_urls[details.asin] = details.imageUrl;
+                                }
+                                // The sixth query -- export-data
+                                fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/exported-data?accountId=1545531519&include-all=0&include-any=1&sort=default`, {
+                                    "headers": {
+                                        "Accept": "application/json",
+                                        "Authorization": "Bearer " + my_bearer,
+                                        "Content-Type": "application/json",
+                                    },
+                                    "method": "GET",
+                                }).then(data => {
+                                    data.json().then(data => {
+                                        // Make the CSV
+                                        result.export = convertToCSV(data.data);
+                                        // The last (seventh) query -- track-event
+                                        fetch("https://research-tools.helium10.com/api/site/track-event?accountId=1545531519", {
+                                            "headers": {
+                                                "Accept": "application/json",
+                                                "Authorization": "Bearer " + my_bearer,
+                                                "Content-Type": "application/json",
+                                            },
+                                            "body": "{\"eventName\":\"Cerebro Export\",\"eventProperties\":{\"marketplace\":\"ATVPDKIKX0DER\",\"format\":\"csv\"}}",
+                                            "method": "POST",
+                                        }).then(data => {
+                                            // HURRAY! All requests done!
+                                            chrome.runtime.sendMessage(
+                                                {
+                                                    fetch: [
+                                                        'http://195.201.194.213:8832/helium/set/' + task_id,
+                                                        {
+                                                            headers: {
+                                                                // 'Content-Encoding': 'gzip',
+                                                                'Content-Type': 'application/json',
+                                                            },
+                                                            method: 'POST',
+                                                            body: JSON.stringify(result),
+                                                        },
+                                                    ]
+                                                },
+                                                (response) => {
+                                                    // Close the window!!!
+                                                    window.close();
+                                                },
+                                            );
+                                        });
+                                    })
+                                });
+                            })
                         });
-                    })});
-                })});
-            })});
+                    })
+                });
+            });
         });
-    })});
+    });
 }

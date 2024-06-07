@@ -1,8 +1,9 @@
 import enum
 from fastapi import APIRouter
 from pydantic import BaseModel
+from pymongo.errors import PyMongoError
 from starlette.responses import Response
-from starlette.status import HTTP_404_NOT_FOUND, HTTP_201_CREATED
+from starlette.status import HTTP_201_CREATED
 
 import google_drive_helper
 import tasks_manager
@@ -47,14 +48,16 @@ async def add_result(data: SellerCentral):
         'filter': {'progressive': True},
         'service': 'sellercentral',
     }])
-    print(google_drive_helper.get_files('id, name', serv='sellercentral'))
-    db('amazon_sellercentral')['pdf' if data.media_type == 'pdf' else 'videos'].replace_one({
-        'course_id': data.course_id,
-        'module_id': data.module_id,
-    }, {
-        'course_id': data.course_id,
-        'course_name': data.course_name,
-        'module_id': data.module_id,
-        'module_name': data.module_name,
-    }, upsert=True)
+    try:
+        db('amazon_sellercentral')['pdf' if data.media_type == MediaTypeEnum.pdf else 'videos'].replace_one({
+            'course_id': data.course_id,
+            'module_id': data.module_id,
+        }, {
+            'course_id': data.course_id,
+            'course_name': data.course_name,
+            'module_id': data.module_id,
+            'module_name': data.module_name,
+        }, upsert=True)
+    except PyMongoError:
+        pass
     return Response(status_code=HTTP_201_CREATED)
