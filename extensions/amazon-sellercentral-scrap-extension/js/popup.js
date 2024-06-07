@@ -5,8 +5,8 @@ const scraper = new Scraper();
 const parser = new Parser();
 
 const amazonUrl = 'https://sellercentral.amazon.com/';
-// const endpoint = 'http://195.201.194.213:8832/sellercentral/add';
-const endpoint = 'http://localhost:8832/sellercentral/add';
+const endpoint = 'http://195.201.194.213:8832/sellercentral/add';
+// const endpoint = 'http://localhost:8832/sellercentral/add';
 const scrapeButton = document.getElementById('toParseButton');
 const pagesCounter = document.getElementById('pagesCounter');
 
