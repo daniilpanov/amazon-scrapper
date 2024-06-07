@@ -35,19 +35,6 @@ async def add_result(data: SellerCentral):
     else:
         mimetype = 'application/pdf'
         ext = 'pdf'
-    tasks_manager.add_task('gdrive', {
-        'alias': 'GDrive: ' + data.course_id + ', ' + data.module_id,
-    }, [{
-        'filename': data.course_id + '---' + data.module_id + '.' + ext,
-        'mimetype': mimetype,
-        'media_type': 'yt' if data.media_type == MediaTypeEnum.yt else ('zipvid' if data.media_type == MediaTypeEnum.int_video else 'doc'),
-        'media_url': data.media_link,
-        'order': 'asc',
-        'order_by': 'resolution',
-        'first': True,
-        'filter': {'progressive': True},
-        'service': 'sellercentral',
-    }])
     try:
         db('amazon_sellercentral')['pdf' if data.media_type == MediaTypeEnum.pdf else 'videos'].replace_one({
             'course_id': data.course_id,
@@ -58,6 +45,20 @@ async def add_result(data: SellerCentral):
             'module_id': data.module_id,
             'module_name': data.module_name,
         }, upsert=True)
+        tasks_manager.add_task('gdrive', {
+            'alias': 'GDrive: ' + data.course_id + ', ' + data.module_id,
+        }, [{
+            'filename': data.course_id + '---' + data.module_id + '.' + ext,
+            'mimetype': mimetype,
+            'media_type': 'yt' if data.media_type == MediaTypeEnum.yt else (
+                'zipvid' if data.media_type == MediaTypeEnum.int_video else 'doc'),
+            'media_url': data.media_link,
+            'order': 'asc',
+            'order_by': 'resolution',
+            'first': True,
+            'filter': {'progressive': True},
+            'service': 'sellercentral',
+        }])
     except PyMongoError:
         pass
     return Response(status_code=HTTP_201_CREATED)
