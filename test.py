@@ -11,3 +11,4 @@ def create_helium_task(asins):
 
 if __name__ == '__main__':
     create_helium_task(['B0CV66GQ6Q', 'B000EGH36E'])
+    # ((ObjectId('6662fea2888377855fd42fdc'), [ObjectId('6662fea2888377855fd42fdd')]),)
