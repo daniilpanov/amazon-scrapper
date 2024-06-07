@@ -3,7 +3,7 @@ import os.path
 import fastapi
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
-from . import raw_tasks_router, products_router, sellercentral_router, h10router, cmds_router
+from . import raw_tasks_router, products_router, sellercentral_router, h10router, cmds_router, google_drive_router
 
 app = fastapi.FastAPI()
 app.add_middleware(
@@ -19,6 +19,7 @@ app.include_router(products_router.router)
 app.include_router(sellercentral_router.router)
 app.include_router(h10router.router)
 app.include_router(cmds_router.router)
+app.include_router(google_drive_router.router)
 
 
 # WEB VERSION

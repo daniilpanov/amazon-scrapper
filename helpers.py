@@ -2,7 +2,6 @@ import asyncio
 import os.path
 import re
 from functools import wraps, partial
-from time import sleep
 
 import orjson
 from more_itertools import batched
@@ -99,15 +98,6 @@ def log(*args, **kwargs):
     if DEBUG:
         print(colorama.Back.GREEN, *args, colorama.Back.RESET, **kwargs)
     return True
-
-
-def parse_args(argv: list[str]):
-    params_dict = {}
-    for arg in argv:
-        row = arg.split('=', 1)
-        if len(row) > 1:
-            params_dict[row[0]] = row[1]
-    return params_dict
 
 
 def send_bot_msg(user, msg=None, files=None):

@@ -3,7 +3,8 @@ from bs4 import BeautifulSoup
 from selenium.common import NoSuchElementException
 
 from functions import base_chrome_init
-from helpers import get_all_asins_from_text, parse_args
+from helpers import get_all_asins_from_text
+from args_parser import parse_args
 
 
 def get_asins(url, wd, excluded=None, limit=True, domain='amazon.com', unique_brands=False, to_links=True):

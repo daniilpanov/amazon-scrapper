@@ -60,7 +60,7 @@ def do_task(task):
                 resolution = data.get('resolution', 360)
                 input_stream = ffmpeg.input('pipe:0', format='mp4')
                 output_stream = ffmpeg.output(input_stream, 'pipe:1', format='mp4', vf=f'scale=-1:{resolution}')
-                output = ffmpeg.run(output_stream, input=BytesIO(res.content), capture_stdout=True, capture_stderr=True)
+                output = ffmpeg.run(output_stream, input=res.content, capture_stdout=True, capture_stderr=True)
                 video_data = output[0]
             else:
                 video_data = res.content

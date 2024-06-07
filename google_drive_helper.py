@@ -43,7 +43,7 @@ def get_files(fields: str | None = None, q: str | None = None, serv=None):
         ).execute()
         next_page_token = next_page.get('nextPageToken')
         results['files'] = results['files'] + next_page['files']
-    return results.get('files')
+    return results.get('files', [])
 
 
 def get_files_about_asin(asin, serv=None):
