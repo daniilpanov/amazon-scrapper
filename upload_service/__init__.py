@@ -1,3 +1,4 @@
+import os
 import tempfile
 import time
 from io import BytesIO
@@ -58,14 +59,22 @@ def do_task(task):
         res = requests.get(task['data']['media_url'])
         if res.status_code == 200:
             if data.get('media_type') == 'zipvid':
-                with tempfile.NamedTemporaryFile() as temp:
+                with tempfile.NamedTemporaryFile(delete=False, mode='wb') as temp:
                     temp.write(res.content)
-                    resolution = data.get('resolution', 360)
-                    input_stream = ffmpeg.input(temp.name)
-                    output_stream = ffmpeg.output(input_stream, 'pipe:1', format='mp4', vf=f'scale=-1:{resolution}')
-                    output = ffmpeg.run(output_stream, input=res.content, capture_stdout=True, capture_stderr=True)
-                    video_data = output[0]
-
+                resolution = data.get('resolution', 360)
+                input_stream = ffmpeg.input(temp.name)
+                output_stream = ffmpeg.output(input_stream, temp.name + '-compressed', format='mp4',
+                                              vf=f'scale=-2:{resolution}')
+                try:
+                    ffmpeg.run(output_stream, input=res.content, capture_stdout=True, capture_stderr=True)
+                    os.remove(temp.name)
+                    with open(temp.name + '-compressed', 'rb') as f:
+                        video_data = f.read()
+                    os.remove(temp.name + '-compressed')
+                except ffmpeg._run.Error as e:
+                    os.remove(temp.name)
+                    os.remove(temp.name + '-compressed')
+                    print(e.stderr.decode('utf-8'))
             else:
                 video_data = res.content
             # uploading
