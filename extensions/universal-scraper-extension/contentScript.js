@@ -51,7 +51,7 @@ function sendMessageToTab(tabId, message, retryDelay = 500, maxRetries = 100) {
 
 function h10scrap(task) {
     fetch(
-        'http://195.201.194.213:8832/tasks/acquire/h10/' + task.taskHeader._id.$oid + '/' + task._id.$oid,
+        'http://195.201.194.213:8832/tasks/acquire/h10/' + task.taskHeader._id + '/' + task._id,
         {method: 'post'},
     ).then((res) => {
         if (res.status !== 200) {

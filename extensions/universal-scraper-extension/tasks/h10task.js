@@ -153,12 +153,12 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                 "method": "GET",
             }).then(data => {
                 data.json().then(data => {
-                    main(task._id.$oid, asins);
+                    main(task._id, asins);
                 }).catch(reason => {
-                    main(task._id.$oid, asins, reason);
+                    main(task._id, asins, reason);
                 });
             }).catch(reason => {
-                main(task._id.$oid, asins, reason);
+                main(task._id, asins, reason);
             });
         }, 500);
     }, (counter) => {return counter >= 500});
