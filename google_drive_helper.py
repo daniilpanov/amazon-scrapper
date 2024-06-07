@@ -1,3 +1,4 @@
+import typing
 from io import BytesIO
 from typing import BinaryIO
 
@@ -28,7 +29,7 @@ services = {
 services[None] = services[DEFAULT_SERVICE_FILE]
 
 
-def get_files(fields: str | None = None, q: str | None = None, serv=None):
+def get_files(fields: typing.Optional[str] = None, q: typing.Optional[str] = None, serv: typing.Optional[str] = None):
     if fields is None:
         fields = 'id, name, mimeType, parents, createdTime, permissions, quotaBytesUsed'
     results = services[serv].files().list(pageSize=10, q=q,
@@ -87,7 +88,7 @@ def delete_duplicate_files(serv=None):
         print(f'Произошла ошибка: {error}')
 
 
-def load_file(io: BinaryIO | BytesIO, filename: str, mimetype: str, serv=None):
+def load_file(io: BinaryIO, filename: str, mimetype: str, serv=None):
     return services[serv].files().create(body={
         'name': filename,
     }, media_body=MediaIoBaseUpload(io, mimetype, resumable=True)).execute()
