@@ -3,7 +3,13 @@ class Parser {
         this.parser = new DOMParser();
     }
 
-    parseDOM(htmlString) {
-
+    async parseDOM(htmlString) {
+        try {
+            return this.parser.parseFromString(htmlString, "text/html");
+        } catch (error) {
+            console.log(error);
+        }
     }
 }
+
+export default Parser;

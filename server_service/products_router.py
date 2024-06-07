@@ -1,7 +1,7 @@
 import datetime
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import ORJSONResponse
+from helpers import orjson_response
 from pydantic import BaseModel
 from pymongo.errors import PyMongoError, BulkWriteError
 from starlette.requests import Request
@@ -56,7 +56,7 @@ async def collect_products_task(config: AsinsCollectingConfig):
             row['asin'] = item.asin
             row['keywords'] = ''
             data.append(row)
-    return ORJSONResponse(tasks_manager.add_task('products', {
+    return orjson_response(tasks_manager.add_task('products', {
         'alias': config.alias,
     }, data, stage=int(config.collect_reviews)))
 

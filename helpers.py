@@ -4,10 +4,12 @@ import re
 from functools import wraps, partial
 from time import sleep
 
+import orjson
 from more_itertools import batched
 
 import colorama
 import requests
+from starlette.responses import Response
 from urllib3.exceptions import NewConnectionError, MaxRetryError
 from requests.exceptions import ConnectionError
 
@@ -25,6 +27,10 @@ def to_async(func):
         return await loop.run_in_executor(executor, pfunc)
 
     return run
+
+
+def orjson_response(res):
+    return Response(orjson.dumps(res, default=str), headers={'Content-Type': 'application/json'})
 
 
 def get_proxy(only_alive=False):

@@ -3,6 +3,7 @@ import re
 from collections import defaultdict
 
 import fastapi
+import orjson
 import requests
 from bs4 import BeautifulSoup
 from fastapi import APIRouter, Body
@@ -56,7 +57,7 @@ async def reviews_count_cmd(asin: str, current_format: bool = True):
 
 @router.post('/category/set')
 async def category_set_cmd(data=Body()):
-    data = fastapi.responses.orjson.loads(data)
+    data = orjson.loads(data)
     asins = data['asins']
     if type(asins) is str:
         asins = get_all_asins_from_text(asins)

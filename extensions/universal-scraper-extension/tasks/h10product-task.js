@@ -31,7 +31,13 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
         }
         let aplus_content = null;
         if (typeof aplus !== 'undefined' || typeof aplus_feature_div !== 'undefined') {
-            aplus_content = (typeof aplus === 'undefined' ? aplus_feature_div : aplus).innerHTML || null;
+            aplus_content = (typeof aplus === 'undefined' ? aplus_feature_div : aplus).innerHTML;
+        } else if (typeof productDescription_feature_div !== 'undefined') {
+            if (typeof productDescription !== 'undefined') {
+                aplus_content = productDescription.innerHTML || null;
+            } else {
+                aplus_content = productDescription_feature_div.innerHTML || null;
+            }
         }
         if (typeof detailBulletsWithExceptions_feature_div !== 'undefined') {
             const uls = detailBulletsWithExceptions_feature_div.getElementsByTagName('ul');
@@ -56,6 +62,7 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                 }
             }
         }
+
         chrome.runtime.sendMessage(
             {
                 fetch: [

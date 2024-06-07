@@ -7,7 +7,7 @@ from . import get_data_by_requests, get_data_by_selenium
 
 
 def do_task(task):
-    requests.post('http://localhost:8832/tasks/acquire/products/' + task['header_id']['$oid'] + '/' + task['_id']['$oid'])
+    requests.post('http://localhost:8832/tasks/acquire/products/' + task['header_id'] + '/' + task['_id'])
     try:
         html = get_data_by_requests.get_html_by_request(task['data']['asin'], domain=task['data']['domain'])
         if not html:
@@ -15,7 +15,7 @@ def do_task(task):
         data = parser.parse_product(task['data']['asin'], html, domain=task['data']['domain'])
         if not data:
             print('NO DATA: ' + task['data']['asin'])
-            requests.patch('http://localhost:8832/tasks/report/' + task['_id']['$oid'], json={
+            requests.patch('http://localhost:8832/tasks/report/' + task['_id'], json={
                 'confirm': True,
                 'stop': True,
                 'errors': [
@@ -27,15 +27,15 @@ def do_task(task):
         json_data['parse_datetime'] = json_data['parse_datetime'].isoformat()
         print('json data made')
         requests.post('http://localhost:8832/products/set_result/card/' + task['data']['asin'], json=json_data)
-        requests.patch('http://localhost:8832/tasks/stage/' + task['_id']['$oid'], json={
+        requests.patch('http://localhost:8832/tasks/stage/' + task['_id'], json={
             'release': True,
             'stage': 2 if task.get('stage', 0) > 0 else 0,
         })
-        # requests.patch('http://localhost:8832/tasks/finish/' + task['_id']['$oid'], json={
+        # requests.patch('http://localhost:8832/tasks/finish/' + task['_id'], json={
         #     'confirm': True,
         # })
     except Exception as e:
-        requests.patch('http://localhost:8832/tasks/report/' + task['_id']['$oid'], json={
+        requests.patch('http://localhost:8832/tasks/report/' + task['_id'], json={
             'confirm': True,
             'stop': True,
             'errors': [

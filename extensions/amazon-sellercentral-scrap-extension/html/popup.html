@@ -6,7 +6,7 @@
 
     <style>
         body {
-            height: 220px;
+            height: 270px;
             width: 320px;
             background-color: #FF9900;
             display: flex;
@@ -28,10 +28,6 @@
             box-shadow: 0px 3px 4px rgba(0, 0, 0, 0.5);
         }
 
-        .empty_div {
-            height: 50px;
-            width: 15px;
-        }
 
         .parse_button {
             background-color: #FF9900;
@@ -67,7 +63,8 @@
     <div class="container">
         <h1>Amazon Scraper</h1>
 
-        <div class="empty_div"></div>
+        <p style="font-size: medium; font-weight: 900; color: #ffffff;">Pages scraped:</p>
+        <p style="font-size: large; font-weight: 900; color: #ffffff;" id="pagesCounter">0</p>
 
         <button class="parse_button" id="toParseButton">
             Scrape

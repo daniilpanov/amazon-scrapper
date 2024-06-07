@@ -19,7 +19,7 @@ THREADS['collect_products'] = THREADS['products']
 THREADS['collect_departments'] = THREADS['departments']
 MAX_PROCESSES = os.environ.get('MAX_PROCESSES')
 
-SERVICE_ACCOUNT_FILE = os.environ.get('SERVICE_ACCOUNT_FILE')
+DEFAULT_SERVICE_FILE = os.environ.get('DEFAULT_SERVICE_FILE')
 
 SQL_DB_NAME = os.environ.get('DB_NAME')
 SQL_DB_USER = os.environ.get('DB_USER')

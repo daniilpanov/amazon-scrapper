@@ -1,4 +1,4 @@
-import pako from "./pako.esm.mjs";
+import pako from './pako.esm.mjs';
 
 chrome.tabs.query({
     url: 'chrome-extension://' + chrome.runtime.id + '/control_panel.html',
