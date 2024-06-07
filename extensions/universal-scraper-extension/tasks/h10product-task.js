@@ -32,12 +32,13 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
         }
         let aplus_content = null;
         if (typeof aplus !== 'undefined' || typeof aplus_feature_div !== 'undefined') {
-            aplus_content = (typeof aplus === 'undefined' ? aplus_feature_div : aplus).innerHTML;
-        } else if (typeof productDescription_feature_div !== 'undefined') {
+            aplus_content = (typeof aplus === 'undefined' ? aplus_feature_div : aplus)?.innerHTML?.trim();
+        }
+        if (!aplus_content && typeof productDescription_feature_div !== 'undefined') {
             if (typeof productDescription !== 'undefined') {
-                aplus_content = productDescription.innerHTML || null;
+                aplus_content = productDescription?.innerHTML?.trim();
             } else {
-                aplus_content = productDescription_feature_div.innerHTML || null;
+                aplus_content = productDescription_feature_div.innerHTML?.trim();
             }
         }
         if (typeof detailBulletsWithExceptions_feature_div !== 'undefined') {
