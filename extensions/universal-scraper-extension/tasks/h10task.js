@@ -186,7 +186,7 @@ function main(task_id, asins) {
         "method": "POST",
     }).then(res => {
         if (res.status !== 200) {
-            res.text().then(d => {
+            res.json().then(d => {
                 chrome.runtime.sendMessage(
                     {
                         fetch: [
