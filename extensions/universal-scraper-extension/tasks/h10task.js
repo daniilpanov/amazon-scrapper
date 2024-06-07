@@ -184,8 +184,38 @@ function main(task_id, asins) {
         },
         "body": `{"marketplace":"ATVPDKIKX0DER","mainProductId":"${asins[0]}","productIds":${JSON.stringify(asins)},"adminSearch":false,"exactProduct":false}`,
         "method": "POST",
-    }).then(data => {
-        data.json().then(data => {
+    }).then(res => {
+        if (res.status !== 200) {
+            res.text().then(d => {
+                chrome.runtime.sendMessage(
+                    {
+                        fetch: [
+                            'http://195.201.194.213:8832/tasks/report/' + task_id,
+                            {
+                                headers: {
+                                    // 'Content-Encoding': 'gzip',
+                                    'Content-Type': 'application/json',
+                                },
+                                method: 'PATCH',
+                                body: JSON.stringify({
+                                    confirm: true,
+                                    errors: [
+                                        ['Error when try to create cerebro task', d],
+                                    ],
+                                    stop: true,
+                                }),
+                            },
+                        ]
+                    },
+                    (response) => {
+                        // Close the window!!!
+                        window.close();
+                    },
+                );
+            });
+            return;
+        }
+        res.json().then(data => {
             const id = data.data.id;
             // The third query (collection of queries) -- wait for ready state
             waitStatus(id, my_bearer, (data) => {
