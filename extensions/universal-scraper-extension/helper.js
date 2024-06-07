@@ -7,7 +7,7 @@ function waitForElement(path_to_element, callback, stop_callback, counter = 0) {
         }
     }
     else {
-        return callback(el);
+        return callback(el, counter);
     }
 }
 // Removing element while the elements look like its are presented on the page

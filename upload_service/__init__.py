@@ -1,3 +1,4 @@
+import tempfile
 import time
 from io import BytesIO
 
@@ -57,11 +58,14 @@ def do_task(task):
         res = requests.get(task['data']['media_url'])
         if res.status_code == 200:
             if data.get('media_type') == 'zipvid':
-                resolution = data.get('resolution', 360)
-                input_stream = ffmpeg.input('pipe:0', format='mp4')
-                output_stream = ffmpeg.output(input_stream, 'pipe:1', format='mp4', vf=f'scale=-1:{resolution}')
-                output = ffmpeg.run(output_stream, input=res.content, capture_stdout=True, capture_stderr=True)
-                video_data = output[0]
+                with tempfile.NamedTemporaryFile() as temp:
+                    temp.write(res.content)
+                    resolution = data.get('resolution', 360)
+                    input_stream = ffmpeg.input(temp.name)
+                    output_stream = ffmpeg.output(input_stream, 'pipe:1', format='mp4', vf=f'scale=-1:{resolution}')
+                    output = ffmpeg.run(output_stream, input=res.content, capture_stdout=True, capture_stderr=True)
+                    video_data = output[0]
+
             else:
                 video_data = res.content
             # uploading
