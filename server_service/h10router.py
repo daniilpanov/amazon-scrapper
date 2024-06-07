@@ -34,8 +34,7 @@ class HeliumTask(BaseModel):
 @router.post('/get')
 async def get_helium(config: HeliumTask):
     data = tasks_manager.add_task('h10', {'alias': config.alias or ','.join(config.asins) + '#h10'}, [{'asins': config.asins}]),
-    # print(data)
-    return Response(data[0][0] + '--' + data[0][1][0], status_code=HTTP_200_OK)
+    return Response(str(data[0][0]) + '--' + str(data[0][1][0]), status_code=HTTP_200_OK)
 
 
 @router.get('/result/{helium_id}')
