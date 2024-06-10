@@ -13,7 +13,7 @@ const totalPagesCount = document.getElementById('totalPagesCount');
 scrapeButton.addEventListener('click', async (event) => {
     scrapeButton.disabled = true;
     scrapeButton.innerHTML = 'Wait...';
-    pagesCounter.innerHTML = 0;
+    pagesCounter.innerHTML = '0';
     let totalPages = 0;
 
     try {
