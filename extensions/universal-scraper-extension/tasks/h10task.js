@@ -351,5 +351,36 @@ function main(task_id, asins) {
                 });
             });
         });
+    }).catch(reason => {
+        chrome.runtime.sendMessage(
+            {
+                fetch: [
+                    'http://195.201.194.213:8832/tasks/report/' + task_id,
+                    {
+                        headers: {
+                            // 'Content-Encoding': 'gzip',
+                            'Content-Type': 'application/json',
+                        },
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                            confirm: false,
+                            errors: [
+                                ['Error when try to create cerebro task', reason],
+                            ],
+                            stop: false,
+                        }),
+                    },
+                ]
+            },
+            (response) => {
+                chrome.runtime.sendMessage(
+                    {fetch: ['http://195.201.194.213:8832/tasks/release/' + task_id, {method: 'POST'}]},
+                    (response) => {
+                        // Close the window!!!
+                        window.close();
+                    },
+                );
+            },
+        );
     });
 }
