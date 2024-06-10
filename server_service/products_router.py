@@ -64,6 +64,10 @@ async def collect_products_task(config: AsinsCollectingConfig):
 @router.post('/set_result/reviews')
 async def set_reviews_result(request: Request):
     data = await request.json()
+    if 'scrap_datetime' in data:
+        data['scrap_datetime'] = datetime.datetime.fromisoformat(data['scrap_datetime'])
+    if 'date' in data:
+        data['date'] = datetime.datetime.fromisoformat(data['date'])
     try:
         db('amazon_data')['customer_reviews'].insert_many(data, ordered=False)
     except BulkWriteError:
@@ -80,6 +84,17 @@ async def set_product_result(request: Request, asin: str):
         data['parse_datetime'] = datetime.datetime.fromisoformat(data['parse_datetime'])
     try:
         db('amazon_data')['product_card'].replace_one({'asin': asin}, data, upsert=True)
+    except PyMongoError as e:
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
+    return Response(status_code=HTTP_204_NO_CONTENT)
+
+
+@router.post('/set_result/aspects/{asin}')
+async def set_aspects_result(request: Request, asin: str):
+    data = await request.json()
+    return
+    try:
+        db('amazon_data')['aspects'].replace_one({'asin': asin}, data, upsert=True)
     except PyMongoError as e:
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     return Response(status_code=HTTP_204_NO_CONTENT)

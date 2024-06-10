@@ -1,5 +1,7 @@
 import re
+from queue import Queue
 
+import requests
 from bs4 import BeautifulSoup
 from orjson import orjson, JSONDecodeError
 
@@ -37,7 +39,11 @@ def process_req1(asin, response, domain, q):
                     or item_parser.find('div', class_='a-divider-section') \
                     or item_parser.find('h3', attrs={'data-hook': 'dp-global-reviews-header'}):
                 continue
-            res.append(parser.parse_reviews(asin, item[2].strip(), domain))
+
+            json_data = parser.parse_reviews(asin, item[2].strip(), domain)
+            json_data['date'] = json_data['date'].isoformat()
+            json_data['scrap_datetime'] = json_data['scrap_datetime'].isoformat()
+            res.append(json_data)
         if not res:
             print(process_data_res)
         q.put(res)
@@ -58,3 +64,16 @@ def process_req2(asin, response, domain, q):
     if res:
         q.put(res)
     return bool(res) - (not bool(res))
+
+
+def write_data(q: Queue):
+    data = -1
+    try:
+        while data:
+            data = q.get()
+            requests.post('http://localhost:8832/products/set_result/reviews', json=data)
+    except KeyboardInterrupt:
+        while not q.empty() and data:
+            data = q.get()
+            requests.post('http://localhost:8832/products/set_result/reviews', json=data)
+        raise

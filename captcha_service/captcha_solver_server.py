@@ -1,3 +1,5 @@
+import os.path
+
 import fastapi
 from fastapi import HTTPException
 from starlette.middleware.cors import CORSMiddleware
@@ -7,7 +9,10 @@ from starlette.status import HTTP_200_OK, HTTP_500_INTERNAL_SERVER_ERROR
 
 from .captcha_solver.solve_captcha_with_model import CaptchaSolver
 
-capsolver = CaptchaSolver('captcha_solver')
+if os.path.isdir('captcha_solver'):
+    capsolver = CaptchaSolver('captcha_solver')
+else:
+    capsolver = CaptchaSolver(os.path.join('captcha_service', 'captcha_solver'))
 app = fastapi.FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +35,10 @@ async def solve_url(request: SolveURLRequest):
     raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-if __name__ == '__main__':
+def run(host='0.0.0.0', port=8090):
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8090)
+    uvicorn.run(app, host=host, port=port)
+
+
+if __name__ == '__main__':
+    run()

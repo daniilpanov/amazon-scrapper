@@ -185,7 +185,7 @@ function main(task_id, asins) {
         "body": `{"marketplace":"ATVPDKIKX0DER","mainProductId":"${asins[0]}","productIds":${JSON.stringify(asins)},"adminSearch":false,"exactProduct":false}`,
         "method": "POST",
     }).then(res => {
-        if (res.status !== 200) {
+        if (res.status >= 300) {
             res.json().then(d => {
                 chrome.runtime.sendMessage(
                     {

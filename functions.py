@@ -2,6 +2,7 @@ import os
 import random
 from time import sleep
 
+from pymongo.errors import PyMongoError
 from selenium.common.exceptions import JavascriptException, NoSuchElementException
 from selenium.webdriver import Keys, ActionChains
 from selenium.webdriver.chrome.options import Options
@@ -242,7 +243,7 @@ class WebDriver:
                 processed[datum['name']] = datum['value']
             try:
                 db_mongo.db('amazon_data')['__cookies'].insert_one(processed)
-            except Exception:
+            except PyMongoError:
                 pass
             return True
         except JavascriptException as e:
@@ -406,8 +407,8 @@ def base_chrome_init(
     if not proxy:
         if proxy_conf and type(proxy_conf) is dict:
             proxy = proxy_conf.get('protocol', 'socks5') + '://'
-            if 'user' in proxy_conf and 'pass' in proxy_conf:
-                proxy += proxy_conf['user'] + ':' + proxy_conf['pass'] + '@'
+            if 'username' in proxy_conf and 'password' in proxy_conf:
+                proxy += proxy_conf['username'] + ':' + proxy_conf['password'] + '@'
             proxy += proxy_conf['addr'] + ':' + str(proxy_conf.get('port', 80))
     if proxy:
         # opts.add_argument(f'proxy-server_service={proxy}')
