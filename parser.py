@@ -1,5 +1,7 @@
 import datetime
 import re
+
+import orjson
 import pytz
 from bs4 import BeautifulSoup
 
@@ -161,7 +163,10 @@ def parse_reviews(asin, html, domain='amazon.com'):
 
 
 def parse_aspects(asin, html):
-    bs = BeautifulSoup(html, features='html.parser')
+    if isinstance(html, str):
+        bs = BeautifulSoup(html, features='html.parser')
+    else:
+        bs = html
     if not bs:
         print('NO BS! ASIN:', asin)
         return False
@@ -190,6 +195,49 @@ def parse_aspects(asin, html):
             return False
         aspects.append((aspect[0].text, positive, negative))
     return aspects
+
+
+def parse_media_links(asin, html):
+    if isinstance(html, str):
+        bs = BeautifulSoup(html, features='lxml')
+    else:
+        bs = html
+    try:
+        js = bs.find('div', id='imageBlockVariations_feature_div').find('script').text
+    except AttributeError as e:
+        print(e)
+        return [], []
+    data_json = re.search(r"var obj = jQuery.parseJSON\('(.+)'\)", js)
+    if not data_json:
+        print('no data')
+        return [], []
+    data = orjson.loads(data_json.group(1))
+    titles_mapping = data['colorToAsin']
+    title = None
+    for t, value in titles_mapping.items():
+        if value['asin'] == asin:
+            title = t
+            break
+    if not title:
+        print('no title')
+        return [], []
+    images_links = []
+    for img in data['colorImages'][title]:
+        if 'hiRes' in img:
+            images_links.append(img['hiRes'])
+        else:
+            res_max = 0
+            media_link = None
+            for link, resolution in img['main'].items():
+                if int(resolution[0]) > res_max:
+                    res_max = int(resolution[0])
+                    media_link = link
+            if media_link:
+                images_links.append(media_link)
+    video_links = []
+    if data['videos']:
+        video_links.append(data['videos'][0]['url'])
+    return images_links, video_links
 
 
 def parse_product(asin, html, tiny=False, domain='amazon.com'):

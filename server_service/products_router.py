@@ -92,6 +92,7 @@ async def set_product_result(request: Request, asin: str):
 @router.post('/set_result/aspects/{asin}')
 async def set_aspects_result(request: Request, asin: str):
     data = await request.json()
+    print(data)
     return
     try:
         db('amazon_data')['aspects'].replace_one({'asin': asin}, data, upsert=True)

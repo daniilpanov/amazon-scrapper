@@ -8,6 +8,10 @@ from orjson import orjson, JSONDecodeError
 import parser
 
 
+class UnknownParseError(Exception):
+    pass
+
+
 def process_req1(asin, response, domain, q):
     try:
         process_data_res = re.sub(r'\["script","if\(window\.ue\) \{[^]]+]', '', response.strip())
@@ -20,14 +24,14 @@ def process_req1(asin, response, domain, q):
                     pass
         except Exception as e:
             print(e)
-            return False
+            raise UnknownParseError
         data_with_quantity = None
         for item in raw:
             if len(item) >= 3 and item[1] == '#filter-info-section':
                 data_with_quantity = item[2]
                 break
         if not data_with_quantity:
-            return False
+            return -1
 
         res = []
 
@@ -50,7 +54,7 @@ def process_req1(asin, response, domain, q):
         return bool(res) - (not bool(res))
     except Exception as ex:
         print(ex)
-        return False
+        raise UnknownParseError
 
 
 def process_req2(asin, response, domain, q):
