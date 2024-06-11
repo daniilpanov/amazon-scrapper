@@ -36,8 +36,11 @@ def get_proxy(only_alive=False):
     r = requests.get('http://localhost:8833/proxy/alive')
     if r.status_code == 200:
         return r.json()
-    if not only_alive:
-        return requests.get('http://localhost:8833/proxy/random').json()
+    if only_alive:
+        return None
+    r = requests.get('http://localhost:8833/proxy/random').json()
+    if r.status_code == 200:
+        return r.json()
     return None
 
 

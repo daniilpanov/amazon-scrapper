@@ -1,8 +1,11 @@
+import typing
 from threading import Thread
 
 from selenium.common import WebDriverException
 
+import helpers
 import settings
+from proxies_service.proxies_manager import AmazonProxy
 from .parse import *
 from functions import WebDriver, base_chrome_init
 
@@ -20,14 +23,55 @@ for key in params:
 wd: WebDriver | None = None
 
 
-def update_wd():
-    global wd
-    if wd:
-        wd.full_close()
-    # proxy = helpers.get_proxy()
-    wd = base_chrome_init(False, goto='https://www.amazon.com', proxy=settings.WEB_PROXY, user_agent=settings.ua.random)
-    wd.change_loc()
-    return wd
+class ReviewsCollector:
+    # BEGIN classprops
+    params = {
+        'sortBy': ['', 'recent'],
+        'reviewerType': ['', 'avp_only_reviews'],
+        'filterByStar': ['', 'five_star', 'four_star', 'three_star', 'two_star', 'one_star'],
+        'mediaType': ['', 'media_reviews_only'],
+    }
+    requests_counter = 0
+    params_len = 1
+    for key in params:
+        params_len *= len(params[key])
+    _inst: typing.Self | None = None
+    # END classprops
+    # BEGIN objprops
+    wd: WebDriver | None = None
+    proxy: str | None = None
+    ua: str
+    cookies: dict | None = None
+    domain: str = 'amazon.com'
+    # END objprops
+
+    def __new__(cls, domain='amazon.com'):
+        if not cls._inst:
+            cls._inst = super(ReviewsCollector, cls).__new__(cls)
+        return cls._inst
+
+    def update_proxy_conf(self, proxy_conf=None):
+        if isinstance(proxy_conf, dict):
+            self.proxy = AmazonProxy.to_str(proxy_conf)
+            self.cookies = proxy_conf.get('cookies')
+            self.ua = proxy_conf.get('useragent', settings.ua.random)
+        else:
+            self.proxy = proxy_conf or settings.WEB_PROXY
+            self.ua = settings.ua.random
+            self.cookies = None
+
+    def update_wd(self):
+        proxy = helpers.get_proxy()
+        self.update_proxy_conf(proxy)
+        self.wd = base_chrome_init(
+            False,
+            goto=f'https://www.{self.domain}',
+            proxy=self.proxy,
+            user_agent=self.ua,
+            cookies=self.cookies,
+        )
+        wd.change_loc()
+        return wd
 
 
 def send_request(asin, seed, page, keywords='', domain='amazon.com', current_format=True, q=None):
@@ -101,6 +145,26 @@ def load_reviews(asin, keywords='', domain='amazon.com', index=0, current_format
     queue.put(None)
     writer_thr.join()
     return {}
+
+
+def iteration(asin, keywords, domain, index, current_format, canonical_link, full, proxy, retry=True):
+    try:
+        if not wd or not retry:
+            update_wd()
+    except Exception as e:
+        if retry:
+            return iteration(asin, keywords, domain, index, current_format, canonical_link, full, proxy, False)
+        return {'error': e, 'index': index}
+
+
+def load_reviews(asin, keywords='', domain='amazon.com', index=0, current_format=True, canonical_link=None, full=False):
+    queue = Queue()
+    writer_thr = Thread(target=write_data, args=(queue,))
+    writer_thr.start()
+    while proxy := helpers.get_proxy(True):
+        if iteration(asin, keywords, domain, index, current_format, canonical_link, full, proxy):
+            break
+    iteration(asin, keywords, domain, index, current_format, canonical_link, full, settings.WEB_PROXY)
 
 
 def close():

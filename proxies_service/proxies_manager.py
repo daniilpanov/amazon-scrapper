@@ -93,6 +93,7 @@ def updating():
         print(list(str(i) for i in AmazonProxy.update_proxies(cookies)))
         for i in range(60):
             if all([proxy.deprecated for proxy in AmazonProxy.proxies]):
+                time.sleep(5)
                 break
             time.sleep(1)
 

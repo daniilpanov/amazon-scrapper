@@ -412,13 +412,13 @@ def base_chrome_init(
             proxy += proxy_conf['addr'] + ':' + str(proxy_conf.get('port', 80))
     if proxy:
         # opts.add_argument(f'proxy-server_service={proxy}')
-        wire_opts = {'proxy': {'http': proxy, 'https': proxy}}
+        wire_opts = {'proxy': {'http://': proxy, 'https://': proxy}}
     if headless:
         opts.add_argument('--headless')
         opts.add_argument('--headless=new')
-        opts.add_argument('--no-sandbox')
         opts.add_argument('--disable-gpu')
         opts.add_argument('--disable-dev-shm-usage')
+    opts.add_argument('--no-sandbox')
     opts.add_argument('start-maximized')
     opts.add_argument('disable-infobars')
     opts.add_argument('--log-level=3')
