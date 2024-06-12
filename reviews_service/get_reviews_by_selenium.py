@@ -135,7 +135,7 @@ class ReviewsCollector:
             print(f'[send_request({self.asin})] Exception occurred: {e}')
             raise ScrapError
 
-    def iteration(self, retry=True):
+    def iteration(self):
         if not self.send_request():
             if not self.send_request():
                 return False
@@ -153,21 +153,28 @@ def load_reviews(asin, keywords='', domain='amazon.com', index=0, current_format
         html = scraper.wd.get_page_source()
         soup = BeautifulSoup(html, features='lxml')
         data = parser.parse_product(asin, soup, domain=domain)
-        if scraper.aspects_collect:
-            aspects = parser.parse_aspects(asin, soup)
-            # if aspects:
-            # todo: save
-        if scraper.media_collect:
-            parser.parse_media_links(asin, soup)
-            # todo: save
-            if scraper.target_task_create:
-                pass
-
         json_data = dict(
             zip(('asin', 'product_url', 'canonical_link', 'product_title', 'product_descr', 'picture_url',
                  'parse_datetime', 'features', 'top_5_phrases', 'product_price'), data))
         json_data['parse_datetime'] = json_data['parse_datetime'].isoformat()
+
+        if scraper.aspects_collect:
+            aspects = parser.parse_aspects(asin, soup)
+            if aspects:
+                aspects = [dict(zip(('Aspect', 'positive', 'negative'), aspect)) for aspect in aspects]
+                requests.post('http://localhost:8832/products/set_result/aspects/' + asin, json=aspects)
+
+        if scraper.media_collect:
+            media_data = parser.parse_media_links(soup)
+            if media_data:
+                json_data['media_data'] = media_data
+        else:
+            media_data = None
         requests.post('http://localhost:8832/products/set_result/card/' + asin, json=json_data)
+
+        if media_data and scraper.target_task_create:
+            requests.post('http://localhost:8832/products/target/collect/' + asin)
+
         if not canonical_link:
             scraper.canonical_link = canonical_link = json_data['canonical_link']
     scraper.wd.get(canonical_link or 'https://www.' + domain + '/product-reviews/' + asin)

@@ -197,7 +197,7 @@ def parse_aspects(asin, html):
     return aspects
 
 
-def parse_media_links(asin, html):
+def parse_media_links(html):
     if isinstance(html, str):
         bs = BeautifulSoup(html, features='lxml')
     else:
@@ -206,12 +206,16 @@ def parse_media_links(asin, html):
         js = bs.find('div', id='imageBlockVariations_feature_div').find('script').text
     except AttributeError as e:
         print(e)
-        return [], []
+        return None
     data_json = re.search(r"var obj = jQuery.parseJSON\('(.+)'\)", js)
     if not data_json:
         print('no data')
-        return [], []
+        return None
     data = orjson.loads(data_json.group(1))
+    return data
+
+
+def get_media_links(asin, data):
     titles_mapping = data['colorToAsin']
     title = None
     for t, value in titles_mapping.items():

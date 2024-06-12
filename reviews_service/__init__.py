@@ -6,7 +6,7 @@ from . import get_reviews_by_selenium
 from . import get_reviews_by_requests
 
 
-def do_task(task, full=False):
+def do_task(task):
     requests.post(
         'http://localhost:8832/tasks/acquire/products/' + task['header_id'] + '/' + task['_id'])
     try:
@@ -44,7 +44,7 @@ def run():
                 do_task(task)
             tasks = requests.get('http://localhost:8832/tasks/get_available/reviews?stage=0').json()
             for task in tasks:
-                do_task(task, full=True)
+                do_task(task)
             time.sleep(5)
     except KeyboardInterrupt:
         get_reviews_by_selenium.close()
