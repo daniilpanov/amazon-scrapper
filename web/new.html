@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang='en'>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>AMAZON WEB MANAGEMENT</title>
@@ -16,7 +16,6 @@
     <!--suppress HtmlUnknownTarget -->
     <script src="/file?filepath=web/js/script.js"></script>
 </head>
-
 <body>
 <header>
     <nav>
@@ -34,25 +33,15 @@
                     type='button' role='tab' aria-controls='nav-full-collect' aria-selected='false'>Full collect
             </button>
             <a class='nav-link' id='nav-extra-tab' href="http://45.14.245.223/ai.html" target="_blank"
-                    aria-selected='false'>
+               aria-selected='false'>
                 Goto AI module <i class="bi bi-arrow-up-right-square-fill"></i>
             </a>
         </div>
     </nav>
 </header>
 
-<main class='container-fluid'>
+<main>
     <div class='row flex-nowrap'>
-
-        <aside class='col-auto col-md-4 col-xl-3' id="tasks_panel">
-            <div class='d-flex flex-column align-items-center align-items-sm-start min-vh-100'>
-                <h3>Active tasks list</h3>
-                <ul id='tasks' style="margin-left: 0; padding-left: .1rem;">
-                    <!-- li with data-bs-task-id -->
-                </ul>
-            </div>
-        </aside>
-
         <div class='col-auto tab-content col-md-8 col-xl-9' id='content'>
             <div class='tab-pane fade show active' id='nav-bsr' role='tabpanel' aria-labelledby='nav-bsr-tab'>
                 <h2>Collect ASINs from BSR</h2>
@@ -357,7 +346,7 @@
                                     <label>
                                         ASINs list
                                         <textarea name='asins' class='form-control' placeholder='ASIN...'
-                                               required></textarea>
+                                                  required></textarea>
                                     </label>
                                 </div>
                                 <p></p>
@@ -425,32 +414,5 @@
         </div>
     </div>
 </main>
-
-<script src='/file?filepath=web/js/readmore-plugin.js'></script>
-<script>
-    const readmoreupdatef = function () {
-        $('.readmoreable').readmore({
-            moreLink: '<a href="#">Развернуть</a>',
-            lessLink: '<a href="#">Свернуть</a>',
-        })
-    };
-    readmoreupdatef();
-    window.onresize = readmoreupdatef;
-</script>
 </body>
-
-
-<ul id="task-template" style="display: none;">
-    <li class="task">
-        <a href="#">
-            <div class="task-progress btn btn-success"></div>
-            <div class="task-wrapper row">
-                <div class="task-remove col-xl-1">&times;</div>
-                <div class="task-progress-text col-xl-2">0%</div>
-                <div class="task-content col-xl-6"></div>
-                <div class="task-time col-xl-3">00:00:00</div>
-            </div>
-        </a>
-    </li>
-</ul>
 </html>

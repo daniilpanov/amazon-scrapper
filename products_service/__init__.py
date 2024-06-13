@@ -9,10 +9,12 @@ from . import get_data_by_requests, get_data_by_selenium
 def do_task(task):
     requests.post('http://localhost:8832/tasks/acquire/products/' + task['header_id'] + '/' + task['_id'])
     try:
-        html = get_data_by_requests.get_html_by_request(task['data']['asin'], domain=task['data']['domain'])
+        asin = task['data']['asin']
+        domain = task['data']['domain']
+        html = get_data_by_requests.get_html_by_request(asin, domain=domain)
         if not html:
-            html = get_data_by_selenium.get_html_by_selenium(task['data']['asin'], domain=task['data']['domain'])
-        data = parser.parse_product(task['data']['asin'], html, domain=task['data']['domain'])
+            html = get_data_by_selenium.get_html_by_selenium(asin, domain=domain)
+        data = parser.parse_product(asin, html, domain=domain)
         if not data:
             print('NO DATA: ' + task['data']['asin'])
             requests.patch('http://localhost:8832/tasks/report/' + task['_id'], json={
@@ -20,11 +22,27 @@ def do_task(task):
                 'stop': True,
                 'errors': [
                     'No data: asin ' + task['data']['asin'],
-                ],
+                    ],
             })
             return False
         json_data = dict(zip(('asin', 'product_url', 'canonical_link', 'product_title', 'product_descr', 'picture_url', 'parse_datetime', 'features', 'top_5_phrases', 'product_price'), data))
         json_data['parse_datetime'] = json_data['parse_datetime'].isoformat()
+        if json_data.get('aspects_collect'):
+            aspects = parser.parse_aspects(asin, html)
+            if aspects:
+                aspects = [dict(zip(('Aspect', 'positive', 'negative'), aspect)) for aspect in aspects]
+                requests.post('http://localhost:8832/products/set_result/aspects/' + asin, json=aspects)
+
+        if json_data.get('media_collect'):
+            media_data = parser.parse_media_links(html)
+            if media_data:
+                json_data['media_data'] = media_data
+        else:
+            media_data = None
+        requests.post('http://localhost:8832/products/set_result/card/' + asin, json=json_data)
+
+        if media_data and json_data.get('target_task_create'):
+            requests.post('http://localhost:8832/products/target/collect/' + asin)
         print('json data made')
         requests.post('http://localhost:8832/products/set_result/card/' + task['data']['asin'], json=json_data)
         requests.patch('http://localhost:8832/tasks/stage/' + task['_id'], json={

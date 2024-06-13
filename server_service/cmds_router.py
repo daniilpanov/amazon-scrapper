@@ -7,7 +7,7 @@ import orjson
 import requests
 from bs4 import BeautifulSoup
 from fastapi import APIRouter, Body
-from pymongo.errors import BulkWriteError
+from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_201_CREATED, \
@@ -80,19 +80,20 @@ async def category_set_cmd(data=Body()):
 @router.get('/products/get/{asin}')
 async def product_get_cmd(asin: str):
     try:
-        product_card = db('amazon_data')['product_card'].find_one({'asin': asin})
+        if not (product_card := db('amazon_data')['product_card'].find_one({'asin': asin})):
+            raise HTTPException(status_code=HTTP_404_NOT_FOUND)
         try:
             aspects = [(i['Aspect'], i['positive'], i['negative']) for i in db('amazon_data')['amazon_aspects'].find({
                 'ASIN': asin,
             })]
-        except:
+        except PyMongoError as e:
+            print('[Warning]', type(e), e)
             aspects = None
         try:
             category = db('amazon_data')['all_categories'].find_one({'ASIN': asin}) or defaultdict(lambda: None)
-        except:
+        except PyMongoError as e:
+            print('[Warning]', type(e), e)
             category = defaultdict(lambda: None)
-        if not product_card:
-            raise HTTPException(status_code=HTTP_404_NOT_FOUND)
         return {
             'ASIN': asin,
             'URL': product_card['product_url'],

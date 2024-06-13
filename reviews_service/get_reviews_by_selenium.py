@@ -1,7 +1,9 @@
+import datetime
 import time
 import typing
 from threading import Thread
 
+import pytz
 from selenium.common import WebDriverException
 
 import helpers
@@ -51,10 +53,12 @@ class ReviewsCollector:
     target_task_create: bool
     # queue helping to do async results loading
     data_queue: Queue
+    # automotive
+    automotive: bool = True  # auto send request to AI
     # END objprops
 
     def __new__(cls, queue, asin, keywords='', domain='amazon.com', index=0, current_format=True, canonical_link=None,
-                full_collect_config=False):
+                full_collect_config=False, auto_send_to_ai=False):
         if cls._inst:
             cls._inst = super(ReviewsCollector, cls).__new__(cls)
         inst = cls._inst
@@ -71,6 +75,8 @@ class ReviewsCollector:
             inst.aspects_collect = full_collect_config.get('aspects_collect', False)
             inst.media_collect = full_collect_config.get('media_collect', False)
             inst.target_task_create = full_collect_config.get('target_task_create', False)
+        # automatic send data to AI
+        inst.automotive = auto_send_to_ai
         return cls._inst
 
     @classmethod
@@ -136,9 +142,15 @@ class ReviewsCollector:
             raise ScrapError
 
     def iteration(self):
-        if not self.send_request():
+        try:
             if not self.send_request():
-                return False
+                try:
+                    if not self.send_request():
+                        return False
+                except ScrapError:
+                    return False
+        except ScrapError:
+            return False
         return True
 
 
@@ -185,11 +197,24 @@ def load_reviews(asin, keywords='', domain='amazon.com', index=0, current_format
                 for index in range(index, ReviewsCollector.params_len):
                     for page in (page, 11):
                         if not scraper.iteration():
+                            print(requests.post(
+                                'http://45.14.245.223:1802/new_collection/',
+                                headers={
+                                    'accept': 'application/json',
+                                    'Content-Type': 'application/json'
+                                },
+                                json={
+                                    'name': 'Collected-' + asin,
+                                    'date': datetime.datetime.now(pytz.UTC).date().isoformat(),
+                                    'asins': [asin],
+                                },
+                            ))
                             break
                     page = 1
             except WebDriverException:
                 scraper.update_wd()
             time.sleep(5)
+            scraper.update_wd()
     finally:
         queue.put(None)
         writer_thr.join()
