@@ -17,6 +17,10 @@ class ScrapError(Exception):
     pass
 
 
+class BadAsinError(Exception):
+    pass
+
+
 class ReviewsCollector:
     # BEGIN classprops
     params = {
@@ -59,7 +63,7 @@ class ReviewsCollector:
 
     def __new__(cls, queue, asin, keywords='', domain='amazon.com', index=0, current_format=True, canonical_link=None,
                 full_collect_config=False, auto_send_to_ai=False):
-        if cls._inst:
+        if not cls._inst:
             cls._inst = super(ReviewsCollector, cls).__new__(cls)
         inst = cls._inst
         inst.data_queue = queue
@@ -70,7 +74,9 @@ class ReviewsCollector:
         inst.current_format = current_format
         inst.canonical_link = canonical_link
         # optional: full product parsing
+        print(full_collect_config)
         if isinstance(full_collect_config, dict):
+            print('ok')
             inst.is_full = True
             inst.aspects_collect = full_collect_config.get('aspects_collect', False)
             inst.media_collect = full_collect_config.get('media_collect', False)
@@ -135,20 +141,22 @@ class ReviewsCollector:
                    + ", null, 'text');"
             res = self.wd.execute_script('return ' + ajax)
             if not res or 'BAAAAAAD ASIN!' in res:
-                return None
-            return process_req1(self.asin, res, self.domain, self.data_queue)
+                raise BadAsinError
+            try:
+                return process_req1(self.asin, res, self.domain, self.data_queue)
+            except UnknownParseError as e:
+                raise ScrapError from e
         except Exception as e:
             print(f'[send_request({self.asin})] Exception occurred: {e}')
             raise ScrapError
 
-    def iteration(self):
+    def iteration(self, index, page):
+        self.index = index
+        self.page = page
         try:
             if not self.send_request():
-                try:
-                    if not self.send_request():
-                        return False
-                except ScrapError:
-                    return False
+                if not self.send_request():
+                    return None
         except ScrapError:
             return False
         return True
@@ -188,34 +196,41 @@ def load_reviews(asin, keywords='', domain='amazon.com', index=0, current_format
             requests.post('http://localhost:8832/products/target/collect/' + asin)
 
         if not canonical_link:
-            scraper.canonical_link = canonical_link = json_data['canonical_link']
+            scraper.canonical_link = canonical_link = json_data['canonical_link'].replace('/dp/', '/product-reviews/', 1)
     scraper.wd.get(canonical_link or 'https://www.' + domain + '/product-reviews/' + asin)
     page = 1
     try:
-        while True:
+        while ReviewsCollector.params_len - index > 5:
             try:
                 for index in range(index, ReviewsCollector.params_len):
-                    for page in (page, 11):
-                        if not scraper.iteration():
-                            print(requests.post(
-                                'http://45.14.245.223:1802/new_collection/',
-                                headers={
-                                    'accept': 'application/json',
-                                    'Content-Type': 'application/json'
-                                },
-                                json={
-                                    'name': 'Collected-' + asin,
-                                    'date': datetime.datetime.now(pytz.UTC).date().isoformat(),
-                                    'asins': [asin],
-                                },
-                            ))
+                    _break = False
+                    for page in range(page, 11):
+                        _iter = scraper.iteration(index, page)
+                        if not _iter:
+                            if _iter is False:
+                                _break = True
                             break
                     page = 1
+                    if _break:  # change proxy
+                        break
             except WebDriverException:
-                scraper.update_wd()
+                pass
             time.sleep(5)
             scraper.update_wd()
     finally:
+        if ReviewsCollector.params_len - index < 5:
+            print(requests.post(
+                'http://45.14.245.223:1802/new_collection/',
+                headers={
+                    'accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                json={
+                    'name': 'Collected-' + asin,
+                    'date': datetime.datetime.now(pytz.UTC).date().isoformat(),
+                    'asins': [asin],
+                },
+            ))
         queue.put(None)
         writer_thr.join()
 

@@ -31,7 +31,7 @@ def process_req1(asin, response, domain, q):
                 data_with_quantity = item[2]
                 break
         if not data_with_quantity:
-            return -1
+            return False
 
         res = []
 
@@ -51,7 +51,7 @@ def process_req1(asin, response, domain, q):
         if not res:
             print(process_data_res)
         q.put(res)
-        return bool(res) - (not bool(res))
+        return bool(res)
     except Exception as ex:
         print(ex)
         raise UnknownParseError
