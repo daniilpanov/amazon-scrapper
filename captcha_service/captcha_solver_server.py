@@ -9,9 +9,13 @@ from starlette.status import HTTP_200_OK, HTTP_500_INTERNAL_SERVER_ERROR
 
 from .captcha_solver.solve_captcha_with_model import CaptchaSolver
 
+capsolver = None
 if os.path.isdir('captcha_solver'):
-    capsolver = CaptchaSolver('captcha_solver')
-else:
+    try:
+        capsolver = CaptchaSolver('captcha_solver')
+    except:
+        pass
+if not capsolver:
     capsolver = CaptchaSolver(os.path.join('captcha_service', 'captcha_solver'))
 app = fastapi.FastAPI()
 app.add_middleware(

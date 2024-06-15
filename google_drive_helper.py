@@ -26,7 +26,8 @@ services = {
     'target': build_service('target'),
     'sellercentral': build_service('sellercentral'),
 }
-services[None] = services[DEFAULT_SERVICE_FILE]
+if DEFAULT_SERVICE_FILE:
+    services[None] = services[DEFAULT_SERVICE_FILE]
 
 
 def get_files(fields: typing.Optional[str] = None, q: typing.Optional[str] = None, serv: typing.Optional[str] = None):
