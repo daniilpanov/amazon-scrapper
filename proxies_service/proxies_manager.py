@@ -41,7 +41,8 @@ class AmazonProxy:
     @classmethod
     def update_proxies(cls, query_builder):
         cls.proxies = set()
-        _next = 'https://proxy.webshare.io/api/v2/proxy/list/?mode=backbone'
+        # _next = 'https://proxy.webshare.io/api/v2/proxy/list/?mode=backbone'
+        _next = 'https://proxy.webshare.io/api/v2/proxy/list/?mode=direct'
         while True:
             res = requests.get(
                 _next,
