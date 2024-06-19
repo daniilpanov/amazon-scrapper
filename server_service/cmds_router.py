@@ -23,34 +23,39 @@ router = APIRouter(prefix='/cmd')
 
 
 class CollectProductsForm(BaseModel):
-    task_name: str | None = None
+    alias: str | None = None
     category_name: str | None = None
     client_name: str | None = None
     asins: str
     target: str | None = None
-    collect_aspects: bool = True
+    collect_aspects: bool = False
     collect_reviews: bool = False
-    current_format: bool = True
-    collect_media_config: bool = False
+    current_format: bool = False
     top5: bool = False
 
 
 @router.post('/alias/products/collect')
 async def collect_products_form(config: CollectProductsForm):
-    asins = get_all_asins_from_text(config.asins)
+    asins = get_all_asins_from_text(config.asins) + ([config.target] if config.target else [])
+    print(config.target)
+    print(asins[0])
+    print(asins[0] == config.target)
     if config.category_name:
         await category_set_cmd({
-            'asins': asins + ([config.target] if config.target else []),
+            'asins': asins,
             'top5_asins': asins[:5] if config.top5 else [],
             'target': config.target or None,
             'cat_name': config.category_name,
             'client_name': config.client_name,
         })
     res = await products_router.collect_products_task(products_router.AsinsCollectingConfig(**{
-        'asins': [products_router.AsinsItemCollectConfig(asin=asin) for asin in asins],
+        'alias': config.alias,
+        'asins': [products_router.AsinsItemCollectConfig(
+            asin=asin,
+            collect_media_config=asin == config.target,  # if asin=target then collect media
+        ) for asin in asins],
         'collect_aspects': config.collect_aspects,
         'collect_reviews': config.collect_reviews,
-        'collect_media_config': config.collect_media_config,
         'current_format': config.current_format,
     }))
     return res

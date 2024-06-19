@@ -10,6 +10,7 @@ scene = ReviewsScene
 actions = []
 tasks_endpoints = ['tasks/get_available/products?stage=2']
 
+
 def do_task(task):
     requests.post(
         'http://localhost:8832/tasks/acquire/products/' + task['header_id'] + '/' + task['_id'])

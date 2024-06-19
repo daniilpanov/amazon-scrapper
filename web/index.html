@@ -7,7 +7,7 @@
     <!--suppress HtmlUnknownTarget -->
     <script src='/file?filepath=web/js/jquery.js'></script>
     <!--suppress HtmlUnknownTarget -->
-    <script src="/file?filepath=web/js/script.js"></script>
+    <script src="/file?filepath=web/js/new-script.js"></script>
     <!--suppress HtmlUnknownTarget -->
 <!--    <link href='/file?filepath=web/css/bootstrap.min.css' rel='stylesheet'>-->
     <!--suppress HtmlUnknownTarget -->
@@ -93,7 +93,7 @@
                 <h2>Collect products data</h2>
 
                 <div>
-                    <form method='post' action='/cmd/alias/collect_product'>
+                    <form method='post' action='/cmd/alias/products/collect'>
                         <p></p>
                         <div>
                             <label>
@@ -102,7 +102,7 @@
                             </label>
                             <label>
                                 Target ASIN (optional)
-                                <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN' required>
+                                <input type='text' name='target' class='form-control' placeholder='Target ASIN' required>
                             </label>
                             <div>
                                 <label>
@@ -113,11 +113,11 @@
                             </div>
                             <label>
                                 Category name (optional)
-                                <input type='text' name='category' class='form-control' placeholder='Category name'>
+                                <input type='text' name='category_name' class='form-control' placeholder='Category name'>
                             </label>
                             <label>
                                 Client alias (optional)
-                                <input type='text' name='client_alias' class='form-control'
+                                <input type='text' name='client_name' class='form-control'
                                        placeholder='Client alias'>
                             </label>
                         </div>
@@ -125,17 +125,17 @@
                         <div>
                             <p>
                                 <label>
-                                    <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect amazon aspects
+                                    <input type='checkbox' class='checkbox' name='collect_aspects' value='1' checked> Collect amazon aspects
                                 </label>
                             </p>
                             <p>
                                 <label>
-                                    <input type='checkbox' class='checkbox' name='collect_reviews' value='1'> Collect reviews
+                                    <input type='checkbox' class='checkbox' name='collect_reviews' value='1' checked> Collect reviews
                                 </label>
                             </p>
                             <p>
                                 <label>
-                                    <input type='checkbox' class='checkbox' name='current_format' value='1'> Reviews in current format?
+                                    <input type='checkbox' class='checkbox' name='current_format' value='1' checked> Reviews in current format?
                                 </label>
                             </p>
                             <p>

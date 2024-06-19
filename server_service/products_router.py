@@ -103,11 +103,25 @@ async def collect_products_task(config: AsinsCollectingConfig):
                 row = default_row.copy()
                 row['asin'] = item.asin
                 row['keywords'] = keyword
+                if item.current_format is not None:
+                    row['current_format'] = item.current_format
+                if item.collect_aspects is not None:
+                    row['collect_aspects'] = item.collect_aspects
+                if item.collect_aspects is not None:
+                    row['collect_media_config'] = item.collect_media_config
+                    row['target'] = item.collect_media_config
                 data.append(row)
         else:
             row = default_row.copy()
             row['asin'] = item.asin
             row['keywords'] = ''
+            if item.current_format is not None:
+                row['current_format'] = item.current_format
+            if item.collect_aspects is not None:
+                row['collect_aspects'] = item.collect_aspects
+            if item.collect_media_config is not None:
+                row['collect_media_config'] = item.collect_media_config
+                row['target'] = item.collect_media_config
             data.append(row)
     return orjson_response(tasks_manager.add_task('products', {
         'alias': config.alias,
