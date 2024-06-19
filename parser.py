@@ -1,5 +1,6 @@
 import datetime
 import re
+import urllib.parse
 
 import orjson
 import pytz
@@ -257,8 +258,11 @@ def parse_product(asin, html, tiny=False, domain='amazon.com'):
     canonical_link_item = bs.select_one('link[rel="canonical"]')
     if canonical_link_item:
         canonical_link = canonical_link_item['href']
+        canonical_link_parts = urllib.parse.urlparse(canonical_link)
+        canonical_prefix = canonical_link_parts.path.split('/')[1]
     else:
         canonical_link = None
+        canonical_prefix = None
     if not bs:
         print('NO BS! ASIN:', asin)
         return False
@@ -307,7 +311,7 @@ def parse_product(asin, html, tiny=False, domain='amazon.com'):
     else:
         price = None
     return [
-        asin, f'https://{domain}/dp/{asin}', canonical_link,
+        asin, f'https://{domain}/dp/{asin}', canonical_prefix,
         title, descr, pic, datetime.datetime.now(pytz.UTC),
         features, top5, price,
     ]
