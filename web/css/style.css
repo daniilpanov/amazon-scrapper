@@ -3,6 +3,21 @@ body {
     margin: 0;
     padding: 0;
     background: #f4f4f4;
+    min-height: 100dvh;
+}
+
+.toast {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    opacity: 0.9;
+}
+
+#sidebarMenu {
+    position: fixed;
+    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 #tasks_panel {

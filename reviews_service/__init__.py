@@ -5,6 +5,10 @@ import requests
 from . import get_reviews_by_selenium
 
 
+scene = None
+actions = []
+tasks_endpoints = ['']
+
 def do_task(task):
     requests.post(
         'http://localhost:8832/tasks/acquire/products/' + task['header_id'] + '/' + task['_id'])

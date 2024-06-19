@@ -1,456 +1,374 @@
 <!DOCTYPE html>
-<html lang='en'>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AMAZON WEB MANAGEMENT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Amazon Control Panel</title>
     <!--suppress HtmlUnknownTarget -->
     <script src='/file?filepath=web/js/jquery.js'></script>
     <!--suppress HtmlUnknownTarget -->
-    <link href='/file?filepath=web/css/bootstrap.min.css' rel='stylesheet'>
+    <script src="/file?filepath=web/js/script.js"></script>
     <!--suppress HtmlUnknownTarget -->
-    <link href='/file?filepath=web/css/bootstrap-icons.min.css' rel='stylesheet'>
+<!--    <link href='/file?filepath=web/css/bootstrap.min.css' rel='stylesheet'>-->
+    <!--suppress HtmlUnknownTarget -->
+<!--    <link href='/file?filepath=web/css/bootstrap-icons.min.css' rel='stylesheet'>-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <!--suppress HtmlUnknownTarget -->
     <link href='/file?filepath=web/css/style.css' rel='stylesheet'>
-    <!--suppress HtmlUnknownTarget -->
-    <script src='/file?filepath=web/js/bootstrap.bundle.min.js'></script>
-    <!--suppress HtmlUnknownTarget -->
-    <script src="/file?filepath=web/js/script.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-
 <body>
-<header>
-    <nav>
-        <div class='nav nav-tabs' id='nav-tab' role='tablist'>
-            <button class='nav-link active' id='nav-bsr-tab' data-bs-toggle='tab' data-bs-target='#nav-bsr'
-                    type='button' role='tab' aria-controls='nav-bsr' aria-selected='true'>BSR
-            </button>
-            <button class='nav-link' id='nav-reviews-tab' data-bs-toggle='tab' data-bs-target='#nav-reviews'
-                    type='button' role='tab' aria-controls='nav-reviews' aria-selected='false'>Reviews
-            </button>
-            <button class='nav-link' id='nav-product-tab' data-bs-toggle='tab' data-bs-target='#nav-products'
-                    type='button' role='tab' aria-controls='nav-products' aria-selected='false'>Products
-            </button>
-            <button class='nav-link' id='nav-full-collect-tab' data-bs-toggle='tab' data-bs-target='#nav-full-collect'
-                    type='button' role='tab' aria-controls='nav-full-collect' aria-selected='false'>Full collect
-            </button>
-            <a class='nav-link' id='nav-extra-tab' href="http://45.14.245.223/ai.html" target="_blank"
-                    aria-selected='false'>
-                Goto AI module <i class="bi bi-arrow-up-right-square-fill"></i>
-            </a>
-        </div>
-    </nav>
-</header>
-
-<main class='container-fluid'>
-    <div class='row flex-nowrap'>
-
-        <aside class='col-auto col-md-4 col-xl-3' id="tasks_panel">
-            <div class='d-flex flex-column align-items-center align-items-sm-start min-vh-100'>
-                <h3>Active tasks list</h3>
-                <ul id='tasks' style="margin-left: 0; padding-left: .1rem;">
-                    <!-- li with data-bs-task-id -->
+<div class="container-fluid">
+    <div class="row">
+        <nav id="sidebarMenu" class="col-md-4 col-lg-3 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <h3>Actions Menu</h3>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#dashboard" data-bs-toggle="tab">
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#collectProducts" data-bs-toggle="tab">
+                            Collect products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#CVnM" data-bs-toggle="tab">
+                            Categories management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#BSRc" data-bs-toggle="tab">
+                            Collect from BSR with category
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#BSR" data-bs-toggle="tab">
+                            Collect from BSR
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#getData" data-bs-toggle="tab">
+                            Get data
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#help" data-bs-toggle="tab">
+                            Help
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class='nav-link' href="http://45.14.245.223/ai.html" target="_blank">
+                            Goto AI module <i class="bi bi-arrow-up-right-square-fill"></i>
+                        </a>
+                    </li>
                 </ul>
             </div>
-        </aside>
+        </nav>
 
-        <div class='col-auto tab-content col-md-8 col-xl-9' id='content'>
-            <div class='tab-pane fade show active' id='nav-bsr' role='tabpanel' aria-labelledby='nav-bsr-tab'>
-                <h2>Collect ASINs from BSR</h2>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div>
-                            <form method='post' action='/cmd/alias/get_all' data-bs-special='true'>
-                                <p></p>
-                                <div>
-                                    <label>
-                                        Task name (optional)
-                                        <input type='text' name='alias' class='form-control' placeholder='Task name'>
-                                    </label>
-                                    <label>
-                                        Category name
-                                        <input type='text' name='category' class='form-control' placeholder='Category name'
-                                               required>
-                                    </label>
-                                    <label>
-                                        Client alias (optional)
-                                        <input type='text' name='client_alias' class='form-control'
-                                               placeholder='Client alias'>
-                                    </label>
-                                    <label>
-                                        BSR link (full URL)
-                                        <input type='text' name='bsr_link' class='form-control' placeholder='BSR link'
-                                               required>
-                                    </label>
-                                    <label>
-                                        Target ASIN (optional)
-                                        <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN'>
-                                    </label>
-                                </div>
-                                <p></p>
-                                <div>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='only_top5' value='1'> Only top5
-                                        </label>
-                                    </p>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='limit' value='1'> Limits (reviews
-                                            > 700)
-                                        </label>
-                                    </p>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='unique_brands' value='1'> Unique
-                                            brands
-                                        </label>
-                                    </p>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect
-                                            amazon
-                                            aspects
-                                        </label>
-                                    </p>
-                                    <button type='submit' class='btn btn-success'>Create task</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="offset-md-2 col-md-8">
-                        <div>
-                            <form method='post' action='/cmd/alias/get_bsr' data-bs-special='true'>
-                                <p></p>
-                                <div>
-                                    <label>
-                                        Task name (optional)
-                                        <input type='text' name='alias' class='form-control' placeholder='Task name'>
-                                    </label>
-                                    <label>
-                                        BSR link (full URL)
-                                        <input type='text' name='bsr_link' class='form-control' placeholder='BSR link'
-                                               required>
-                                    </label>
-                                </div>
-                                <p></p>
-                                <div>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='only_top5' value='1'> Only top5
-                                        </label>
-                                    </p>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='limit' value='1'> Limits (reviews
-                                            > 700)
-                                        </label>
-                                    </p>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='unique_brands' value='1'> Unique
-                                            brands
-                                        </label>
-                                    </p>
-                                    <button type='submit' class='btn btn-success'>Create task</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+        <main class="col-md-8 ms-sm-auto col-lg-9 px-md-4 offset-md-4 offset-lg-3 tab-content">
+            <div class="tab-pane" id="dashboard">
+                <h2>Dashboard</h2>
+
+                <p>Sorry, this tab is under developing. Here will be tasks monitoring and maybe any additional information</p>
             </div>
+            <div class="tab-pane" id="help">
+                <h2>Help</h2>
 
-            <div class='tab-pane fade' id='nav-reviews' role='tabpanel' aria-labelledby='nav-reviews-tab'>
-                <h2>Reviews management</h2>
-                <div class='row'>
-                    <div class='col-md-6'>
+                <p>Sorry, this tab is under developing. Here will be user manuals</p>
+            </div>
+            <div class="tab-pane fade show active" id="collectProducts">
+                <h2>Collect products data</h2>
+
+                <div>
+                    <form method='post' action='/cmd/alias/collect_product' data-bs-special='true'>
+                        <p></p>
                         <div>
-                            <h4>Collect reviews</h4>
-                            <form method='post' action='/tasks/add/collect_reviews'>
+                            <label>
+                                Task name (optional)
+                                <input type='text' name='alias' class='form-control' placeholder='Task name'>
+                            </label>
+                            <label>
+                                Target ASIN (optional)
+                                <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN' required>
+                            </label>
+                            <div>
                                 <label>
-                                    Task name (optional)
-                                    <input type='text' name='alias' class='form-control' placeholder='Task name'>
+                                    ASINs list
+                                    <textarea name='asins' class='form-control' placeholder='ASIN...'
+                                              required></textarea>
                                 </label>
-                                <label>
-                                    Enter the ASINs (divide by any punctuation symbol):
-                                    <textarea name='asins' class='form-control'
-                                              placeholder='ASINs or links list'></textarea>
-                                </label>
-                                <button type='submit' class='btn btn-success'>Create task</button>
-                            </form>
-                        </div>
-                    </div>
-                    <div class='col-md-6'>
-                        <div>
-                            <h4>Count reviews</h4>
-                            <form method='get' action='/cmd/reviews/count' data-bs-special='true'>
-                                <label>
-                                    Enter the ASIN:
-                                    <input type='text' name='asin' placeholder='ASIN or link'>
-                                </label>
-                                <button type='submit' class='btn btn-success'>Calculate</button>
-                            </form>
-                            <div id='count-reviews-result'>
-                                <!-- 30/100 or 21321/3423452 -->
                             </div>
+                            <label>
+                                Category name (optional)
+                                <input type='text' name='category' class='form-control' placeholder='Category name'>
+                            </label>
+                            <label>
+                                Client alias (optional)
+                                <input type='text' name='client_alias' class='form-control'
+                                       placeholder='Client alias'>
+                            </label>
                         </div>
-                    </div>
+                        <p></p>
+                        <div>
+                            <p>
+                                <label>
+                                    <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect amazon aspects
+                                </label>
+                            </p>
+                            <p>
+                                <label>
+                                    <input type='checkbox' class='checkbox' name='collect_reviews' value='1'> Collect reviews
+                                </label>
+                            </p>
+                            <p>
+                                <label>
+                                    <input type='checkbox' class='checkbox' name='current_format' value='1'> Reviews in current format?
+                                </label>
+                            </p>
+                            <button type='submit' class='btn btn-success'>Create task</button>
+                        </div>
+                    </form>
                 </div>
             </div>
+            <div class="tab-pane" id="CVnM">
+                <h2>Categories management</h2>
 
-            <div class='tab-pane fade' id='nav-products' role='tabpanel' aria-labelledby='nav-product-tab'>
-                <h2>Products management</h2>
-                <div class='row'>
-                    <div class='col-md-12'>
-                        <div>
-                            <h4>Get product info</h4>
-                            <div class='row'>
-                                <form class='col-md-4' method='get' action='/cmd/products/get' data-bs-special='true'>
-                                    <label>
-                                        Enter the ASIN:
-                                        <input type='text' class='form-control' name='asin' placeholder='ASIN or link'>
-                                    </label>
-                                    <button type='submit'>Get info</button>
-                                </form>
-
-                                <div class='col-md-8' id='product-info'>
-                                    <table class='data-table'>
-                                        <tr>
-                                            <td>ASIN</td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td>URL</td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Title</td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Description</td>
-                                            <td>
-                                                <div class='readmoreable'></div>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>Features</td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Top 5 phrases</td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Price<span>, $</span></td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Amazon Aspects</td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Category <span>[name | client]</span></td>
-                                            <td></td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-12">
-                        <div>
-                            <form method='post' action='/cmd/alias/collect_target' data-bs-special='true'>
-                                <p></p>
-                                <div>
-                                    <label>
-                                        Task name (optional)
-                                        <input type='text' name='alias' class='form-control' placeholder='Task name'>
-                                    </label>
-                                    <label>
-                                        Target ASIN (optional)
-                                        <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN' required>
-                                    </label>
-                                </div>
-                                <p></p>
-                                <div>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect amazon aspects
-                                        </label>
-                                    </p>
-                                    <button type='submit' class='btn btn-success'>Create task</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                    <div class='col-md-6'>
-                        <div>
-                            <h4>Collect products data</h4>
-                            <form method='get' action='/tasks/add/collect_products'>
-                                <label>
-                                    Task name (optional)
-                                    <input type='text' name='alias' class='form-control' placeholder='Task name'>
-                                </label>
-                                <label>
-                                    Enter the ASINs (divide by any punctuation symbol):
-                                    <textarea name='asins' class='form-control'
-                                              placeholder='ASINs or links list'></textarea>
-                                </label>
-                                <button type='submit' class='btn btn-success'>Create task</button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class='col-md-6'>
-                        <div>
-                            <h4>Set category for ASINs</h4>
-                            <form method='post' action='/cmd/category/set' data-bs-special='true'>
-                                <label>
-                                    Category name
-                                    <input type='text' class='form-control' name='category' placeholder='Category name'>
-                                </label>
-                                <label>
-                                    Client alias
-                                    <input type='text' class='form-control' name='alias-client'
-                                           placeholder='Client alias'>
-                                </label>
-                                <label>
-                                    Enter the ASINs (divide by any punctuation symbol):
-                                    <textarea name='asins' class='form-control'
-                                              placeholder='ASINs or links list'></textarea>
-                                </label>
-                                <button type='submit' class='btn btn-success'>Set category</button>
-                            </form>
-                        </div>
-                    </div>
+                <div>
+                    <h4>Set category for ASINs</h4>
+                    <form method='post' action='/cmd/category/set' data-bs-special='true'>
+                        <label>
+                            Category name
+                            <input type='text' class='form-control' name='category' placeholder='Category name'>
+                        </label>
+                        <label>
+                            Client alias
+                            <input type='text' class='form-control' name='alias-client'
+                                   placeholder='Client alias'>
+                        </label>
+                        <p></p>
+                        <label>
+                            Enter the ASINs (divide by any punctuation symbol):
+                            <textarea name='asins' class='form-control'
+                                      placeholder='ASINs or links list'></textarea>
+                        </label>
+                        <p></p>
+                        <button type='submit' class='btn btn-success'>Set category</button>
+                    </form>
                 </div>
             </div>
-
-            <div class='tab-pane fade' id='nav-full-collect' role='tabpanel' aria-labelledby='nav-full-collect-tab'>
-                <h2>Collect all info about ASINs</h2>
+            <div class="tab-pane" id="getData">
+                <h2>View of collected data</h2>
+                <hr>
                 <div class="row">
-                    <div class="col-md-12">
-                        <div>
-                            <form method='post' action='/cmd/alias/collect_all_info' data-bs-special='true'>
-                                <p></p>
-                                <div>
-                                    <label>
-                                        Task name (optional)
-                                        <input type='text' name='alias' class='form-control' placeholder='Task name'>
-                                    </label>
-                                    <label>
-                                        Category name
-                                        <input type='text' name='category' class='form-control' placeholder='Category name'
-                                               required>
-                                    </label>
-                                    <label>
-                                        Client alias (optional)
-                                        <input type='text' name='client_alias' class='form-control'
-                                               placeholder='Client alias'>
-                                    </label>
-                                    <label>
-                                        Target ASIN (optional)
-                                        <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN'>
-                                    </label>
-                                </div>
-                                <div>
-                                    <label>
-                                        ASINs list
-                                        <textarea name='asins' class='form-control' placeholder='ASIN...'
-                                               required></textarea>
-                                    </label>
-                                </div>
-                                <p></p>
-                                <div>
-                                    <p>
-                                        <label>
-                                            <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect amazon aspects
-                                        </label>
-                                    </p>
-                                    <button type='submit' class='btn btn-success'>Create task</button>
-                                </div>
-                            </form>
-                        </div>
+                    <h4 class="col-12">Count reviews</h4>
+                    <form method='get' action='/cmd/reviews/count' data-bs-special='true' class="col-md-6">
+                        <label>
+                            Enter the ASIN:
+                            <input type='text' name='asin' placeholder='ASIN or link'>
+                        </label>
+                        <button type='submit' class='btn btn-success'>Calculate</button>
+                    </form>
+                    <div id='count-reviews-result' class="col-md-6">
+                        <!-- 30/100 or 21321/3423452 -->
+                        Result: <span id="reviewsCount">?</span> of ASIN <span id="reviewsCountASIN">?</span>
                     </div>
                 </div>
-            </div>
-
-            <div class='tab-pane fade' id='task-content'>
-                <h1></h1>
-                <div class='tab' data-bs-script='collect_reviews'>
+                <hr>
+                <div>
+                    <h4>Get product info</h4>
                     <div class='row'>
-                        <div class='col-md-12'>
-                            <table>
-                                <thead>
-                                <tr>
-                                    <th>ASINs</th>
-                                    <th>Count</th>
-                                </tr>
-                                </thead>
-                                <tbody data-bs-key='asins-count'>
+                        <form class='col-md-4' method='get' action='/cmd/products/get' data-bs-special='true'>
+                            <label>
+                                Enter the ASIN:
+                                <input type='text' class='form-control' name='asin' placeholder='ASIN or link'>
+                            </label>
+                            <button type='submit' class="btn btn-success">Get info</button>
+                        </form>
 
-                                </tbody>
+                        <div class='col-md-8' id='product-info'>
+                            <table class='data-table'>
+                                <tr>
+                                    <td>ASIN</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>URL</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Title</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Description</td>
+                                    <td>
+                                        <div class='readmoreable'></div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Features</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Top 5 phrases</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Price<span>, $</span></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Amazon Aspects</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Category <span>[name | client]</span></td>
+                                    <td></td>
+                                </tr>
                             </table>
                         </div>
                     </div>
                 </div>
-                <div class='tab' data-bs-script='collect_products'>
-                    <h1>Collected product cards:</h1>
-                    <ul data-bs-key='asins'></ul>
-                    <div data-bs-key='media'></div>
-                </div>
-                <div class='tab' data-bs-script='collect_departments'>
-                    <div class='row'>
-                        <div class='col-md-12'>
-                            BSR URL: <a href data-bs-key='bsr_url'></a>
-                        </div>
-                        <div class='col-md-12'>
-                            <table>
-                                <thead>
-                                <tr>
-                                    <th>ASIN</th>
-                                    <th>URL</th>
-                                </tr>
-                                </thead>
-                                <tbody data-bs-key='asins-links'>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="tab" data-bs-script="waiting">
-                    <h1>Task running!</h1>
-                </div>
             </div>
-        </div>
+            <div class="tab-pane" id="BSR">
+                <h2>Collect data from BSR</h2>
+
+                <form method='post' action='/cmd/alias/get_bsr' data-bs-special='true'>
+                    <p></p>
+                    <div>
+                        <label>
+                            Task name (optional)
+                            <input type='text' name='alias' class='form-control' placeholder='Task name'>
+                        </label>
+                        <label>
+                            BSR link (full URL)
+                            <input type='text' name='bsr_link' class='form-control' placeholder='BSR link'
+                                   required>
+                        </label>
+                    </div>
+                    <p></p>
+                    <div>
+                        <p>
+                            <label>
+                                <input type='checkbox' class='checkbox' name='only_top5' value='1'> Only top5
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type='checkbox' class='checkbox' name='limit' value='1'> Limits (reviews
+                                > 700)
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type='checkbox' class='checkbox' name='unique_brands' value='1'> Unique
+                                brands
+                            </label>
+                        </p>
+                        <button type='submit' class='btn btn-success'>Create task</button>
+                    </div>
+                </form>
+            </div>
+            <div class="tab-pane" id="BSRc">
+                <h2>Collect data from BSR</h2>
+
+                <form method='post' action='/cmd/alias/get_all' data-bs-special='true'>
+                    <p></p>
+                    <div>
+                        <label>
+                            Task name (optional)
+                            <input type='text' name='alias' class='form-control' placeholder='Task name'>
+                        </label>
+                        <label>
+                            Category name
+                            <input type='text' name='category' class='form-control' placeholder='Category name'
+                                   required>
+                        </label>
+                        <label>
+                            Client alias (optional)
+                            <input type='text' name='client_alias' class='form-control'
+                                   placeholder='Client alias'>
+                        </label>
+                        <label>
+                            BSR link (full URL)
+                            <input type='text' name='bsr_link' class='form-control' placeholder='BSR link'
+                                   required>
+                        </label>
+                        <label>
+                            Target ASIN (optional)
+                            <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN'>
+                        </label>
+                    </div>
+                    <p></p>
+                    <div>
+                        <p>
+                            <label>
+                                <input type='checkbox' class='checkbox' name='only_top5' value='1'> Only top5
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type='checkbox' class='checkbox' name='limit' value='1'> Limits (reviews
+                                > 700)
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type='checkbox' class='checkbox' name='unique_brands' value='1'> Unique
+                                brands
+                            </label>
+                        </p>
+                        <p>
+                            <label>
+                                <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect
+                                amazon
+                                aspects
+                            </label>
+                        </p>
+                        <button type='submit' class='btn btn-success'>Create task</button>
+                    </div>
+                </form>
+            </div>
+        </main>
     </div>
-</main>
+</div>
 
-<script src='/file?filepath=web/js/readmore-plugin.js'></script>
 <script>
-    const readmoreupdatef = function () {
-        $('.readmoreable').readmore({
-            moreLink: '<a href="#">Развернуть</a>',
-            lessLink: '<a href="#">Свернуть</a>',
-        })
-    };
-    readmoreupdatef();
-    window.onresize = readmoreupdatef;
+    function showNotification(message) {
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast';
+        toastEl.innerHTML = `
+                <div class="toast-header">
+                    <strong class="me-auto">Notification</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            `;
+        document.body.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+        setTimeout(function() {
+            toast.hide();
+            toastEl.parentNode.removeChild(toastEl);
+        }, 5000);
+    }
 </script>
+
+<div class="toast" id="notificationToast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+        <strong class="me-auto">Notification</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body" id="notificationBody">
+    </div>
+</div>
+<!--suppress HtmlUnknownTarget -->
+<!--<script src='/file?filepath=web/js/bootstrap.bundle.min.js'></script>-->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
-
-<ul id="task-template" style="display: none;">
-    <li class="task">
-        <a href="#">
-            <div class="task-progress btn btn-success"></div>
-            <div class="task-wrapper row">
-                <div class="task-remove col-xl-1">&times;</div>
-                <div class="task-progress-text col-xl-2">0%</div>
-                <div class="task-content col-xl-6"></div>
-                <div class="task-time col-xl-3">00:00:00</div>
-            </div>
-        </a>
-    </li>
-</ul>
 </html>
