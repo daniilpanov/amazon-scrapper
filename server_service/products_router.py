@@ -6,7 +6,6 @@ import parser
 from helpers import orjson_response
 from pydantic import BaseModel, field_validator
 from pymongo.errors import PyMongoError, BulkWriteError
-from starlette.requests import Request
 from starlette.responses import Response
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT, HTTP_201_CREATED, HTTP_404_NOT_FOUND, \
     HTTP_400_BAD_REQUEST
@@ -92,6 +91,7 @@ async def collect_products_task(config: AsinsCollectingConfig):
         'current_format': config.current_format,
         'collect_aspects': config.collect_aspects,
         'collect_media_config': config.collect_media_config,
+        'target': config.collect_media_config,
         'domain': config.domain,
     }
     data = []

@@ -25,7 +25,7 @@ def do_task(task):
                     ],
             })
             return False
-        json_data = dict(zip(('asin', 'product_url', 'canonical_link', 'product_title', 'product_descr', 'picture_url', 'parse_datetime', 'features', 'top_5_phrases', 'product_price'), data))
+        json_data = dict(zip(('asin', 'product_url', 'canonical_prefix', 'product_title', 'product_descr', 'picture_url', 'parse_datetime', 'features', 'top_5_phrases', 'product_price'), data))
         json_data['parse_datetime'] = json_data['parse_datetime'].isoformat()
         if json_data.get('aspects_collect'):
             aspects = parser.parse_aspects(asin, html)
