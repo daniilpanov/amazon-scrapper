@@ -26,7 +26,7 @@ for router in os.listdir(prefix):
     router = router[:-3]
     modules.append(router)
     try:
-        module = importlib.import_module('.' + router)
+        module = importlib.import_module('.' + router, 'server_service')
     except (ImportError, TypeError):
         module = importlib.import_module(router)
     try:

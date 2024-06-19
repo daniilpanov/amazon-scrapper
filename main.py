@@ -1,122 +1,124 @@
 import importlib
+import random
 import sys
-
 import requests.exceptions
+import time
+import PyQt5.QtWebEngineWidgets
+from PyQt5.QtNetwork import QNetworkProxy
+from PyQt5.QtWidgets import QApplication
 
-import helpers
-
-
-class TaskException(Exception):
-    play = False
-    report = True
-    reload = False
+from exceptions import *
 
 
-class SceneErrorException(TaskException):
-    play = True
+class Starter:
 
+    # Yes, it is antipattern, but it is very compact
+    def __init__(self, service: str, *args, **kwargs):
+        self.service = service
+        # Create an app
+        app = QApplication([])
+        try:
+            # Import module
+            module = importlib.reload(importlib.import_module(service))  # raise_2
+            # Import scene and actions; create scene
+            self.scene = module.scene(*args, **kwargs)  # raise_1
+            self.actions = module.actions  # raise_1
+            # Import tasks endpoint
+            self.endpoints = module.tasks_endpoints  # raise_1
+            # Connect events
+            self.scene.success_signal.connect(self.success)
+            self.scene.report_signal.connect(self.report)
+            self.scene.reload_signal.connect(self.reload)
+            self.scene.proxy_change_signal.connect(self.proxyChange)
+            # Setup actions
+            actions_inst = [action(self.scene) for action in self.actions]
+            self.scene.setActionObjects(actions_inst)
+            # Low down server payload
+            time.sleep(5)
+            print('iter!')
+            self.next_task()
+            app.exec_()
+        except AttributeError:  # MARK: raise_1
+            print('Fail: service', service, 'configured invalid!')
+            raise
+        except ImportError:  # MARK: raise_2
+            print('Fail: service', service, 'not found!')
+            raise
+        finally:
+            QApplication.quit()
 
-class SceneCriticalErrorException(TaskException):
-    pass
+    def success(self, task_id: str):
+        self.scene.endScene()
+        requests.patch('http://localhost:8832/tasks/finish/' + task_id)
+        self.reload(task_id)
+        return self.next_task()
 
+    def report(self, task_id: str, error: str, play: bool, reload: bool):
+        requests.patch('http://localhost:8832/tasks/report/' + task_id, json={
+            'confirm': True,
+            'stop': (not play and not reload),
+            'errors': [error],
+        })
+        if not play and reload:
+            self.reload(task_id)
 
-class ActionErrorException(TaskException):
-    play = True
+    def reload(self, task_id):
+        requests.post('http://localhost:8832/tasks/release/' + task_id)
 
+    def proxyChange(self, task_id):
+        if self.scene.need_proxy:
+            proxy_conf = requests.get('http://localhost:8833/proxy/random')
+            if proxy_conf.status_code == 200:
+                proxy_conf = proxy_conf.json()
+                if 'details' not in proxy_conf:
+                    print(proxy_conf)
+                    del proxy_conf['cookies']
+                    del proxy_conf['useragent']
+                    self.scene.setGlobalProxy(proxy_conf['addr'], proxy_conf['port'], proxy_conf['username'], proxy_conf['password'])
+            return self.reload(task_id)
+        return self.report(task_id, 'Connection error!', False, False)
 
-class ActionCriticalErrorException(TaskException):
-    pass
+    def next_task(self):
+        # Get tasks and do it
+        tasks = []
+        try:
+            while not tasks:
+                for endpoint in self.endpoints:
+                    tasks.extend(requests.get('http://localhost:8832/' + endpoint).json())
+                time.sleep(5)
+                print('got tasks:', tasks)
+            self.do_task(random.choice(tasks))
+        except (requests.exceptions.RequestException, ConnectionError, TimeoutError):
+            pass
 
-
-class InvalidConfErrorException(TaskException):
-    report = False
-
-
-class UnknownErrorException(TaskException):
-    play = False
-
-
-class StopException(TaskException):
-    play = False
-    report = False
-
-
-class ReloadException(TaskException):
-    report = False
-    reload = True
-
-
-def do_task(task, scene, actions, *args, **kwargs):
-    scene_inst = scene(*args, **kwargs)
-    actions_inst = [action(*args, **kwargs) for action in actions]
-    scene_inst.setActionObjects(actions_inst)
-    try:
-        proxy = helpers.get_proxy(True)
-        scene_inst.setProxy(proxy)
-        if isinstance(proxy.get('cookies'), dict):
-            scene_inst.setCookies(proxy['cookies'])
-        if proxy.get('useragent'):
-            scene_inst.setUA(proxy['useragent'])
-    except (requests.exceptions.RequestException, ConnectionError, TimeoutError):
-        pass
-    try:
-        scene_inst.configure(task)
-    except AttributeError:
-        pass
-    try:
-        scene_inst.beginActions()
-    except AttributeError:
-        pass
-    try:
+    def do_task(self, task):
+        requests.post('http://localhost:8832/tasks/acquire/products/' + task['header_id'] + '/' + task['_id'])
+        if self.scene.need_proxy:
+            proxy_conf = requests.get('http://localhost:8833/proxy/random')
+            if proxy_conf.status_code == 200:
+                proxy_conf = proxy_conf.json()
+                if 'details' not in proxy_conf:
+                    print(proxy_conf)
+                    del proxy_conf['cookies']
+                    del proxy_conf['useragent']
+                    self.scene.configure(proxy_conf)
+        else:
+            self.scene.configure()
+        # set scene task
+        self.scene.beginScene(task)
+        # do until scene_inst can be iterated
         while True:
+            # try - except must be INSIDE the cycle - this is cause why I can't put it into the while condition
             try:
-                if not next(scene_inst):
+                # If false - stop
+                if not next(self.scene):
+                    print('end task')
                     break
-            except TaskException as e:
-                if e.report:
-                    requests.patch('http://localhost:8832/tasks/report/' + task['_id'], json={
-                        'confirm': True,
-                        'stop': (not e.play and not e.reload),
-                        'errors': [
-                            str(e),
-                        ],
-                    })
-                    if not e.play and e.reload:
-                        requests.post('http://localhost:8832/tasks/release/' + task['_id'])
-                elif not e.play:
-                    if e.reload:
-                        requests.post('http://localhost:8832/tasks/release/' + task['_id'])
-                    else:
-                        requests.post('http://localhost:8832/tasks/finish/' + task['_id'])
-    except StopIteration:
-        pass
-    finally:
-        scene_inst.endActions()
-
-
-def start(service: str, *args, **kwargs):
-    try:
-        # Import module
-        module = importlib.import_module(service)
-        # Import scene and actions
-        scene = module.scene
-        actions = module.actions
-        # Import tasks endpoint
-        tasks_endpoints = module.tasks_endpoints
-        # Wait for tasks
-        while True:
-            try:
-                tasks = requests.get('http://localhost:8832/' + tasks_endpoints).json()
-            except (requests.exceptions.RequestException, ConnectionError, TimeoutError):
-                continue
-            for task in tasks:
-                do_task(task, scene, actions, *args, **kwargs)
-    except AttributeError:
-        print('Fail: service', service, 'configured invalid!')
-        raise
-    except ImportError:
-        print('Fail: service', service, 'not found!')
-        raise
+            except ProxyChangeException:
+                if self.scene.need_proxy:
+                    self.proxyChange(task['_id'])
+                else:
+                    self.report(task['_id'], 'Connection error!', False, False)
 
 
 def run_exec(executable: str, *args, **kwargs):
@@ -142,7 +144,7 @@ if __name__ == '__main__':
     if 'service' in params:
         if not params['service'].endswith('_service'):
             params['service'] += '_service'
-        start(**params)
+        Starter(**params)
     elif 'exec' in params:
         _exec = params['exec']
         del params['exec']

@@ -1,5 +1,4 @@
 import requests
-from PyQt5.QtWidgets import QApplication
 
 import QtWebView
 import parser
@@ -17,6 +16,7 @@ class ProductCardScene(QtWebView.Scraper):
 
     def beginScene(self, task):
         super().beginScene(task)
+        self.task = task
         data = task.get('data', {})
         self.asin = data['asin']
         self.url = 'https://www.' + data.get('domain', 'amazon.com') + '/' + data.get('canonical_prefix', '') + '/dp/' + data['asin']
@@ -27,6 +27,7 @@ class ProductCardScene(QtWebView.Scraper):
     def __next__(self):
         super().__iter__()
         self.setUrl(self.url)
+        print('setUrl')
 
     def actionHtmlLoaded(self, html):
         if not super().actionHtmlLoaded(html):
@@ -54,6 +55,7 @@ class ProductCardScene(QtWebView.Scraper):
 
         if media_data and self.target:
             requests.post('http://localhost:8832/products/target/collect/' + self.asin)
-        QApplication.quit()  # exit
+        print('Really fast mzfck!!!')
+        self.success_signal.emit(self.task['_id'])  # exit
         return True
 

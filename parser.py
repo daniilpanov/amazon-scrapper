@@ -211,7 +211,12 @@ def parse_media_links(html):
     if not data_json:
         print('no data')
         return None
-    data = orjson.loads(data_json.group(1))
+    data_json_str = data_json.group(1).replace('\n', '').replace('\\', '')
+    try:
+        data = orjson.loads(data_json_str)
+    except:
+        print(data_json_str[23490:23530])
+        raise
     return data
 
 

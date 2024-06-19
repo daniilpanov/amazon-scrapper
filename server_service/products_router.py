@@ -1,6 +1,7 @@
 import datetime
 
 from fastapi import APIRouter, HTTPException
+from starlette.requests import Request
 
 import parser
 from helpers import orjson_response
@@ -55,14 +56,15 @@ class AspectsResultItem(BaseModel):
 class ProductsResultItem(BaseModel):
     asin: str
     product_url: str
-    canonical_link: str
+    canonical_prefix: str
     product_title: str
     product_descr: str
     picture_url: str
     parse_datetime: datetime.datetime
     features: dict[str, str] | None
     top_5_phrases: list[str] | None
-    product_price: int | None
+    product_price: int | float | None
+    media_data: dict | list | None = None
 
     _cast_parse_datetime = field_validator('parse_datetime', mode='before')(_cast_iso_dt_to_dt_obj)
 
@@ -125,6 +127,9 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 
 @router.post('/set_result/card/{asin}')
 async def set_product_result(asin: str, card: ProductsResultItem):
+# async def set_product_result(request: Request, asin: str):
+    # print(await request.json())
+    # return
     try:
         AMADATA['product_card'].replace_one({'asin': asin}, card.model_dump(), upsert=True)
     except PyMongoError as e:
@@ -139,7 +144,7 @@ async def set_aspects_result(asin: str, aspects: list[AspectsResultItem]):
         data = []
         for aspect in aspects:
             replace_aspects.append(aspect.Aspect)
-            data.append(aspect.to_dict(asin))
+            data.append(aspect.compare_with_asin(asin))
         print(replace_aspects)
         print(data)
         AMADATA['aspects'].delete_many({'ASIN': asin, 'Aspect': {'$in': replace_aspects}})
