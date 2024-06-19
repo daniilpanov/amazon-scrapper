@@ -7,6 +7,7 @@ import orjson
 import requests
 from bs4 import BeautifulSoup
 from fastapi import APIRouter, Body
+from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
@@ -16,8 +17,43 @@ from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR,
 import helpers
 from db_mongo import db
 from helpers import get_all_asins_from_text
+from . import products_router
 
 router = APIRouter(prefix='/cmd')
+
+
+class CollectProductsForm(BaseModel):
+    task_name: str | None = None
+    category_name: str | None = None
+    client_name: str | None = None
+    asins: str
+    target: str | None = None
+    collect_aspects: bool = True
+    collect_reviews: bool = False
+    current_format: bool = True
+    collect_media_config: bool = False
+    top5: bool = False
+
+
+@router.post('/alias/products/collect')
+async def collect_products_form(config: CollectProductsForm):
+    asins = get_all_asins_from_text(config.asins)
+    if config.category_name:
+        await category_set_cmd({
+            'asins': asins + ([config.target] if config.target else []),
+            'top5_asins': asins[:5] if config.top5 else [],
+            'target': config.target or None,
+            'cat_name': config.category_name,
+            'client_name': config.client_name,
+        })
+    res = await products_router.collect_products_task(products_router.AsinsCollectingConfig(**{
+        'asins': [products_router.AsinsItemCollectConfig(asin=asin) for asin in asins],
+        'collect_aspects': config.collect_aspects,
+        'collect_reviews': config.collect_reviews,
+        'collect_media_config': config.collect_media_config,
+        'current_format': config.current_format,
+    }))
+    return res
 
 
 @router.get('/reviews/count')
@@ -57,7 +93,8 @@ async def reviews_count_cmd(asin: str, current_format: bool = True):
 
 @router.post('/category/set')
 async def category_set_cmd(data=Body()):
-    data = orjson.loads(data)
+    if not isinstance(data, (dict, list, tuple)):
+        data = orjson.loads(data)
     asins = data['asins']
     if type(asins) is str:
         asins = get_all_asins_from_text(asins)

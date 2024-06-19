@@ -90,18 +90,20 @@ class Starter:
     def next_task(self):
         # Get tasks and do it
         tasks = []
-        try:
-            while not tasks:
+        while not tasks:
+            try:
                 for endpoint in self.endpoints:
                     tasks.extend(requests.get('http://localhost:8832/' + endpoint).json())
                 time.sleep(5)
-                print('got tasks:', tasks)
-            self.do_task(random.choice(tasks))
-        except (requests.exceptions.RequestException, ConnectionError, TimeoutError):
-            pass
+            except (requests.exceptions.RequestException, ConnectionError, TimeoutError):
+                pass
+            print('got tasks:', tasks)
+        self.do_task(random.choice(tasks))
 
     def do_task(self, task):
-        requests.post('http://localhost:8832/tasks/acquire/products/' + task['header_id'] + '/' + task['_id'])
+        res = requests.post('http://localhost:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
+        if res.status_code == 409:
+            return self.next_task()
         if self.scene.need_proxy:
             proxy_conf = requests.get('http://localhost:8833/proxy/random')
             if proxy_conf.status_code == 200:

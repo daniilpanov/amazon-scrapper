@@ -35,6 +35,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="#aspects" data-bs-toggle="tab">
+                            Aspects management
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#CVnM" data-bs-toggle="tab">
                             Categories management
                         </a>
@@ -79,11 +84,16 @@
 
                 <p>Sorry, this tab is under developing. Here will be user manuals</p>
             </div>
+            <div class="tab-pane" id="aspects">
+                <h2>Aspects management</h2>
+
+                <p>Sorry, this tab is under developing. Here will be aspects list with filters and 'Export CSV' function</p>
+            </div>
             <div class="tab-pane fade show active" id="collectProducts">
                 <h2>Collect products data</h2>
 
                 <div>
-                    <form method='post' action='/cmd/alias/collect_product' data-bs-special='true'>
+                    <form method='post' action='/cmd/alias/collect_product'>
                         <p></p>
                         <div>
                             <label>
@@ -126,6 +136,11 @@
                             <p>
                                 <label>
                                     <input type='checkbox' class='checkbox' name='current_format' value='1'> Reviews in current format?
+                                </label>
+                            </p>
+                            <p>
+                                <label>
+                                    <input type='checkbox' class='checkbox' name='top5' value='1'> Set the first five ASINs in the list as top5 ASINs at the category
                                 </label>
                             </p>
                             <button type='submit' class='btn btn-success'>Create task</button>
