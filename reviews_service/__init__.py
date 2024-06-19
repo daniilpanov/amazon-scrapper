@@ -2,12 +2,13 @@ import time
 
 import requests
 
+from reviews_service.scene import ReviewsScene
 from . import get_reviews_by_selenium
 
 
-scene = None
+scene = ReviewsScene
 actions = []
-tasks_endpoints = ['']
+tasks_endpoints = ['tasks/get_available/products?stage=2']
 
 def do_task(task):
     requests.post(

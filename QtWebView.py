@@ -28,6 +28,8 @@ class Scraper(QWebEngineView):
     # signals
     # [task_id]
     success_signal = pyqtSignal(str)
+    # [task_id, stage]
+    set_stage_signal = pyqtSignal(str, int)
     # [task_id, error, play, reload]
     report_signal = pyqtSignal(str, str, bool, bool)
     # [task_id]

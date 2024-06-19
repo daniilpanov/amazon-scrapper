@@ -55,7 +55,9 @@ class ProductCardScene(QtWebView.Scraper):
 
         if media_data and self.target:
             requests.post('http://localhost:8832/products/target/collect/' + self.asin)
-        print('Really fast mzfck!!!')
+        if self.task.get('stage') == 1:
+            self.set_stage_signal.emit(self.task['_id'], 2)
+            return True
         self.success_signal.emit(self.task['_id'])  # exit
         return True
 
