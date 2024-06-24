@@ -95,7 +95,8 @@ class Starter:
                 for endpoint in self.endpoints:
                     tasks.extend(requests.get('http://localhost:8832/' + endpoint).json())
                 time.sleep(5)
-            except (requests.exceptions.RequestException, ConnectionError, TimeoutError):
+            except (requests.exceptions.RequestException, ConnectionError, TimeoutError) as e:
+                print(e)
                 pass
             print('got tasks:', tasks)
         self.do_task(random.choice(tasks))
