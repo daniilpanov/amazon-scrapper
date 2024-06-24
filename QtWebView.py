@@ -17,6 +17,9 @@ class WebEnginePage(QWebEnginePage):
         print(f'JS alert [{url}]:', msg)
         # QMessageBox.information(self.view(), "Alert", msg)
 
+    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        print(f"JavaScript error at line {lineNumber} of {sourceID}: {message}")
+
 
 class Scraper(QWebEngineView):
     default_web_page = WebEnginePage
@@ -25,11 +28,16 @@ class Scraper(QWebEngineView):
     need_proxy: bool = False
     domain: str = 'amazon.com'
     task: dict
+    scripts: dict[str, str] | None = None
     # signals
     # [task_id]
     success_signal = pyqtSignal(str)
     # [task_id, stage]
     set_stage_signal = pyqtSignal(str, int)
+    # [task_id, stage]
+    set_stage_res_signal = pyqtSignal(str, int, object)
+    # [task_id, stage]
+    set_stage_res_key_signal = pyqtSignal(str, int, object, str)
     # [task_id, error, play, reload]
     report_signal = pyqtSignal(str, str, bool, bool)
     # [task_id]
@@ -44,24 +52,26 @@ class Scraper(QWebEngineView):
         # empty actions list
         self.actions = []
 
-        # Load qwebchannel.js
-        file = QFile('./qwebchannel.js')
-        if not file.open(QFile.ReadOnly):
-            print('Failed to load qwebchannel.js')
-            return
-        script = QTextStream(file).readAll()
-        file.close()
+        # Load scripts
+        self.scripts = {'qwebchannel.js': './qwebchannel.js'} | (self.scripts or {})  # add first defaults
+        for script_name, script_path in self.scripts.items():
+            file = QFile(script_path)
+            if not file.open(QFile.ReadOnly):
+                print('Failed to load', script_name)
+                return
+            script_content = QTextStream(file).readAll()
+            file.close()
 
-        # Create QWebEngineScript
-        qwebchannel_script = QWebEngineScript()
-        qwebchannel_script.setName('qwebchannel.js')
-        qwebchannel_script.setSourceCode(script)
-        qwebchannel_script.setInjectionPoint(QWebEngineScript.DocumentCreation)
-        qwebchannel_script.setWorldId(QWebEngineScript.MainWorld)
-        qwebchannel_script.setRunsOnSubFrames(False)
+            # Create QWebEngineScript
+            script_widget = QWebEngineScript()
+            script_widget.setName(script_name)
+            script_widget.setSourceCode(script_content)
+            script_widget.setInjectionPoint(QWebEngineScript.DocumentCreation)
+            script_widget.setWorldId(QWebEngineScript.MainWorld)
+            script_widget.setRunsOnSubFrames(False)
 
-        # Insert script into profile
-        self.profile.scripts().insert(qwebchannel_script)
+            # Insert script into profile
+            self.profile.scripts().insert(script_widget)
 
         # Create a QWebChannel and register a QObject to communicate with JavaScript
         self.channel = QWebChannel(self.page())

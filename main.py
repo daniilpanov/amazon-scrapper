@@ -28,6 +28,8 @@ class Starter:
             # Connect events
             self.scene.success_signal.connect(self.success)
             self.scene.set_stage_signal.connect(self.set_stage)
+            self.scene.set_stage_res_signal.connect(self.set_stage)
+            self.scene.set_stage_res_key_signal.connect(self.set_stage)
             self.scene.report_signal.connect(self.report)
             self.scene.reload_signal.connect(self.reload)
             self.scene.proxy_change_signal.connect(self.proxyChange)
@@ -54,11 +56,13 @@ class Starter:
         self.reload(task_id)
         return self.next_task()
 
-    def set_stage(self, task_id: str, stage: int):
+    def set_stage(self, task_id: str, stage: int, res: object | None = None, key: str | None = None):
         self.scene.endScene()
         requests.patch('http://localhost:8832/tasks/stage/' + task_id, json={
             'release': True,
             'stage': stage,
+            'result': res,
+            'result_key': key,
         })
         return self.next_task()
 

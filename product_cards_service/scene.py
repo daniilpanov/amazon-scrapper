@@ -1,3 +1,5 @@
+import random
+
 import requests
 
 import QtWebView
@@ -19,7 +21,9 @@ class ProductCardScene(QtWebView.Scraper):
         self.task = task
         data = task.get('data', {})
         self.asin = data['asin']
-        self.url = 'https://www.' + data.get('domain', 'amazon.com') + '/' + data.get('canonical_prefix', '') + '/dp/' + data['asin']
+        self.url = ('https://www.' + data.get('domain', 'amazon.com') + '/' + (
+            data['canonical_prefix'] + '/' if 'canonical_prefix' in data else '') + '/dp/' + data['asin']
+                    + '/ref=sr_1_' + str(random.randint(1, 6)))
         self.collect_aspects = data.get('collect_aspects', True)
         self.collect_media_config = data.get('collect_media_config', False)
         self.target = data.get('target', self.collect_media_config)
@@ -55,9 +59,11 @@ class ProductCardScene(QtWebView.Scraper):
 
         if media_data and self.target:
             requests.post('http://localhost:8832/products/target/collect/' + self.asin)
+
+        # exit
         if self.task.get('stage') == 1:
-            self.set_stage_signal.emit(self.task['_id'], 2)
+            self.set_stage_res_signal.emit(self.task['_id'], 2, {'prefix': product_card_json.get('canonical_prefix')})
             return True
-        self.success_signal.emit(self.task['_id'])  # exit
+        self.success_signal.emit(self.task['_id'])
         return True
 

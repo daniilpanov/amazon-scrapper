@@ -22,7 +22,7 @@ class StageForm(BaseModel):
     release: bool = False
     stage: int = None
     result: typing.Any = None
-    result_key: str = None
+    result_key: str | None = None
 
 
 @router.delete('/delete/{header_id}')

@@ -2,12 +2,13 @@ import time
 
 import requests
 
+from reviews_service.actions import ReviewsLoader
 from reviews_service.scene import ReviewsScene
 from . import get_reviews_by_selenium
 
 
 scene = ReviewsScene
-actions = []
+actions = [ReviewsLoader]
 tasks_endpoints = ['tasks/get_available/products?stage=2']
 
 

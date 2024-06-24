@@ -73,11 +73,11 @@ def process_req2(asin, response, domain, q):
 def write_data(q: Queue):
     data = -1
     try:
-        while data:
+        while data is not None:
             data = q.get()
             requests.post('http://localhost:8832/products/set_result/reviews', json=data)
     except KeyboardInterrupt:
-        while not q.empty() and data:
+        while not q.empty() and data is not None:
             data = q.get()
             requests.post('http://localhost:8832/products/set_result/reviews', json=data)
         raise
