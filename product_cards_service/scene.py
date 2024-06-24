@@ -62,7 +62,7 @@ class ProductCardScene(QtWebView.Scraper):
 
         # exit
         if self.task.get('stage') == 1:
-            self.set_stage_res_signal.emit(self.task['_id'], 2, {'prefix': product_card_json.get('canonical_prefix')})
+            self.set_stage_res_signal.emit(self.task['_id'], 3, {'prefix': product_card_json.get('canonical_prefix')})
             return True
         self.success_signal.emit(self.task['_id'])
         return True
