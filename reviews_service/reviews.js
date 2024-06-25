@@ -306,6 +306,9 @@ class CollectReviews {
                 this.per_index_callback(res_arr);
             }
         }
+        if (this.finish_callback) {
+            this.finish_callback(fin_res_arr);
+        }
     }
 
     reset() {
