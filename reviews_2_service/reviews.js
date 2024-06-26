@@ -15,8 +15,12 @@ class CollectReviews {
     serviceunavailableerror_callback = null
     finish_callback = null
     // Current params
-    named_filters
-    named_options
+    named_filters = {}
+    named_options = {}
+    indexes_map = {}
+    indexes_map_prev = {}
+    indexes_limits = {}
+    indexes_half_period = {0: 1}
     format_type_filter = null
     format_type_options = null
     params_count = 1
@@ -36,7 +40,7 @@ class CollectReviews {
     async waitLoad() {
         for (let i = 0; i < 1000; ++i) {
             await new Promise(resolve => setTimeout(resolve, 100))
-            if (!document.querySelector('.cr-list-loading.reviews-loading:not(.aok-hidden)')) {
+            if (!document.querySelector('.cr-list-loading.reviews-loading:not(.aok-hidden)') && document.querySelector('.a-pagination .a-last')) {
                 return
             }
         }
@@ -184,8 +188,20 @@ class CollectReviews {
         return reviews
     }
 
+    async waitPopover($0) {
+        const ex = (resolve) => {
+            if ($0.closest('div.a-popover').getAttribute('aria-hidden') === 'true') {
+                setTimeout(ex, 100, resolve)
+            } else {
+                resolve();
+            }
+        };
+        return new Promise(resolve => setTimeout(ex, 100, resolve))
+    }
+
     async updateParams() {
-        const filters = document.querySelectorAll('[data-cel-widget="cm_cr-view_opt_sort_filter"] select')
+        const filters = document.querySelectorAll('[id*="cm_cr-view_opt_"] select')
+        filters[0].scrollIntoView()
         this.named_filters = {}
         this.named_options = {}
         let opts
@@ -193,30 +209,67 @@ class CollectReviews {
             filter.click()
             const key = filter.id.replace('-dropdown', '')
             this.named_filters[key] = filter
-            await new Promise(resolve => setTimeout(resolve, 100))
+            await new Promise(resolve => setTimeout(resolve, 500))
             opts = []
-            document.querySelectorAll('.a-popover li[aria-labelledby*="' + filter.id + '"]').forEach(o => opts.push(o))
+            document.querySelectorAll('.a-popover li[aria-labelledby*="' + filter.id + '"] a').forEach(o => opts.push(o))
             this.named_options[key] = opts
         }
         // Remove redundant params
         this.named_options['star-count'].pop(7)
         this.named_options['star-count'].pop(6)
         // Move special filters
-        if (this.named_filters.includes('format-type')) {
+        if ('format-type' in this.named_filters) {
             this.format_type_filter = this.named_filters['format-type']
             this.format_type_options = this.named_options['format-type']
             delete this.named_filters['format-type']
             delete this.named_options['format-type']
         }
         // Count filters params variants
-        for (const el of this.named_options) {
-            this.params_count *= el.length || 1
+        let l
+        for (const i in this.named_options) {
+            this.params_count *= l || 1
+            l = this.named_options[i].length
+            this.indexes_map[i] = 0
+            this.indexes_map_prev[i] = 0
+            this.indexes_limits[i] = l - 1
+            this.indexes_half_period[i] = this.params_count
         }
     }
 
+    getDirectionOfIndex(idx) {
+        if (this.indexes_map[idx] >= this.indexes_limits[idx]) {
+            return -1
+        }
+        const diff = Boolean(this.indexes_map_prev[idx] - this.indexes_map[idx] + 1)
+        return diff - !diff
+    }
+
+    // snake-like switching pattern
     async switching() {
-        // snake-like switching pattern
-        // 1 1 1 1 -> 2 1 1 1 -> 2 2 1 1 -> 1 2 1 1 -> 1 2 2 1 -> 2 2 2 1 -> 2 1 2 1 -> 1 1 2 1 -> 1 1 3 1 -> 2 1 3 1 -> 2 2 3 1 -> 1 2 3 1 -> 1 2 4 1 -> 2 2 4 1 -> 2 1 4 1 -> 1 1 4 1
+        let mod = 1, idx
+        const keys = Object.keys(this.named_options).reverse(), add_keys = Object.keys(this.named_options).reverse()
+        add_keys.push(0)
+        for (idx of keys) {
+            if (!this.index) {
+                ++this.index
+                return
+            }
+            mod = this.index % this.indexes_half_period[idx]
+            if (!mod) {
+                break
+            }
+        }
+        const dir = this.getDirectionOfIndex(idx)
+        this.indexes_map_prev = {...this.indexes_map}
+        this.indexes_map[idx] += dir
+        this.named_filters[idx].click()
+        const opts = this.named_options[idx] = []
+        await new Promise(resolve => setTimeout(resolve, 100))
+        document.querySelectorAll('.a-popover li[aria-labelledby*="' + this.named_filters[idx].id + '"] a').forEach(o => opts.push(o))
+        this.named_options[idx][this.indexes_map[idx]].scrollIntoView()
+        this.named_options[idx][this.indexes_map[idx]].click()
+        ++this.index
+        this.page = 1
     }
 
     async collect() {
@@ -224,17 +277,20 @@ class CollectReviews {
 
         if (this.format_type_filter) {
             this.format_type_filter.click()
+            const opts = this.format_type_options = []
             await new Promise(resolve => setTimeout(resolve, 100))
-            this.format_type_options[this.current_format].click()
+            document.querySelectorAll('.a-popover li[aria-labelledby*="' + this.format_type_filter.id + '"] a').forEach(o => opts.push(o))
+            this.format_type_options[Number(this.current_format)].click()
         }
 
         let result, res_arr = [], fin_res_arr = []
         for (; this.index < this.params_count; ++this.index) {
+            await this.waitLoad()
             await this.switching()
             for (; this.page <= 10; ++this.page) {
                 await this.waitLoad()
                 try {
-                    result = await this.sendRequest()
+                    result = this.parse()
                     console.log(result)
                     if (!result || !result.length) {
                         break
@@ -268,12 +324,14 @@ class CollectReviews {
                     }
                 }
                 try {
+                    console.log(document.querySelector('.a-pagination .a-last > a'))
                     document.querySelector('.a-pagination .a-last > a').click()
+                    document.querySelector('.a-pagination .a-last > a').scrollIntoView()
                 } catch (e) {
+                    console.log(e)
                     break
                 }
             }
-            this.page = 1
             if (this.per_index_callback) {
                 this.per_index_callback(res_arr);
             }
@@ -295,9 +353,9 @@ function monthToNum(month) {
     if (month[0] === 'f') {
         r = 2
     } else if (month[0] === 'j' && month[1] === 'u') {
-        r = 6 + ('l' in month)
+        r = 6 + (month.includes('l'))
     } else if (month[0] === 'a') {
-        r = 4 + 4 * ('g' in month)
+        r = 4 + 4 * (month.includes('g'))
     } else if (month[0] === 'm') {
         r = 3 + 2 * (!month.includes('r'))
     } else if (month[0] === 's') {
