@@ -20,3 +20,7 @@ class ReviewsLoader(QObject):
         self.scene.index = index
         self.scene.page_number = page
         next(self.scene)
+
+    @pyqtSlot()
+    def finish(self):
+        self.scene.success_signal.emit(self.scene.task['_id'])

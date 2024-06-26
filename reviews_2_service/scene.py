@@ -17,9 +17,9 @@ class ReviewsScene(Scraper):
         self.task = task
         data = task.get('data', {})
         self.asin = data['asin']
-        self.prefix = task.get('result', {}).get('canonical_prefix')
+        self.prefix = task.get('result', {}).get('prefix')
         self.url = ('https://www.' + data.get('domain', 'amazon.com') + (
-            self.prefix + '/' if self.prefix else '') + '/product-service/' + data['asin']
+            '/' + self.prefix if self.prefix else '') + '/product-reviews/' + data['asin']
                     + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews&pageNumber=1')
         self.index = task.get('index', 0)
         self.page_number = task.get('page', 1)
@@ -34,6 +34,9 @@ class ReviewsScene(Scraper):
             return False
         if self.setAmazonLocation():
             return False
+        print(self.url)
+        with open('test.html', 'w', encoding='utf-8') as f:
+            f.write(str(self.soup))
         self.runJs('''new QWebChannel(qt.webChannelTransport, async (channel) => {
             const RLC = channel.objects.ReviewsLoader;
             const collector = new CollectReviews("%s", %s, %s, "%s", "%s");
@@ -46,6 +49,9 @@ class ReviewsScene(Scraper):
                     return false;
                 }
                 return ++fails_counter;
+            };
+            collector.finish_callback = () => {
+                RCL.finish();
             };
             collector.index = %s;
             collector.page = %s;

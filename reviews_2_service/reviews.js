@@ -283,7 +283,7 @@ class CollectReviews {
             this.format_type_options[Number(this.current_format)].click()
         }
 
-        let result, res_arr = [], fin_res_arr = []
+        let result, res_arr = []
         for (; this.index < this.params_count; ++this.index) {
             await this.waitLoad()
             await this.switching()
@@ -303,11 +303,6 @@ class CollectReviews {
                             res_arr.push(item)
                         }
                     }
-                    if (this.finish_callback) {
-                        for (const item of result){
-                            fin_res_arr.push(item)
-                        }
-                    }
                 } catch (e) {
                     console.log(e.message)
                     if (e.message === 'Invalid ASIN') {
@@ -324,7 +319,6 @@ class CollectReviews {
                     }
                 }
                 try {
-                    console.log(document.querySelector('.a-pagination .a-last > a'))
                     document.querySelector('.a-pagination .a-last > a').click()
                     document.querySelector('.a-pagination .a-last > a').scrollIntoView()
                 } catch (e) {
@@ -337,7 +331,7 @@ class CollectReviews {
             }
         }
         if (this.finish_callback) {
-            this.finish_callback(fin_res_arr);
+            this.finish_callback();
         }
     }
 
