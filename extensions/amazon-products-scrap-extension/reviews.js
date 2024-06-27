@@ -115,11 +115,7 @@ class CollectReviews {
                     review_date_dict['month'] = null;
                 }
                 if ((Object.values(review_date_dict)).every((i) => {return i > 0;})) {
-                    review_date = [
-                        review_date_dict['year'],
-                        review_date_dict['month'],
-                        review_date_dict['day'],
-                    ];
+                    review_date = review_date_dict['year'] + '-' + review_date_dict['month'].toString().padStart(2, 0) + '-' + review_date_dict['day'].toString().padStart(2, 0);
                 }
                 else {
                     review_date = null;

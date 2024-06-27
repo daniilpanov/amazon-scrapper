@@ -1,4 +1,5 @@
 import datetime
+import typing
 
 import pytz
 from fastapi import APIRouter, HTTPException
@@ -78,7 +79,7 @@ class ReviewsResultItem(BaseModel):
     description: str
     rating: int = 0
     helpful: int = 0
-    options: str | None
+    options: typing.Any
 
     _cast_date = field_validator('date', mode='before')(_cast_iso_dt_to_dt_obj)
 
