@@ -1,5 +1,6 @@
 import datetime
 
+import pytz
 from fastapi import APIRouter, HTTPException
 from starlette.requests import Request
 
@@ -60,13 +61,10 @@ class ProductsResultItem(BaseModel):
     product_title: str
     product_descr: str
     picture_url: str
-    parse_datetime: datetime.datetime
     features: dict[str, str] | None
     top_5_phrases: list[str] | None
     product_price: int | float | None
     media_data: dict | list | None = None
-
-    _cast_parse_datetime = field_validator('parse_datetime', mode='before')(_cast_iso_dt_to_dt_obj)
 
 
 class ReviewsResultItem(BaseModel):
@@ -81,9 +79,7 @@ class ReviewsResultItem(BaseModel):
     rating: int = 0
     helpful: int = 0
     options: str | None
-    scrap_datetime: datetime.datetime
 
-    _cast_scrap_datetime = field_validator('scrap_datetime', mode='before')(_cast_iso_dt_to_dt_obj)
     _cast_date = field_validator('date', mode='before')(_cast_iso_dt_to_dt_obj)
 
 
@@ -131,7 +127,10 @@ async def collect_products_task(config: AsinsCollectingConfig):
 @router.post('/set_result/reviews')
 async def set_reviews_result(reviews: list[ReviewsResultItem]):
     try:
-        AMADATA['customer_reviews'].insert_many([model.model_dump() for model in reviews], ordered=False)
+        AMADATA['customer_reviews'].insert_many(
+            [model.model_dump() | {'scrap_datetime': datetime.datetime.now(pytz.UTC)} for model in reviews],
+            ordered=False,
+        )
     except BulkWriteError:
         pass
     except PyMongoError as e:
@@ -145,7 +144,11 @@ async def set_product_result(asin: str, card: ProductsResultItem):
     # print(await request.json())
     # return
     try:
-        AMADATA['product_card'].replace_one({'asin': asin}, card.model_dump(), upsert=True)
+        AMADATA['product_card'].replace_one(
+            {'asin': asin},
+            card.model_dump() | {'parse_datetime': datetime.datetime.now(pytz.UTC)},
+            upsert=True,
+        )
     except PyMongoError as e:
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     return Response(status_code=HTTP_204_NO_CONTENT)
