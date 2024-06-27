@@ -132,7 +132,6 @@ def parse_reviews(asin, html, domain='amazon.com'):
             review_options = review_options.text
     else:
         review_options = []
-    parse_datetime = datetime.datetime.now(pytz.UTC)
 
     # data.append({
     #     'Product Link': 'https://www.amazon.com/dp/' + self.params['asin'],
@@ -159,7 +158,6 @@ def parse_reviews(asin, html, domain='amazon.com'):
         'rating': review_rating,
         'helpful': helpful_votes,
         'options': review_options,
-        'scrap_datetime': parse_datetime,
     }
 
 
@@ -312,6 +310,5 @@ def parse_product(asin, html, tiny=False, domain='amazon.com'):
         price = None
     return [
         asin, f'https://{domain}/dp/{asin}', canonical_prefix,
-        title, descr, pic, datetime.datetime.now(pytz.UTC),
-        features, top5, price,
+        title, descr, pic, features, top5, price,
     ]

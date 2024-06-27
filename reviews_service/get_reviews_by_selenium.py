@@ -174,9 +174,7 @@ def load_reviews(asin, keywords='', domain='amazon.com', index=0, current_format
         soup = BeautifulSoup(html, features='lxml')
         data = parser.parse_product(asin, soup, domain=domain)
         json_data = dict(
-            zip(('asin', 'product_url', 'canonical_link', 'product_title', 'product_descr', 'picture_url',
-                 'parse_datetime', 'features', 'top_5_phrases', 'product_price'), data))
-        json_data['parse_datetime'] = json_data['parse_datetime'].isoformat()
+            zip(('asin', 'product_url', 'canonical_link', 'product_title', 'product_descr', 'picture_url', 'features', 'top_5_phrases', 'product_price'), data))
 
         if scraper.aspects_collect:
             aspects = parser.parse_aspects(asin, soup)

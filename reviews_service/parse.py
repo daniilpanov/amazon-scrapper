@@ -46,7 +46,6 @@ def process_req1(asin, response, domain, q):
 
             json_data = parser.parse_reviews(asin, item[2].strip(), domain)
             json_data['date'] = json_data['date'].isoformat()
-            json_data['scrap_datetime'] = json_data['scrap_datetime'].isoformat()
             res.append(json_data)
         if not res:
             print(process_data_res)

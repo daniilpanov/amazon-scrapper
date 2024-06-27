@@ -41,9 +41,7 @@ class ProductCardScene(QtWebView.Scraper):
         print('load data')
         product_card = parser.parse_product(self.asin, self.soup)
         product_card_json = dict(zip((
-                             'asin', 'product_url', 'canonical_prefix', 'product_title', 'product_descr', 'picture_url',
-                             'parse_datetime', 'features', 'top_5_phrases', 'product_price'), product_card))
-        product_card_json['parse_datetime'] = product_card_json['parse_datetime'].isoformat()
+                             'asin', 'product_url', 'canonical_prefix', 'product_title', 'product_descr', 'picture_url', 'features', 'top_5_phrases', 'product_price'), product_card))
         if self.collect_aspects:
             aspects = parser.parse_aspects(self.asin, self.soup)
             if aspects:
