@@ -70,7 +70,7 @@ class BSRCollectingConfig(BaseModel):
     bsr: str
     limit: bool = True
     unique_brands: bool = False
-    count: int = 5
+    count: int = 30
     target: str | None = None
     with_continue: bool = False
 

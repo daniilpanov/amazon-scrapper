@@ -18,7 +18,7 @@ $(document).ready(() => {
     $('form[action="/cmd/alias/get_all"]').submit((e) => {
         e.preventDefault();
         let data = {};
-        for (const i of $('form[action="/cmd/alias/get_all"]').serializeArray()) {
+        for (const i of $(e.target).serializeArray()) {
             data[i.name] = i.value;
         }
         fetch(base_url + '/cmd/alias/bsr/collect', {
