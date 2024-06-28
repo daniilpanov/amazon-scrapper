@@ -25,17 +25,16 @@ async function run({root, task}, sender, sendResponse) {
     }
     sendResponse('OK');
     let needle_tab = null, created = false;
-    const {asin} = task.data;
     // check if needle tab is already opened
     for (const tab of await chrome.tabs.query({})) {
-        if (tab.url.startsWith('https://www.amazon.') && tab.url.includes('/dp/' + asin)) {
+        if (tab.url === task.data.bsr) {
             needle_tab = tab;
             break;
         }
     }
     if (!needle_tab) {
         needle_tab = await chrome.tabs.create({
-            url: 'https://www.' + (task.data.domain || 'amazon.com') + '/' + (task.result.prefix ? task.result.prefix + '/' : '') + 'dp/' + asin + '?th=1',
+            url: task.data.bsr,
             active: false,
         });
         created = true;
@@ -54,16 +53,15 @@ async function run({root, task}, sender, sendResponse) {
             target: {tabId: needle_tab.id},
             args: [task],
             func: (task) => {
-                const bsr_collector = CollectBSR(task.data.limit, task.data.count, task.data.target, task.data.unique_brands, task.data.domain);
-                let url = task.data.bsr || bsr_collector.getBSRURL(task.data.asin);
-                if (!url) {
+                const bsr_collector = new CollectBSR(task.data.limit, task.data.count, task.data.target, task.data.unique_brands, task.data.domain);
+                if (!task.data.bsr) {
                     return {errors: ['Can not get BSR URL! Please enter full URL']};
                 }
                 let asins_links = {};
-                for (const asin of bsr_collector.getASINsLInks(url)) {
+                for (const asin of bsr_collector.getASINsLInks(task.data.bsr)) {
                     asins_links[asin] = `https://${task.data.domain}/dp/${asin}`;
                 }
-                return {data: {bsr_url: url, asins_links: asins_links}};
+                return {data: {bsr_url: task.data.bsr, asins_links: asins_links}};
             },
         });
         data = result[0].result?.data;
@@ -112,7 +110,7 @@ async function run({root, task}, sender, sendResponse) {
         });
     } finally {
         if (created) {
-            await chrome.tabs.remove(needle_tab.id);
+            // await chrome.tabs.remove(needle_tab.id);
         }
     }
 }
