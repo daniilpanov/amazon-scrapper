@@ -67,7 +67,7 @@ class BSRCollectingConfig(BaseModel):
     domain: str = 'amazon.com'
     category: str | None = None
     client: str | None = None
-    asin_bsr: str
+    bsr: str
     limit: bool = True
     unique_brands: bool = False
     count: int = 5
@@ -83,11 +83,7 @@ class BSRResult(BaseModel):
 
 @router.post('/alias/bsr/collect')
 async def collect_bsr_cmd(config: BSRCollectingConfig):
-    asins = get_all_asins_from_text(config.asin_bsr)
-    if asins:
-        data = {'asin': asins[0]}
-    else:
-        data = {'bsr': config.asin_bsr}
+    data = {'bsr': config.bsr}
     data['domain'] = config.domain
     data['limit'] = config.limit
     data['unique_brands'] = config.unique_brands
