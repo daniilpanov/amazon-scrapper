@@ -16,8 +16,10 @@ let interval_id, self;
                     break;
                 case 'products':
                     const all_extensions = await chrome.management.getAll();
+                    let found = false;
                     all_extensions.forEach(ext => {
                         if (ext.name.toLowerCase().includes('amazon products scraper')) {
+                            found = true;
                             chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]}, (res) => {
                                 switch (res) {
                                     case 'OK':
@@ -34,7 +36,9 @@ let interval_id, self;
                             console.log('Message sent to', ext.name, `[${ext.id}]`);
                         }
                     });
-                    console.log('No extensions found for script products!');
+                    if (!found) {
+                        console.log('No extensions found for script products!');
+                    }
                     break;
                 default:
                     console.log('Unknown script:', data[i].script);

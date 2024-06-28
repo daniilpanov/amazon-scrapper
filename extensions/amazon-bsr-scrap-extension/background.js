@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function run({root, task}, sender, sendResponse) {
     console.log(task);
     let acq = await fetch(
-        'http://195.201.194.213:8832/tasks/acquire/products/' + task.header_id + '/' + task._id,
+        'http://195.201.194.213:8832/tasks/acquire/bsr/' + task.header_id + '/' + task._id,
         {method: 'post'},
     )
     if (acq.status !== 200) {
@@ -237,7 +237,7 @@ async function run({root, task}, sender, sendResponse) {
                     method: 'POST',
                 });
             }
-            await fetch('http://45.14.245.223:1802/new_collection/', {
+            /*await fetch('http://45.14.245.223:1802/new_collection/', {
                     'accept': 'application/json',
                     'Content-Type': 'application/json',
                     body: JSON.stringify({
@@ -246,7 +246,7 @@ async function run({root, task}, sender, sendResponse) {
                         'asins': [asin],
                     }),
                 },
-            );
+            );*/
         }
     } catch (e) {
         console.log(e);

@@ -141,9 +141,6 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 
 @router.post('/set_result/card/{asin}')
 async def set_product_result(asin: str, card: ProductsResultItem):
-# async def set_product_result(request: Request, asin: str):
-    # print(await request.json())
-    # return
     try:
         AMADATA['product_card'].replace_one(
             {'asin': asin},

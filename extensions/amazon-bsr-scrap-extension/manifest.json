@@ -1,0 +1,26 @@
+{
+  "name": "Amazon Products Scraper",
+  "description": "Scraper addon works with AmaScrap",
+  "version": "1.0",
+  "manifest_version": 3,
+  "icons": {},
+  "action": {},
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "permissions": [
+    "webNavigation",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "alarms",
+    "declarativeContent",
+    "storage",
+    "management"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
