@@ -1,5 +1,5 @@
 {
-  "name": "Amazon Products Scraper",
+  "name": "Amazon BSR Scraper",
   "description": "Scraper addon works with AmaScrap",
   "version": "1.0",
   "manifest_version": 3,

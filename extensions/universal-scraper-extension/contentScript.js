@@ -9,14 +9,15 @@ let interval_id, self;
         }
         const res = await fetch('http://195.201.194.213:8832/tasks/get_available');
         const data = await res.json();
+        let all_extensions, found;
         for (let i in data) {
             switch (data[i].script) {
                 case 'h10':
                     setTimeout(h10scrap, 500, data[i]);
                     break;
                 case 'products':
-                    const all_extensions = await chrome.management.getAll();
-                    let found = false;
+                    all_extensions = await chrome.management.getAll();
+                    found = false;
                     all_extensions.forEach(ext => {
                         if (ext.name.toLowerCase().includes('amazon products scraper')) {
                             found = true;
@@ -38,6 +39,32 @@ let interval_id, self;
                     });
                     if (!found) {
                         console.log('No extensions found for script products!');
+                    }
+                    break;
+                case 'bsr':
+                    all_extensions = await chrome.management.getAll();
+                    found = false;
+                    all_extensions.forEach(ext => {
+                        if (ext.name.toLowerCase().includes('amazon bsr scraper')) {
+                            found = true;
+                            chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]}, (res) => {
+                                switch (res) {
+                                    case 'OK':
+                                        console.log('task started:', data[i]);
+                                        break;
+                                    case 'fail':
+                                        console.log('task can not be started due to unknown error:', data[i]);
+                                        break;
+                                    case 'busy':
+                                        console.log('task is busy:', data[i]);
+                                        break;
+                                }
+                            })
+                            console.log('Message sent to', ext.name, `[${ext.id}]`);
+                        }
+                    });
+                    if (!found) {
+                        console.log('No extensions found for script BSR!');
                     }
                     break;
                 default:
