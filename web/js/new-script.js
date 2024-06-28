@@ -13,6 +13,20 @@ $(document).ready(() => {
             headers: {
                 'Content-Type': 'application/json',
             },
-        })
-    })
+        });
+    });
+    $('form[action="/cmd/alias/get_all"]').submit((e) => {
+        e.preventDefault();
+        let data = {};
+        for (const i of $('form[action="/cmd/alias/get_all"]').serializeArray()) {
+            data[i.name] = i.value;
+        }
+        fetch(base_url + '/cmd/alias/bsr/collect', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    });
 });

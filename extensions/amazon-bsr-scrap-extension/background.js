@@ -54,11 +54,20 @@ async function run({root, task}, sender, sendResponse) {
             target: {tabId: needle_tab.id},
             args: [task],
             func: (task) => {
-                window.products_collector = CollectProducts(task.data.asin);
-                return {data: window.products_collector.getProductCard(task.data.collect_media_config)};
+                const bsr_collector = CollectBSR(task.data.limit, task.data.count, task.data.target, task.data.unique_brands, task.data.domain);
+                let url = task.data.bsr || bsr_collector.getBSRURL(task.data.asin);
+                if (!url) {
+                    return {errors: ['Can not get BSR URL! Please enter full URL']};
+                }
+                let asins_links = {};
+                for (const asin of bsr_collector.getASINsLInks(url)) {
+                    asins_links[asin] = `https://${task.data.domain}/dp/${asin}`;
+                }
+                return {data: {bsr_url: url, asins_links: asins_links}};
             },
         });
         data = result[0].result?.data;
+        data.task = task.data;
         errors = result[0].result?.errors;
         // handle errors
         if (errors) {
@@ -78,7 +87,7 @@ async function run({root, task}, sender, sendResponse) {
         }
         // load data
         if (Object.keys(data || {}).length) {
-            fetch('http://195.201.194.213:8832/products/set_result/card/', {
+            fetch('http://195.201.194.213:8832/cmd/alias/bsr/finish/', {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -86,18 +95,6 @@ async function run({root, task}, sender, sendResponse) {
                 body: JSON.stringify(data),
             });
         }
-        fetch('http://195.201.194.213:8832/tasks/finish/' + task._id, {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            method: 'PATCH',
-        });
-        fetch('http://195.201.194.213:8832/tasks/release/' + task._id, {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            method: 'POST',
-        });
     } catch (e) {
         console.log(e);
         fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {

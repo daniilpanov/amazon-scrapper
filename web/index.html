@@ -151,6 +151,8 @@
             <div class="tab-pane" id="CVnM">
                 <h2>Categories management</h2>
 
+                <h5>This form is under development</h5>
+
                 <div>
                     <h4>Set category for ASINs</h4>
                     <form method='post' action='/cmd/category/set' data-bs-special='true'>
@@ -176,10 +178,13 @@
             </div>
             <div class="tab-pane" id="getData">
                 <h2>View of collected data</h2>
+
+                <h5>This form is under development</h5>
+
                 <hr>
                 <div class="row">
                     <h4 class="col-12">Count reviews</h4>
-                    <form method='get' action='/cmd/reviews/count' data-bs-special='true' class="col-md-6">
+                    <form method='get' action='/cmd/reviews/count' class="col-md-6">
                         <label>
                             Enter the ASIN:
                             <input type='text' name='asin' placeholder='ASIN or link'>
@@ -251,7 +256,7 @@
             <div class="tab-pane" id="BSR">
                 <h2>Collect data from BSR</h2>
 
-                <form method='post' action='/cmd/alias/get_bsr' data-bs-special='true'>
+                <form method='post' action='/cmd/alias/get_all'>
                     <p></p>
                     <div>
                         <label>
@@ -262,6 +267,10 @@
                             BSR link (full URL)
                             <input type='text' name='bsr_link' class='form-control' placeholder='BSR link'
                                    required>
+                        </label>
+                        <label>
+                            Target ASIN (optional)
+                            <input type='text' name='target_asin' class='form-control' placeholder='Target ASIN'>
                         </label>
                     </div>
                     <p></p>
@@ -290,7 +299,7 @@
             <div class="tab-pane" id="BSRc">
                 <h2>Collect data from BSR</h2>
 
-                <form method='post' action='/cmd/alias/get_all' data-bs-special='true'>
+                <form method='post' action='/cmd/alias/get_all'>
                     <p></p>
                     <div>
                         <label>
@@ -332,15 +341,8 @@
                         </p>
                         <p>
                             <label>
-                                <input type='checkbox' class='checkbox' name='unique_brands' value='1'> Unique
+                                <input disabled type='checkbox' class='checkbox' name='unique_brands' value='1'> Unique
                                 brands
-                            </label>
-                        </p>
-                        <p>
-                            <label>
-                                <input type='checkbox' class='checkbox' name='amazon_aspects' value='1'> Collect
-                                amazon
-                                aspects
                             </label>
                         </p>
                         <button type='submit' class='btn btn-success'>Create task</button>

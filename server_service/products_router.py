@@ -3,7 +3,6 @@ import typing
 
 import pytz
 from fastapi import APIRouter, HTTPException
-from starlette.requests import Request
 
 import parser
 from helpers import orjson_response

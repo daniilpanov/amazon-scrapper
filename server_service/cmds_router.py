@@ -15,6 +15,7 @@ from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR,
     HTTP_503_SERVICE_UNAVAILABLE
 
 import helpers
+import tasks_manager
 from db_mongo import db
 from helpers import get_all_asins_from_text
 from . import products_router
@@ -59,6 +60,70 @@ async def collect_products_form(config: CollectProductsForm):
         'current_format': config.current_format,
     }))
     return res
+
+
+class BSRCollectingConfig(BaseModel):
+    alias: str | None = None
+    domain: str = 'amazon.com'
+    category: str | None = None
+    client: str | None = None
+    asin_bsr: str
+    limit: bool = True
+    unique_brands: bool = False
+    count: int = 5
+    target: str | None = None
+    with_continue: bool = False
+
+
+class BSRResult(BaseModel):
+    task: BSRCollectingConfig
+    bsr_url: str
+    asins_links: dict[str, str]
+
+
+@router.post('/alias/bsr/collect')
+async def collect_bsr_cmd(config: BSRCollectingConfig):
+    asins = get_all_asins_from_text(config.asin_bsr)
+    if asins:
+        data = {'asin': asins[0]}
+    else:
+        data = {'bsr': config.asin_bsr}
+    data['domain'] = config.domain
+    data['limit'] = config.limit
+    data['unique_brands'] = config.unique_brands
+    data['target'] = config.target
+    data['count'] = config.count
+    data['category'] = config.category
+    data['client'] = config.client
+    data['with_continue'] = config.with_continue
+    return helpers.orjson_response(tasks_manager.add_task('bsr', {
+        'alias': config.alias,
+    }, data))
+
+
+@router.post('/alias/bsr/finish')
+async def set_reviews_result(bsr: BSRResult):
+    tasks_manager.finish_task(bsr.task._id, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
+    tasks_manager.release_task(bsr.task._id)
+    asins = list(bsr.asins_links.keys())
+    if bsr.task.category:
+        await category_set_cmd({
+            'asins': asins,
+            'top5_asins': asins[:5],
+            'target': bsr.task.target or None,
+            'cat_name': bsr.task.category,
+            'client_name': bsr.task.client,
+        })
+    if bsr.task.with_continue:
+        return await collect_products_form(CollectProductsForm(
+            alias=bsr.task.alias,
+            asins=asins,
+            target=bsr.task.target,
+            collect_aspects=True,
+            collect_reviews=True,
+            current_format=True,
+        ))
+    return Response(status_code=HTTP_201_CREATED)
 
 
 @router.get('/reviews/count')
