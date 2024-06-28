@@ -210,7 +210,7 @@ async function run({root, task}, sender, sendResponse) {
             // report errors of reviews collecting if exist
             errors = result[0].result?.errors;
             if (errors) {
-                await fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
+                fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -224,20 +224,20 @@ async function run({root, task}, sender, sendResponse) {
             }
             // else release and finish
             else {
-                await fetch('http://195.201.194.213:8832/tasks/finish/' + task._id, {
+                fetch('http://195.201.194.213:8832/tasks/finish/' + task._id, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     method: 'PATCH',
                 });
-                await fetch('http://195.201.194.213:8832/tasks/release/' + task._id, {
+                fetch('http://195.201.194.213:8832/tasks/release/' + task._id, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     method: 'POST',
                 });
             }
-            await fetch('http://45.14.245.223:1802/new_collection/', {
+            fetch('http://45.14.245.223:1802/new_collection/', {
                     'accept': 'application/json',
                     'Content-Type': 'application/json',
                     body: JSON.stringify({
@@ -250,7 +250,7 @@ async function run({root, task}, sender, sendResponse) {
         }
     } catch (e) {
         console.log(e);
-        await fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
+        fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -265,7 +265,7 @@ async function run({root, task}, sender, sendResponse) {
         });
     } finally {
         if (created) {
-            await chrome.tabs.remove(needle_tab.id);
+            chrome.tabs.remove(needle_tab.id);
         }
     }
 }
