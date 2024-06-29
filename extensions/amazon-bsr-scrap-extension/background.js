@@ -82,7 +82,7 @@ async function run({root, task}, sender, sendResponse) {
         });
         console.log('result!');
         data = result[0].result?.data;
-        data.task = task.data;
+        data.with_continue = Boolean(task.stage > 0);
         data.task_id = task._id;
         errors = result[0].result?.errors;
         console.log(data, errors);
@@ -129,7 +129,7 @@ async function run({root, task}, sender, sendResponse) {
         });
     } finally {
         if (created) {
-            // await chrome.tabs.remove(needle_tab.id);
+            await chrome.tabs.remove(needle_tab.id);
         }
     }
 }

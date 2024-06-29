@@ -92,7 +92,7 @@ async def collect_bsr_cmd(config: BSRCollectingConfig):
     data['client'] = config.client
     return helpers.orjson_response(tasks_manager.add_task('bsr', {
         'alias': config.alias,
-    }, [data], stage=bool(config.with_continue)))
+    }, [data], stage=int(config.with_continue)))
 
 
 @router.post('/alias/bsr/finish')
