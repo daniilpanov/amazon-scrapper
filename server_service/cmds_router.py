@@ -27,7 +27,7 @@ class CollectProductsForm(BaseModel):
     alias: str | None = None
     category_name: str | None = None
     client_name: str | None = None
-    asins: str
+    asins: str | list[str]
     target: str | None = None
     collect_aspects: bool = False
     collect_reviews: bool = False
@@ -37,7 +37,9 @@ class CollectProductsForm(BaseModel):
 
 @router.post('/alias/products/collect')
 async def collect_products_form(config: CollectProductsForm):
-    asins = get_all_asins_from_text(config.asins) + ([config.target] if config.target else [])
+    asins = config.asins
+    if isinstance(asins, str):
+        asins = get_all_asins_from_text(asins) + ([config.target] if config.target else [])
     print(config.target)
     print(asins[0])
     print(asins[0] == config.target)
