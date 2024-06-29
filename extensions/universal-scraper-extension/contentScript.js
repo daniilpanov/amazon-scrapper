@@ -1,16 +1,20 @@
-let interval_id, self;
+let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 10;
 (async () => {
     self = await chrome.management.getSelf();
     interval_id = setInterval(async () => {
         // Limit by the tabs counting
-        const tabs = await chrome.tabs.query({});
-        if (tabs.length > 12) {
-            // return;
+        let tabs_count = (await chrome.tabs.query({})).length;
+        if (tabs_count >= tabs_limit) {
+            return;
         }
         const res = await fetch('http://195.201.194.213:8832/tasks/get_available');
         const data = await res.json();
         let all_extensions, found;
         for (let i in data) {
+            tabs_count = (await chrome.tabs.query({})).length;
+            if (tabs_count >= tabs_limit) {
+                return;
+            }
             switch (data[i].script) {
                 case 'h10':
                     setTimeout(h10scrap, 500, data[i]);
@@ -33,7 +37,7 @@ let interval_id, self;
                                         console.log('task is busy:', data[i]);
                                         break;
                                 }
-                            })
+                            });
                             console.log('Message sent to', ext.name, `[${ext.id}]`);
                         }
                     });
@@ -136,4 +140,4 @@ let interval_id, self;
             });
         });
     }
-})()
+})();

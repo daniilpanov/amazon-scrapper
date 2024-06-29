@@ -55,7 +55,7 @@ async function run({root, task}, sender, sendResponse) {
             target: {tabId: needle_tab.id},
             args: [task],
             func: (task) => {
-                window.products_collector = CollectProducts(task.data.asin);
+                window.products_collector = new CollectProducts(task.data.asin);
                 return {data: window.products_collector.getProductCard(task.data.collect_media_config)};
             },
         });
@@ -94,7 +94,7 @@ async function run({root, task}, sender, sendResponse) {
                 args: [task],
                 func: (task) => {
                     if (!window.products_collector) {
-                        window.products_collector = CollectProducts(task.data.asin);
+                        window.products_collector = new CollectProducts(task.data.asin);
                     }
                     return {data: window.products_collector.getAspects()};
                 },
@@ -239,15 +239,17 @@ async function run({root, task}, sender, sendResponse) {
                 });
             }
             fetch('http://45.14.245.223:1802/new_collection/', {
+                headers: {
                     'accept': 'application/json',
                     'Content-Type': 'application/json',
-                    body: JSON.stringify({
-                        'name': 'Collected-' + asin,
-                        'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
-                        'asins': [asin],
-                    }),
                 },
-            );
+                method: 'POST',
+                body: JSON.stringify({
+                    'name': 'Collected-' + asin,
+                    'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
+                    'asins': [asin],
+                }),
+            });
         }
     } catch (e) {
         console.log(e);
