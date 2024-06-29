@@ -106,9 +106,9 @@ class Starter:
         self.do_task(random.choice(tasks))
 
     def do_task(self, task):
-        `res = requests.post('http://localhost:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
+        res = requests.post('http://localhost:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
         if res.status_code == 409:
-            return self.next_task()`
+            return self.next_task()
         if self.scene.need_proxy:
             proxy_conf = requests.get('http://localhost:8833/proxy/random')
             if proxy_conf.status_code == 200:
