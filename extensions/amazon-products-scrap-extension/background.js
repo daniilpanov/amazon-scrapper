@@ -79,7 +79,7 @@ async function run({root, task}, sender, sendResponse) {
         }
         // load data
         if (Object.keys(data || {}).length) {
-            fetch('http://195.201.194.213:8832/products/set_result/card/', {
+            fetch('http://195.201.194.213:8832/products/set_result/card/' + task.data.asin, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -119,7 +119,7 @@ async function run({root, task}, sender, sendResponse) {
             }
             // load data
             if (data?.length) {
-                fetch('http://195.201.194.213:8832/products/set_result/aspects/', {
+                fetch('http://195.201.194.213:8832/products/set_result/aspects/' + task.data.asin, {
                     headers: {
                         'Content-Type': 'application/json',
                     },

@@ -1,7 +1,69 @@
+
+function sendMessageToTab(tabId, message, retryDelay = 500, maxRetries = 100) {
+    let attempts = 0;
+
+    function sendMessage() {
+        ++attempts;
+        chrome.tabs.sendMessage(tabId, message, function(response) {
+            if (chrome.runtime.lastError) {
+                if (attempts < maxRetries) {
+                    // console.error(`Ошибка при отправке сообщения: ${chrome.runtime.lastError.message}. Повторная попытка ${attempts} из ${maxRetries}...`);
+                    setTimeout(sendMessage, retryDelay);
+                } else {
+                    console.error(`Не удалось отправить сообщение после ${maxRetries} попыток.`);
+                }
+            } else {
+                // console.log('Сообщение отправлено успешно:', response);
+            }
+        });
+    }
+
+    sendMessage();
+}
+
+function h10scrap(task) {
+    fetch(
+        'http://195.201.194.213:8832/tasks/acquire/h10/' + task.taskHeader._id + '/' + task._id,
+        {method: 'post'},
+    ).then((res) => {
+        if (res.status !== 200) {
+            if (res.status === 409) {
+                // console.log('This task is busy');
+            } else {
+                console.error('Error when try to acquire task:', res.statusText);
+            }
+            return;
+        }
+        res.json().then((data) => {
+            chrome.tabs.create({
+                url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
+            }, (tab) => {
+                chrome.scripting.executeScript({
+                    target: {tabId: tab.id},
+                    files: ['helper.js', 'tasks/h10task.js'],
+                });
+
+                sendMessageToTab(tab.id, task);
+            });
+            chrome.tabs.create({
+                url: 'https://www.amazon.com/dp/' + task.data.asins[0],
+            }, (tab) => {
+                chrome.scripting.executeScript({
+                    target: {tabId: tab.id},
+                    files: ['helper.js', 'tasks/h10product-task.js'],
+                });
+
+                sendMessageToTab(tab.id, task);
+            });
+        });
+    });
+}
+
+
 let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 10, curr_limit = tabs_limit;
 (async () => {
     self = await chrome.management.getSelf();
-    interval_id = setInterval(async () => {
+    const main = async () => {
         // Limit by the tabs counting
         let tabs_count = (await chrome.tabs.query({})).length;
         if (tabs_count >= tabs_limit) {
@@ -81,65 +143,7 @@ let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) 
                     break;
             }
         }
-    }, 10000);
-
-    function sendMessageToTab(tabId, message, retryDelay = 500, maxRetries = 100) {
-        let attempts = 0;
-
-        function sendMessage() {
-            ++attempts;
-            chrome.tabs.sendMessage(tabId, message, function(response) {
-                if (chrome.runtime.lastError) {
-                    if (attempts < maxRetries) {
-                        // console.error(`Ошибка при отправке сообщения: ${chrome.runtime.lastError.message}. Повторная попытка ${attempts} из ${maxRetries}...`);
-                        setTimeout(sendMessage, retryDelay);
-                    } else {
-                        console.error(`Не удалось отправить сообщение после ${maxRetries} попыток.`);
-                    }
-                } else {
-                    // console.log('Сообщение отправлено успешно:', response);
-                }
-            });
-        }
-
-        sendMessage();
-    }
-
-    function h10scrap(task) {
-        fetch(
-            'http://195.201.194.213:8832/tasks/acquire/h10/' + task.taskHeader._id + '/' + task._id,
-            {method: 'post'},
-        ).then((res) => {
-            if (res.status !== 200) {
-                if (res.status === 409) {
-                    // console.log('This task is busy');
-                } else {
-                    console.error('Error when try to acquire task:', res.statusText);
-                }
-                return;
-            }
-            res.json().then((data) => {
-                chrome.tabs.create({
-                    url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
-                }, (tab) => {
-                    chrome.scripting.executeScript({
-                        target: {tabId: tab.id},
-                        files: ['helper.js', 'tasks/h10task.js'],
-                    });
-
-                    sendMessageToTab(tab.id, task);
-                });
-                chrome.tabs.create({
-                    url: 'https://www.amazon.com/dp/' + task.data.asins[0],
-                }, (tab) => {
-                    chrome.scripting.executeScript({
-                        target: {tabId: tab.id},
-                        files: ['helper.js', 'tasks/h10product-task.js'],
-                    });
-
-                    sendMessageToTab(tab.id, task);
-                });
-            });
-        });
-    }
+        interval_id = setTimeout(main, 10000);
+    };
+    await main();
 })();
