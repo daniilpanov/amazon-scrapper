@@ -100,8 +100,8 @@ async def collect_bsr_cmd(config: BSRCollectingConfig):
 
 @router.post('/alias/bsr/finish')
 async def set_reviews_result(bsr: BSRResult):
-    tasks_manager.finish_task(bsr.task._id, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
-    tasks_manager.release_task(bsr.task._id)
+    tasks_manager.finish_task(bsr.task_id, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
+    tasks_manager.release_task(bsr.task_id)
     asins = list(bsr.asins_links.keys())
     if bsr.task.category:
         await category_set_cmd({
