@@ -77,6 +77,7 @@ class BSRCollectingConfig(BaseModel):
 
 class BSRResult(BaseModel):
     task: BSRCollectingConfig
+    task_id: str
     bsr_url: str
     asins_links: dict[str, str]
 

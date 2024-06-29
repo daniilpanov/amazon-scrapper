@@ -39,34 +39,53 @@ async function run({root, task}, sender, sendResponse) {
         });
         created = true;
     }
+    console.log(needle_tab);
 
     const date = new Date();
     try {
-        let result, data, errors;
+        let result, data, errors, need_import = created;
+        if (!created) {
+            need_import = await chrome.scripting.executeScript({
+                target: {tabId: needle_tab.id},
+                func: () => {return typeof CollectBSR === 'undefined'},
+            });
+            need_import = need_import[0].result || false;
+        }
+        console.log(need_import);
         // BSR lib
-        await chrome.scripting.executeScript({
-            target: {tabId: needle_tab.id},
-            files: ['./bsr.js'],
-        });
+        if (need_import) {
+            await chrome.scripting.executeScript({
+                target: {tabId: needle_tab.id},
+                files: ['./bsr.js'],
+            });
+        }
+        console.log('bsr imported');
         // BSR result
         result = await chrome.scripting.executeScript({
             target: {tabId: needle_tab.id},
             args: [task],
             func: (task) => {
+                console.log('hello! :)');
                 const bsr_collector = new CollectBSR(task.data.limit, task.data.count, task.data.target, task.data.unique_brands, task.data.domain);
-                if (!task.data.bsr) {
+                console.log('BSR Collector created!');
+                if (!task?.data?.bsr) {
+                    console.log('Fail!');
                     return {errors: ['Can not get BSR URL! Please enter full URL']};
                 }
                 let asins_links = {};
+                console.log('Collect asins');
                 for (const asin of bsr_collector.getASINsLInks(task.data.bsr)) {
                     asins_links[asin] = `https://${task.data.domain}/dp/${asin}`;
                 }
                 return {data: {bsr_url: task.data.bsr, asins_links: asins_links}};
             },
         });
+        console.log('result!');
         data = result[0].result?.data;
         data.task = task.data;
+        data.task_id = task._id;
         errors = result[0].result?.errors;
+        console.log(data, errors);
         // handle errors
         if (errors) {
             fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {

@@ -59,15 +59,15 @@ class CollectBSR {
             }
 
             const reviews_info = link.querySelector('a[href*="product-reviews"]')?.innerText.replaceAll('\u2009', '\n').split('\n');
-            const reviews_count = reviews_info.length < 2 ? 0 : Number(reviews_info[1].trim().replaceAll(',', '').replaceAll(' ', ''));
+            const reviews_count = reviews_info.length < 2 ? 0 : Number(reviews_info[reviews_info.length - 1].trim().replaceAll(',', '').replaceAll(' ', ''));
             if (this.limit && reviews_count < 700 || this.target && link.querySelector('a')?.href.includes(this.target)) {
                 continue;
             }
             const asin = link.querySelector('a')?.href.match(/B0[0-9A-Z]{8}/g)
             if (asin) {
                 i += 1
+                res.push(asin);
             }
-            res.push(asin);
         }
         return res;
     }
