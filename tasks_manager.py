@@ -9,6 +9,9 @@ from pymongo.errors import OperationFailure, PyMongoError, DuplicateKeyError
 import db_mongo
 
 
+acquired: set[ObjectId] = set()
+
+
 class TaskStatusEnum(enum.IntEnum):
     created = 0
     started = 1
@@ -58,6 +61,8 @@ def add_task(script, view, data, visible: bool = True, stage=0):
 
 def acquire_task(script, task_id, header_id):
     task_id = ObjectId(task_id)
+    if task_id in acquired:
+        return False
     header_id = ObjectId(header_id)
     try:
         res = TasksLock.insert_one({
@@ -72,6 +77,7 @@ def acquire_task(script, task_id, header_id):
                 {'_id': task_id},
                 {'$set': {'started_at': datetime.datetime.now(pytz.UTC)}},
             )
+        acquired.add(task_id)
         return res.inserted_id
     except DuplicateKeyError:
         return False
@@ -81,7 +87,12 @@ def acquire_task(script, task_id, header_id):
 
 
 def release_task(task_id):
-    return TasksLock.delete_one({'task_id': ObjectId(task_id)}).deleted_count
+    task_id = ObjectId(task_id)
+    try:
+        acquired.remove(task_id)
+    except KeyError:
+        pass
+    return TasksLock.delete_one({'task_id': task_id}).deleted_count
 
 
 def remove_task(header_id, force_delete=False):

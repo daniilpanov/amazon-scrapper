@@ -274,6 +274,7 @@ class CollectReviews {
             await this.switching();
             for (; this.page <= 10; ++this.page) {
                 await this.waitLoad();
+                await new Promise(resolve => setTimeout(resolve, 100));
                 try {
                     result = this.parse();
                     console.log(result);
