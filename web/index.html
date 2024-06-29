@@ -257,7 +257,6 @@
                 <h2>Collect data from BSR</h2>
 
                 <form method='post' action='/cmd/alias/get_all'>
-                    <input type="hidden" name="with_continue" value="true">
                     <p></p>
                     <div>
                         <label>
@@ -276,6 +275,11 @@
                     </div>
                     <p></p>
                     <div>
+                        <p>
+                            <label>
+                                <input type='checkbox' class='checkbox' name='with_continue' value='1'> Collect all products data?
+                            </label>
+                        </p>
                         <p>
                             <label>
                                 <input type='checkbox' class='checkbox' name='top5' value='1'> Only top5

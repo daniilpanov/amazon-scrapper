@@ -96,7 +96,7 @@ async function run({root, task}, sender, sendResponse) {
                 body: JSON.stringify({
                     confirm: true,
                     errors: [
-                        [date.toISOString() + ' [bsr.card]', errors],
+                        [date.toISOString() + ' [bsr]', errors],
                     ],
                     stop: true,
                 }),
@@ -122,7 +122,7 @@ async function run({root, task}, sender, sendResponse) {
             body: JSON.stringify({
                 confirm: true,
                 errors: [
-                    date.toISOString() + ' [products] Error: ' + e.message,
+                    date.toISOString() + ' [bsr] Error: ' + e.message,
                 ],
                 stop: true,
             }),

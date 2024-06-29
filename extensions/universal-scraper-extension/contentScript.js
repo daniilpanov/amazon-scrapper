@@ -42,6 +42,9 @@ let interval_id, self;
                     }
                     break;
                 case 'bsr':
+                    if ((data[i].stage || 0) >= 2) {
+                        break;
+                    }
                     all_extensions = await chrome.management.getAll();
                     found = false;
                     all_extensions.forEach(ext => {

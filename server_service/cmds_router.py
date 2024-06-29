@@ -32,7 +32,6 @@ class CollectProductsForm(BaseModel):
     collect_aspects: bool = False
     collect_reviews: bool = False
     current_format: bool = False
-    top5: bool = False
 
 
 @router.post('/alias/products/collect')
@@ -40,13 +39,10 @@ async def collect_products_form(config: CollectProductsForm):
     asins = config.asins
     if isinstance(asins, str):
         asins = get_all_asins_from_text(asins) + ([config.target] if config.target else [])
-    print(config.target)
-    print(asins[0])
-    print(asins[0] == config.target)
     if config.category_name:
         await category_set_cmd({
             'asins': asins,
-            'top5_asins': asins[:5] if config.top5 else [],
+            'top5_asins': [],
             'target': config.target or None,
             'cat_name': config.category_name,
             'client_name': config.client_name,
@@ -78,8 +74,8 @@ class BSRCollectingConfig(BaseModel):
 
 
 class BSRResult(BaseModel):
-    task: BSRCollectingConfig
     task_id: str
+    with_continue: bool = False
     bsr_url: str
     asins_links: dict[str, str]
 
@@ -94,34 +90,18 @@ async def collect_bsr_cmd(config: BSRCollectingConfig):
     data['count'] = config.count
     data['category'] = config.category
     data['client'] = config.client
-    data['with_continue'] = config.with_continue
     return helpers.orjson_response(tasks_manager.add_task('bsr', {
         'alias': config.alias,
-    }, [data]))
+    }, [data], stage=bool(config.with_continue)))
 
 
 @router.post('/alias/bsr/finish')
 async def set_reviews_result(bsr: BSRResult):
-    tasks_manager.finish_task(bsr.task_id, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
-    tasks_manager.release_task(bsr.task_id)
-    asins = list(bsr.asins_links.keys())
-    if bsr.task.category:
-        await category_set_cmd({
-            'asins': asins,
-            'top5_asins': asins[:5],
-            'target': bsr.task.target or None,
-            'cat_name': bsr.task.category,
-            'client_name': bsr.task.client,
-        })
-    if bsr.task.with_continue:
-        return await collect_products_form(CollectProductsForm(
-            alias=bsr.task.alias,
-            asins=asins,
-            target=bsr.task.target,
-            collect_aspects=True,
-            collect_reviews=True,
-            current_format=True,
-        ))
+    if bsr.with_continue:
+        tasks_manager.set_task_stage(bsr.task_id, 2, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
+    else:
+        tasks_manager.finish_task(bsr.task_id, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
+        tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
 
 
