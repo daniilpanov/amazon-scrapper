@@ -10,6 +10,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function run({root, task}, sender, sendResponse) {
     console.log(task);
+    if (!task || !root) {
+        sendResponse('bad request');
+    }
     let acq = await fetch(
         'http://195.201.194.213:8832/tasks/acquire/products/' + task.header_id + '/' + task._id,
         {method: 'post'},

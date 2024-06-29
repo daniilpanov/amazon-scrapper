@@ -22,7 +22,7 @@ class CollectProducts {
         let res = {
             asin: this.asin,
             product_url: `https://${this.domain}/dp/${this.asin}`,
-            canonical_link: null,
+            canonical_prefix: null,
             product_title: null,
             product_descr: null,
             picture_url: null,
@@ -32,7 +32,7 @@ class CollectProducts {
         };
 
         // Canonical prefix
-        res.canonical_link = document.querySelector('link[rel="canonical"]')?.href.split('amazon.com')[1]?.split('/')[1];
+        res.canonical_prefix = document.querySelector('link[rel="canonical"]')?.href.split('amazon.com')[1]?.split('/')[1];
 
         // Title & description
         res.product_title = this.getElementByIds(['titleSection', 'title', 'productTitle'])?.innerText;
@@ -77,7 +77,7 @@ class CollectProducts {
 
         // Media config
         if (collect_media_config) {
-            res['media_config'] = this.getMediaConfig();
+            res['media_data'] = this.getMediaConfig();
         }
 
         return res;
