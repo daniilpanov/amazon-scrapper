@@ -248,7 +248,7 @@ async function run({root, task}, sender, sendResponse) {
                 },
                 method: 'POST',
                 body: JSON.stringify({
-                    'name': 'Collected-' + asin,
+                    'name': task.taskHeader.alias || asin,
                     'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
                     'asins': [asin],
                 }),

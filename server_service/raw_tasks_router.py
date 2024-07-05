@@ -71,7 +71,6 @@ async def get_task_req(task_id: str, with_header: bool = True, body_only: bool =
 
 
 @router.get('/get')
-@router.get('/get/{script}')
 async def get_tasks_req(script: str | None = None, all_or_vis: bool = True):
     res = list(tasks_manager.get_all_tasks(({'script': script} if script else {}) | ({'visible': True} if all_or_vis else {})))
     return orjson_response(res)
