@@ -171,8 +171,6 @@ async function run({root, task}, sender, sendResponse) {
                         // setup callbacks
                         // send res
                         collector.per_index_callback = (data) => {
-                            console.log(data);
-                            console.log(JSON.stringify(data));
                             chrome.runtime.sendMessage(
                                 {
                                     fetch: [

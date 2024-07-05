@@ -31,7 +31,9 @@ def run():
                         'target': task['data'].get('target'),
                     },
                 )
+            task_alias = task.get('taskHeader', {}).get('alias')
             data = {
+                'alias': (task_alias + '#reviews') if task_alias else None,
                 'asins': [],
                 'current_format': True,
                 'collect_aspects': True,
