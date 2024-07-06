@@ -61,36 +61,66 @@ function h10scrap(task) {
 
 
 let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 10, curr_limit = tabs_limit;
-(async () => {
-    self = await chrome.management.getSelf();
-    const main = async () => {
-        // Limit by the tabs counting
-        let tabs_count = (await chrome.tabs.query({})).length;
-        if (tabs_count >= tabs_limit) {
-            return;
+self = await chrome.management.getSelf();
+async function main() {
+    // Limit by the tabs counting
+    let tabs_count = (await chrome.tabs.query({})).length;
+    if (tabs_count >= tabs_limit) {
+        console.log('exit from function! limit!');
+        return;
+    }
+    curr_limit = tabs_limit - tabs_count;
+    const res = await fetch('http://195.201.194.213:8832/tasks/get_available');
+    const data = await res.json();
+    let all_extensions, found;
+    for (let i in data) {
+        console.log('Available space left:', curr_limit);
+        if (curr_limit <= 0) {
+            console.log('exit from cycle! limit!');
+            break;
         }
-        curr_limit = tabs_limit - tabs_count;
-        const res = await fetch('http://195.201.194.213:8832/tasks/get_available');
-        const data = await res.json();
-        let all_extensions, found;
-        for (let i in data) {
-            if (curr_limit <= 0) {
+        switch (data[i].script) {
+            case 'h10':
+                setTimeout(h10scrap, 500, data[i]);
+                --curr_limit;
                 break;
-            }
-            switch (data[i].script) {
-                case 'h10':
-                    setTimeout(h10scrap, 500, data[i]);
-                    --curr_limit;
+            case 'products':
+                all_extensions = await chrome.management.getAll();
+                found = false;
+                all_extensions.forEach((async (ext) => {
+                    if (ext.name.toLowerCase().includes('amazon products scraper')) {
+                        found = true;
+                        const msg = await chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]});
+                        console.log('Message sent to', ext.name, `[${ext.id}]`);
+                        switch (msg) {
+                            case 'OK':
+                                console.log('task started:', data[i]);
+                                --curr_limit;
+                                break;
+                            case 'fail':
+                                console.log('task can not be started due to unknown error:', data[i]);
+                                break;
+                            case 'busy':
+                                console.log('task is busy:', data[i]);
+                                break;
+                        }
+                    }
+                }));
+                if (!found) {
+                    console.log('No extensions found for script products!');
+                }
+                break;
+            case 'bsr':
+                if ((data[i].stage || 0) >= 2) {
                     break;
-                case 'products':
-                    all_extensions = await chrome.management.getAll();
-                    found = false;
-                    all_extensions.forEach((async (ext) => {
-                        if (ext.name.toLowerCase().includes('amazon products scraper')) {
-                            found = true;
-                            const msg = await chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]});
-                            console.log('Message sent to', ext.name, `[${ext.id}]`);
-                            switch (msg) {
+                }
+                all_extensions = await chrome.management.getAll();
+                found = false;
+                all_extensions.forEach(ext => {
+                    if (ext.name.toLowerCase().includes('amazon bsr scraper')) {
+                        found = true;
+                        chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]}, (res) => {
+                            switch (res) {
                                 case 'OK':
                                     console.log('task started:', data[i]);
                                     --curr_limit;
@@ -102,48 +132,19 @@ let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) 
                                     console.log('task is busy:', data[i]);
                                     break;
                             }
-                        }
-                    }));
-                    if (!found) {
-                        console.log('No extensions found for script products!');
+                        })
+                        console.log('Message sent to', ext.name, `[${ext.id}]`);
                     }
-                    break;
-                case 'bsr':
-                    if ((data[i].stage || 0) >= 2) {
-                        break;
-                    }
-                    all_extensions = await chrome.management.getAll();
-                    found = false;
-                    all_extensions.forEach(ext => {
-                        if (ext.name.toLowerCase().includes('amazon bsr scraper')) {
-                            found = true;
-                            chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]}, (res) => {
-                                switch (res) {
-                                    case 'OK':
-                                        console.log('task started:', data[i]);
-                                        --curr_limit;
-                                        break;
-                                    case 'fail':
-                                        console.log('task can not be started due to unknown error:', data[i]);
-                                        break;
-                                    case 'busy':
-                                        console.log('task is busy:', data[i]);
-                                        break;
-                                }
-                            })
-                            console.log('Message sent to', ext.name, `[${ext.id}]`);
-                        }
-                    });
-                    if (!found) {
-                        console.log('No extensions found for script BSR!');
-                    }
-                    break;
-                default:
-                    console.log('Unknown script:', data[i].script);
-                    break;
-            }
+                });
+                if (!found) {
+                    console.log('No extensions found for script BSR!');
+                }
+                break;
+            default:
+                console.log('Unknown script:', data[i].script);
+                break;
         }
-        interval_id = setTimeout(main, 10000);
-    };
-    await main();
-})();
+    }
+    interval_id = setTimeout(main, 10000);
+}
+await main();

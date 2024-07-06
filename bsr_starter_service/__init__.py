@@ -4,13 +4,13 @@ import requests
 
 
 def run():
+    print('Script started!')
     while True:
         time.sleep(5)  # low payload
         ready_bsrs = requests.get('http://localhost:8832/tasks/get_available/bsr?stage=2')
         if ready_bsrs.status_code != 200:
             continue
         bsr_tasks = ready_bsrs.json()
-        print(bsr_tasks)
         for task in bsr_tasks:
             res = requests.post(
                 'http://localhost:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
