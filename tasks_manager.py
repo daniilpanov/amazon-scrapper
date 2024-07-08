@@ -207,9 +207,9 @@ def get_header(header_id, with_many_bodies=False):
         return None
 
 
-def get_all_tasks(_filters=None):
+def get_all_tasks(_filters=None, exclude=None):
     try:
-        return TasksListLockView.find(_filters or {})
+        return TasksListLockView.find(_filters or {}, exclude or {})
     except OperationFailure:
         # TODO: log
         return False
