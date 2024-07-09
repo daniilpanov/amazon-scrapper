@@ -104,7 +104,7 @@ async def set_helium_amazon_result(helium_id: str, result: HeliumAdditionalResul
 # 100 ASINS
 @router.post('/get100asins')
 async def get_100asins(config: Get100AsinsTask):
-    data = tasks_manager.add_task('100asins', {'alias': config.alias or ','.join(config.asins) + '#100asins'}, [{'asins': config.asins}]),
+    data = tasks_manager.add_task('100asins', {'alias': config.alias or config.type + ' ' + config.label + '#100asins'}, [{'label': config.label, 'type': config.type}]),
     return Response(str(data[0][0]) + '--' + str(data[0][1][0]), status_code=HTTP_200_OK)
 
 
@@ -123,7 +123,7 @@ async def get_helium_result(task_id: str):
     return task['result']
 
 
-@router.post('/set/{helium_id}')
+@router.post('/set_100asins/{task_id}')
 async def set_100asins_result(task_id: str, result: Get100AsinsResult):
     task_id = ObjectId(task_id)
     try:

@@ -80,6 +80,32 @@ async function main() {
             break;
         }
         switch (data[i].script) {
+            case '100asins':
+                all_extensions = await chrome.management.getAll();
+                found = false;
+                all_extensions.forEach((async (ext) => {
+                    if (ext.name.toLowerCase().includes('amazon 100 asins scraper')) {
+                        found = true;
+                        const msg = await chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]});
+                        console.log('Message sent to', ext.name, `[${ext.id}]`);
+                        switch (msg) {
+                            case 'OK':
+                                console.log('task started:', data[i]);
+                                --curr_limit;
+                                break;
+                            case 'fail':
+                                console.log('task can not be started due to unknown error:', data[i]);
+                                break;
+                            case 'busy':
+                                console.log('task is busy:', data[i]);
+                                break;
+                        }
+                    }
+                }));
+                if (!found) {
+                    console.log('No extensions found for script products!');
+                }
+                break;
             case 'h10':
                 setTimeout(h10scrap, 500, data[i]);
                 --curr_limit;
