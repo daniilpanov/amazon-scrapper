@@ -45,8 +45,8 @@ class CollectProducts {
 
         // features
         const features_els = document.querySelectorAll(
-            '[data-hook="cr-widget-SummaryAttribute"] #cr-summarization-attributes-list > div'
-        )
+            '[data-hook="cr-widget-SummaryAttribute"] #cr-summarization-attributes-list > div',
+        );
         let key, val;
         for (const feat of features_els) {
             key = feat.querySelector('div > div > div:first-child span')?.innerText.trim();
@@ -59,7 +59,7 @@ class CollectProducts {
         const top5_els = document.querySelectorAll('[data-hook="lighthut-terms-list"] > div').values().toArray();
         let counter = 0;
         for (const lighthum of top5_els) {
-            val = lighthum.querySelector('span')?.innerText.trim()
+            val = lighthum.querySelector('span')?.innerText.trim();
             if (val) {
                 res.top_5_phrases.push(val);
                 ++counter;

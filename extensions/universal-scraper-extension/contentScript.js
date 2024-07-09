@@ -46,11 +46,21 @@ function h10scrap(task) {
                 sendMessageToTab(tab.id, task);
             });
             chrome.tabs.create({
-                url: 'https://www.amazon.com/dp/' + task.data.asins[0],
+                url: 'https://www.amazon.com/dp/' + task.data.asins[1],
             }, (tab) => {
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
                     files: ['helper.js', 'tasks/h10product-task.js'],
+                });
+
+                sendMessageToTab(tab.id, task);
+            });
+            chrome.tabs.create({
+                url: 'https://www.amazon.com/dp/' + task.data.asins[0],
+            }, (tab) => {
+                chrome.scripting.executeScript({
+                    target: {tabId: tab.id},
+                    files: ['helper.js', 'tasks/h10target-product-task.js'],
                 });
 
                 sendMessageToTab(tab.id, task);

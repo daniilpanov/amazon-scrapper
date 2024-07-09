@@ -30,6 +30,11 @@ class HeliumAdditionalResult(BaseModel):
     manufacturer: str | None
 
 
+class HeliumAdditional2Result(BaseModel):
+    title: str | None
+    description: str | None
+
+
 class HeliumTask(BaseModel):
     alias: str | None = None
     asins: tuple[str, ...]
@@ -84,12 +89,30 @@ async def set_helium_result(helium_id: str, result: HeliumResult):
 async def set_helium_amazon_result(helium_id: str, result: HeliumAdditionalResult):
     helium_id = ObjectId(helium_id)
     try:
-        res = tasks_manager.TasksBodies.update_one({'_id': helium_id}, {'$set': {'result.amazon_data': {
+        res = tasks_manager.TasksBodies.update_one({'_id': helium_id}, {'$set': {'result.amazon_data.other': {
             'characteristics': result.characteristics,
             'about': result.about,
             'variant': result.variant,
             'manufacturer': result.manufacturer,
             'aplus': result.aplus,
+        }}}).modified_count
+    except PyMongoError as e:
+        print(e)
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
+    task = tasks_manager.get_task(helium_id)
+    if 'helium_data' in task['result']:
+        tasks_manager.finish_task(helium_id, True)
+        tasks_manager.release_task(helium_id)
+    return Response(str(res))
+
+
+@router.post('/set/{helium_id}/amazon_target')
+async def set_helium_amazon_result(helium_id: str, result: HeliumAdditional2Result):
+    helium_id = ObjectId(helium_id)
+    try:
+        res = tasks_manager.TasksBodies.update_one({'_id': helium_id}, {'$set': {'result.amazon_data.target': {
+            'title': result.title,
+            'description': result.description,
         }}}).modified_count
     except PyMongoError as e:
         print(e)
