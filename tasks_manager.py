@@ -209,7 +209,11 @@ def get_header(header_id, with_many_bodies=False):
 
 def get_all_tasks(_filters=None, exclude=None):
     try:
-        return TasksListLockView.find(_filters or {}, exclude or {})
+        res = list(TasksListLockView.find(_filters or {}, exclude or {}, {'result': 0}))
+        for task in res:
+            if task['_id'] in acquired:
+                acquired.remove(task['_id'])
+        return res
     except OperationFailure:
         # TODO: log
         return False
