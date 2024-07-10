@@ -53,8 +53,8 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
         });
         asinList = (await chrome.scripting.executeScript({
             target: {tabId: tab.id},
-            args: [asinList, keywords, label],
-            func: (asinList, keywords, label) => {
+            args: [asinList, type, label],
+            func: (asinList, type, label) => {
                 function check(kw, str) {
                     str = str.toLowerCase();
                     for (const keyword of kw) {
@@ -79,7 +79,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                         }
                         const brandTitle = card.querySelector('h2 > span')?.textContent;
 
-                        if (check(keywords, cardDescription) && (!brandTitle || check(label, brandTitle))) {
+                        if (check(type, cardDescription) && (!brandTitle || check(label, brandTitle))) {
                             asinList.add(asin);
                         }
                     }
