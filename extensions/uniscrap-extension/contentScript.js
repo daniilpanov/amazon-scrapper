@@ -96,7 +96,7 @@ async function main() {
                 all_extensions.forEach((async (ext) => {
                     if (ext.name.toLowerCase().includes('amazon 100 asins scraper')) {
                         found = true;
-                        const msg = await chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]});
+                        const msg = await chrome.runtime.sendMessage(ext.id, {...data[i].data, task_id: data[i]._id, header_id: data[i].header_id});
                         console.log('Message sent to', ext.name, `[${ext.id}]`);
                         switch (msg) {
                             case 'OK':

@@ -38,7 +38,7 @@ async function run({root, task}, sender, sendResponse) {
     }
     if (!needle_tab) {
         needle_tab = await chrome.tabs.create({
-            url: 'https://www.' + (task.data.domain || 'amazon.com') + '/' + (task.result.prefix ? task.result.prefix + '/' : '') + 'dp/' + asin + '?th=1',
+            url: 'https://www.' + (task.data.domain || 'amazon.com') + '/' + (task.result?.prefix ? task.result.prefix + '/' : '') + 'dp/' + asin + '?th=1',
             active: false,
         });
         created = true;
@@ -162,7 +162,7 @@ async function run({root, task}, sender, sendResponse) {
                         // create parser
                         const collector = new CollectReviews(
                             task.data.asin,
-                            task.result.prefix || null,
+                            task.result?.prefix || null,
                             task.data.current_format,
                             task.data.keywords || '',
                             task.data.domain || 'amazon.com'

@@ -1,9 +1,39 @@
-const endpoint = 'http://195.201.194.213:8832/helium/set_100asins'; // заменить
+const endpoint = 'http://195.201.194.213:8832/helium/set_100asins';
 
 chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
-    if (message.action === 'START_ASIN_SCRAPING_QUERY') {
+    let res = await fetch(
+        'http://195.201.194.213:8832/tasks/acquire/100asins/' + message.header_id + '/' + message.task_id,
+        {method: 'post'},
+    )
+    if (res.status === 200) {
         sendResponse('OK');
-        await startScraping100ASINS(message.label, message.type, message.task_id, sender.id);
+        res = await startScraping100ASINS(message.label, message.type, message.task_id, sender.id);
+        if (res) {
+            fetch(
+                'http://195.201.194.213:8832/tasks/finish/' + message.task_id,
+                {method: 'patch'},
+            )
+            fetch(
+                'http://195.201.194.213:8832/tasks/release/' + message.task_id,
+                {method: 'post'},
+            )
+        } else {
+            fetch('http://195.201.194.213:8832/tasks/report/' + message.task_id, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'PATCH',
+                body: JSON.stringify({
+                    confirm: true,
+                    errors: [(new Date().toUTCString()) + ' [100asins] can\'t send the data'],
+                    stop: true,
+                }),
+            });
+        }
+    } else if (res.status === 409) {
+        sendResponse('busy');
+    } else {
+        sendResponse('fail');
     }
 });
 
@@ -83,7 +113,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
     }
 
     console.log(Array.from(asinList));
-    await sendData(Array.from(asinList), task_id, sender_id);
+    return await sendData(Array.from(asinList), task_id, sender_id);
 }
 
 async function sendData(data, task_id, sender_id) {
@@ -103,7 +133,7 @@ async function sendData(data, task_id, sender_id) {
 
             if (response.ok && response.status === 200) {
                 console.log('Данные отправлены успешно, статус код: ', response.status);
-                return;
+                return true;
             } else {
                 throw new Error('Получен статус код: ', response.status)
             }
@@ -115,15 +145,5 @@ async function sendData(data, task_id, sender_id) {
     }
 
     console.log(`Совершено ${attempts} попыток отправки, что является максимальным количеством.`);
-    fetch('http://195.201.194.213:8832/tasks/report/' + task_id, {
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        method: 'PATCH',
-        body: JSON.stringify({
-            confirm: true,
-            errors: [(new Date().toUTCString()) + ' [100asins] can\'t send the data'],
-            stop: true,
-        }),
-    });
+    return false;
 }
