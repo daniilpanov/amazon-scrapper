@@ -55,6 +55,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
             target: {tabId: tab.id},
             args: [asinList, type, label],
             func: (asinList, type, label) => {
+                console.log(asinList);
                 function check(kw, str) {
                     str = str.toLowerCase();
                     for (const keyword of kw) {
