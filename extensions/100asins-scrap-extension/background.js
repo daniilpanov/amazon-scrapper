@@ -38,7 +38,7 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
 });
 
 async function startScraping100ASINS(label, type, task_id, sender_id) {
-    let asinList = new Set();
+    let asinList = [];
     label = label.split(' ');
     type = type.split(' ');
     const keywords = [...label, ...type];
@@ -81,7 +81,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                         const brandTitle = card.querySelector('h2 > span')?.textContent;
 
                         if (check(type, cardDescription) && (!brandTitle || check(label, brandTitle))) {
-                            asinList.add(asin);
+                            asinList.push(asin);
                         }
                     }
                     console.log(asinList);
