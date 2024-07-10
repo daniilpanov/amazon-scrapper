@@ -8,7 +8,6 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     if (res.status === 200) {
         sendResponse('OK');
         res = await startScraping100ASINS(message.label, message.type, message.task_id, sender.id);
-        console.log(res);
         if (res) {
             fetch(
                 'http://195.201.194.213:8832/tasks/finish/' + message.task_id,
@@ -56,7 +55,6 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
             target: {tabId: tab.id},
             args: [asinList, type, label],
             func: (asinList, type, label) => {
-                console.log(asinList);
                 function check(kw, str) {
                     str = str.toLowerCase();
                     for (const keyword of kw) {
@@ -64,14 +62,13 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                             return false;
                         }
                     }
-                    console.log(str, true);
                     return true;
                 }
 
                 function scrap(document) {
                     const productCards = document.querySelectorAll('div[data-asin]');
                     for (const card of productCards) {
-                        if (asinList.size >= 100) {
+                        if (asinList.length >= 100) {
                             return asinList;
                         }
                         const asin = card.getAttribute('data-asin');
@@ -85,7 +82,6 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                             asinList.push(asin);
                         }
                     }
-                    console.log(asinList);
                     return asinList;
                 }
 
@@ -115,10 +111,8 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                 });
             }
         });
-        console.log(result);
         asinList = result[0]?.result || asinList;
-        console.log(asinList);
-        // await chrome.tabs.remove(tab.id);
+        await chrome.tabs.remove(tab.id);
         ++counter;
     }
     asinList = new Set(asinList);
