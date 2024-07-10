@@ -11,11 +11,11 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
         if (res) {
             fetch(
                 'http://195.201.194.213:8832/tasks/finish/' + message.task_id,
-                {method: 'patch'},
+                {method: 'PATCH'},
             )
             fetch(
                 'http://195.201.194.213:8832/tasks/release/' + message.task_id,
-                {method: 'post'},
+                {method: 'POST'},
             )
         } else {
             fetch('http://195.201.194.213:8832/tasks/report/' + message.task_id, {
