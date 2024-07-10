@@ -8,6 +8,7 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     if (res.status === 200) {
         sendResponse('OK');
         res = await startScraping100ASINS(message.label, message.type, message.task_id, sender.id);
+        console.log(res);
         if (res) {
             fetch(
                 'http://195.201.194.213:8832/tasks/finish/' + message.task_id,
@@ -46,7 +47,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
     let counter = 1;
     let tab;
 
-    while (asinList.size <= 100) {
+    while (asinList.length <= 100) {
         tab = await chrome.tabs.create({
             url: encodeURI(`https://amazon.com/s?k=${query}&page=${counter}`),
             active: false,
@@ -120,7 +121,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
         // await chrome.tabs.remove(tab.id);
         ++counter;
     }
-
+    asinList = new Set(asinList);
     console.log(Array.from(asinList));
     return await sendData(Array.from(asinList), task_id, sender_id);
 }
