@@ -51,7 +51,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
             url: encodeURI(`https://amazon.com/s?k=${query}&page=${counter}`),
             active: false,
         });
-        asinList = await chrome.scripting.executeScript({
+        asinList = (await chrome.scripting.executeScript({
             target: {tabId: tab.id},
             args: [asinList, keywords, label],
             func: (asinList, keywords, label) => {
@@ -62,6 +62,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                             return false;
                         }
                     }
+                    console.log(str, true);
                     return true;
                 }
 
@@ -82,6 +83,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                             asinList.add(asin);
                         }
                     }
+                    console.log(asinList);
                     return asinList;
                 }
 
@@ -110,8 +112,9 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                     }
                 });
             }
-        });
-        await chrome.tabs.remove(tab.id);
+        }))[0]?.result || asinList;
+        console.log(asinList);
+        // await chrome.tabs.remove(tab.id);
         ++counter;
     }
 
