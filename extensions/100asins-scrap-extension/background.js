@@ -42,7 +42,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
     label = label.split(' ');
     type = type.split(' ');
     const keywords = [...label, ...type];
-    const query = encodeURI(keywords.join(' '));
+    const query = keywords.join(' ');
     let counter = 1;
 
     const tab = await chrome.tabs.create({
