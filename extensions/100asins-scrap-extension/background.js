@@ -46,7 +46,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
     let counter = 1;
     let tab;
 
-    while (asinList.length <= 100) {
+    while (asinList.length < 100) {
         tab = await chrome.tabs.create({
             url: encodeURI(`https://amazon.com/s?k=${query}&page=${counter}`),
             active: false,
