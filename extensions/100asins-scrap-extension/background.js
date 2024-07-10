@@ -51,7 +51,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
             url: encodeURI(`https://amazon.com/s?k=${query}&page=${counter}`),
             active: false,
         });
-        asinList = (await chrome.scripting.executeScript({
+        const result = await chrome.scripting.executeScript({
             target: {tabId: tab.id},
             args: [asinList, type, label],
             func: (asinList, type, label) => {
@@ -112,7 +112,9 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                     }
                 });
             }
-        }))[0]?.result || asinList;
+        });
+        console.log(result);
+        asinList = result[0]?.result || asinList;
         console.log(asinList);
         // await chrome.tabs.remove(tab.id);
         ++counter;
@@ -122,7 +124,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
     return await sendData(Array.from(asinList), task_id, sender_id);
 }
 
-async function sendData(data, task_id, sender_id) {
+async function sendData(asins, task_id, sender_id) {
     const sendDelay = 500;
     const maxAttemptsCount = 50;
     let attempts = 0;
@@ -131,7 +133,7 @@ async function sendData(data, task_id, sender_id) {
         try {
             const response = await fetch(`${endpoint}/${task_id}`, {
                 method: 'POST',
-                body: JSON.stringify(data),
+                body: JSON.stringify({asins: asins}),
                 headers: {
                     'Content-Type': 'application/json',
                 },
