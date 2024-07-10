@@ -69,7 +69,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                     const productCards = document.querySelectorAll('div[data-asin]');
                     for (const card of productCards) {
                         if (asinList.length >= 100) {
-                            return asinList;
+                            return new Promise(resolve => resolve(asinList));
                         }
                         const asin = card.getAttribute('data-asin');
                         const cardDescription = card.querySelector('a.s-underline-text')?.textContent;
