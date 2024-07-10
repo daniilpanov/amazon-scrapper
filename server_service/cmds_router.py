@@ -66,7 +66,7 @@ class BSRCollectingConfig(BaseModel):
     category: str | None = None
     client: str | None = None
     bsr: str
-    limit: bool = True
+    limit: bool = False
     unique_brands: bool = False
     count: int = 30
     target: str | None = None
