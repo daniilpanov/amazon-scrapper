@@ -31,7 +31,7 @@ async def import_report(request: Request, document: UploadFile = File(...)):
     df = pd.read_csv(io.BytesIO(await document.read()), header=0, index_col=None, delimiter=';')
     try:
         # db_mongo.db('Keywords')['Amazon_keyword_tracker'].insert_many(list(df.T.to_dict().values()))
-        db_mongo.db('Keywords')['keyword_tracker'].insert_many(list(df.T.to_dict().values()))
+        db_mongo.db('Keywords')['keyword_tracker'].insert_many(list(df.T.to_dict().values()), ordered=False)
     except BulkWriteError:
         pass
     return Response(status_code=204)
@@ -45,7 +45,7 @@ async def import_tiktok(request: Request, document: UploadFile = File(...)):
     df = pd.read_csv(io.BytesIO(await document.read()), header=0, index_col=None, delimiter=';')
     try:
         # db_mongo.db('Keywords')['Amazon_keyword_tracker'].insert_many(list(df.T.to_dict().values()))
-        db_mongo.db('Keywords')['tiktok'].insert_many(list(df.T.to_dict().values()))
+        db_mongo.db('Keywords')['tiktok'].insert_many(list(df.T.to_dict().values()), ordered=False)
     except BulkWriteError:
         pass
     return Response(status_code=204)
