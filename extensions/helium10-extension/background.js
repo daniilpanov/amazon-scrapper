@@ -53,8 +53,8 @@ async function startH10(asins) {
         res.json().then((data) => {
             chrome.tabs.create({
                 url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
-                // autoDiscardable: false,
             }, (tab) => {
+                chrome.tabs.update(tab.id, {autoDiscardable: false});
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
                     files: ['helper.js', 'tasks/h10task.js'],
@@ -64,8 +64,8 @@ async function startH10(asins) {
             });
             chrome.tabs.create({
                 url: 'https://www.amazon.com/dp/' + task.data.asins[1],
-                // autoDiscardable: false,
             }, (tab) => {
+                chrome.tabs.update(tab.id, {autoDiscardable: false});
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
                     files: ['helper.js', 'tasks/h10product-task.js'],
@@ -75,8 +75,8 @@ async function startH10(asins) {
             });
             chrome.tabs.create({
                 url: 'https://www.amazon.com/dp/' + task.data.asins[0],
-                // autoDiscardable: false,
             }, (tab) => {
+                chrome.tabs.update(tab.id, {autoDiscardable: false});
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
                     files: ['helper.js', 'tasks/h10target-product-task.js'],

@@ -40,7 +40,8 @@ async function run({root, task}, sender, sendResponse) {
         needle_tab = await chrome.tabs.create({
             url: 'https://www.' + (task.data.domain || 'amazon.com') + '/' + (task.result?.prefix ? task.result.prefix + '/' : '') + 'dp/' + asin + '?th=1',
             active: false,
-            // autoDiscardable: false,
+        }, (tab) => {
+            chrome.tabs.update(tab.id, {autoDiscardable: false});
         });
         created = true;
     }
