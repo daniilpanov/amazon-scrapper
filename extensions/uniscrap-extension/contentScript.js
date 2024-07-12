@@ -37,6 +37,7 @@ function h10scrap(task) {
         res.json().then((data) => {
             chrome.tabs.create({
                 url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
+                autoDiscardable: false,
             }, (tab) => {
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
@@ -47,6 +48,7 @@ function h10scrap(task) {
             });
             chrome.tabs.create({
                 url: 'https://www.amazon.com/dp/' + task.data.asins[1],
+                autoDiscardable: false,
             }, (tab) => {
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
@@ -57,6 +59,7 @@ function h10scrap(task) {
             });
             chrome.tabs.create({
                 url: 'https://www.amazon.com/dp/' + task.data.asins[0],
+                autoDiscardable: false,
             }, (tab) => {
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
@@ -70,13 +73,13 @@ function h10scrap(task) {
 }
 
 
-let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 10, curr_limit = tabs_limit;
+let interval_id, tabs_switching_interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 10, curr_limit = tabs_limit;
 self = await chrome.management.getSelf();
 async function main() {
     // Limit by the tabs counting
     let tabs_count = (await chrome.tabs.query({})).length;
     if (tabs_count >= tabs_limit) {
-        console.log('exit from function! limit!');
+        console.log('exit from function! limit!', tabs_limit, tabs_count);
         return;
     }
     curr_limit = tabs_limit - tabs_count;
@@ -85,7 +88,7 @@ async function main() {
         const data = await res.json();
         let all_extensions, found;
         for (let i in data) {
-            console.log('Available space left:', curr_limit);
+            console.log('Available space left:', curr_limit, '; limit & count:', tabs_limit, tabs_count);
             if (curr_limit <= 0) {
                 console.log('exit from cycle! limit!');
                 break;
@@ -103,7 +106,7 @@ async function main() {
                                 case 'OK':
                                     console.log('task started:', data[i]);
                                     --curr_limit;
-                                    console.log(curr_limit);
+                                    console.log(curr_limit, tabs_limit, tabs_count);
                                     break;
                                 case 'fail':
                                     console.log('task can not be started due to unknown error:', data[i]);
@@ -121,6 +124,7 @@ async function main() {
                 case 'h10':
                     setTimeout(h10scrap, 500, data[i]);
                     --curr_limit;
+                    console.log('h10:', curr_limit, tabs_limit, tabs_count);
                     break;
                 case 'products':
                     all_extensions = await chrome.management.getAll();
@@ -134,7 +138,7 @@ async function main() {
                                 case 'OK':
                                     console.log('task started:', data[i]);
                                     --curr_limit;
-                                    console.log(curr_limit);
+                                    console.log(curr_limit, tabs_limit, tabs_count);
                                     break;
                                 case 'fail':
                                     console.log('task can not be started due to unknown error:', data[i]);
@@ -163,7 +167,7 @@ async function main() {
                                     case 'OK':
                                         console.log('task started:', data[i]);
                                         --curr_limit;
-                                        console.log(curr_limit);
+                                        console.log(curr_limit, tabs_limit, tabs_count);
                                         break;
                                     case 'fail':
                                         console.log('task can not be started due to unknown error:', data[i]);
@@ -190,4 +194,13 @@ async function main() {
     }
     interval_id = setTimeout(main, 10000);
 }
+
+async function switchTabs() {
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+        await chrome.tabs.switching()
+    }
+    tabs_switching_interval_id = setTimeout(switchTabs, 30000);
+}
+
 await main();

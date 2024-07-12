@@ -18,6 +18,8 @@ body {
     height: 100dvh;
     overflow-y: auto;
     overflow-x: hidden;
+    z-index: 99999;
+    background-color: white;
 }
 
 #tasks_panel {

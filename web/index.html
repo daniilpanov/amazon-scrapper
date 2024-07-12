@@ -13,9 +13,13 @@
     <!--suppress HtmlUnknownTarget -->
 <!--    <link href='/file?filepath=web/css/bootstrap-icons.min.css' rel='stylesheet'>-->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!--suppress HtmlUnknownTarget -->
+    <link href='/file?filepath=web/css/multiselect-lib.css' rel='stylesheet'>
     <!--suppress HtmlUnknownTarget -->
     <link href='/file?filepath=web/css/style.css' rel='stylesheet'>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!--suppress HtmlUnknownTarget -->
+    <link href='/file?filepath=web/css/dashboard.css' rel='stylesheet'>
 </head>
 <body>
 <div class="container-fluid">
@@ -77,7 +81,66 @@
             <div class="tab-pane" id="dashboard">
                 <h2>Dashboard</h2>
 
-                <p>Sorry, this tab is under developing. Here will be tasks monitoring and maybe any additional information</p>
+                <div class="panel">
+                    <div class="button-div">
+                        <div class="form_label">
+                            <label for="visibility-select" class="form_text">Visibility: </label>
+                            <div class="multiselect_block">
+                                <select id="visibility-select" class="field_multiselect" name="visible" style="@media (min-width: 768px) { height: calc(4 * 38px)}">
+                                    <option>All</option>
+                                    <option value="1">Visible</option>
+                                    <option value="0">Hidden</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="button-div">
+                        <div class="form_label">
+                            <span class="form_text">Scripts: </span>
+                            <div class="multiselect_block">
+                                <label for="scripts-select" class="field_multiselect">All</label>
+                                <input id="checkbox-scripts" class="multiselect_checkbox" type="checkbox">
+                                <label for="checkbox-scripts" class="multiselect_label"></label>
+                                <select id="scripts-select" class="field_select" name="scripts" multiple style="@media (min-width: 768px) { height: calc(4 * 38px)}">
+
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="button-div">
+                        <div class="form_label">
+                            <span class="form_text">Statuses: </span>
+                            <div class="multiselect_block">
+                                <label for="statuses-select" class="field_multiselect">All</label>
+                                <input id="checkbox-statuses" class="multiselect_checkbox" type="checkbox">
+                                <label for="checkbox-statuses" class="multiselect_label"></label>
+                                <select id="statuses-select" class="field_select" name="statuses" multiple style="@media (min-width: 768px) { height: calc(4 * 38px)}">
+                                    <option value="0">Created</option>
+                                    <option value="1">In progress</option>
+                                    <option value="2" disabled>Paused</option>
+                                    <option value="3">Finished</option>
+                                    <option value="4">Crashed</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="button-div">
+                        <div class="form_label">
+                            <span class="form_text">Stages: </span>
+                            <div class="multiselect_block">
+                                <label for="stages-select" class="field_multiselect">All</label>
+                                <input id="checkbox-stages" class="multiselect_checkbox" type="checkbox">
+                                <label for="checkbox-stages" class="multiselect_label"></label>
+                                <select id="stages-select" class="field_select" name="stages" multiple style="@media (min-width: 768px) { height: calc(4 * 38px)}">
+                                    <!-- script adding -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tasks-row" id="main_row">
+                </div>
             </div>
             <div class="tab-pane" id="help">
                 <h2>Help</h2>
@@ -390,6 +453,10 @@
     <div class="toast-body" id="notificationBody">
     </div>
 </div>
+<!--suppress HtmlUnknownTarget -->
+<script src='/file?filepath=web/js/multiselect-lib.js'></script>
+<!--suppress HtmlUnknownTarget -->
+<script src='/file?filepath=web/js/dashboard.js'></script>
 <!--suppress HtmlUnknownTarget -->
 <script src='/file?filepath=web/js/bootstrap.bundle.min.js'></script>
 </body>

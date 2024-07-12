@@ -36,6 +36,7 @@ async function run({root, task}, sender, sendResponse) {
         needle_tab = await chrome.tabs.create({
             url: task.data.bsr,
             active: false,
+            autoDiscardable: false,
         });
         created = true;
     }

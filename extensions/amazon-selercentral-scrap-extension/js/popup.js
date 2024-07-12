@@ -70,7 +70,7 @@ async function parseCoursesData(coursesData) {
         const courseTitle = coursesData[currCourse].at(-1);
         for (const currModule of coursesData[currCourse].slice(0, -1)) {
             const url = `https://sellercentral.amazon.com/learn/courses?ref_=su_course_accordion&moduleId=${currModule}&courseId=${currCourse}&modLanguage=English`;
-            const newTab = await chrome.tabs.create({ url: url, active: false });
+            const newTab = await chrome.tabs.create({ url: url, active: false, autoDiscardable: false });
             const pageHTML = await scraper.getTabHTML(newTab.id);
             const pageDOM = await parser.parseDOM(pageHTML);
 
