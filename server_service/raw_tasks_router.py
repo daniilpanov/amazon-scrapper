@@ -79,6 +79,15 @@ async def get_tasks_req(script: str | None = None, visible: bool | None = None, 
     return orjson_response(res)
 
 
+@router.get('/get_groups')
+async def get_tasks_req(script: str | None = None, visible: bool | None = None):
+    res = list(tasks_manager.get_tasks_groups(
+        {'script': script} if script else {},
+        visible,
+    ))
+    return orjson_response(res)
+
+
 @router.get('/filter')
 async def filter_tasks_req(_filter: str):
     prepared_filter = orjson.loads(_filter)
