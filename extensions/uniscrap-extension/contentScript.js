@@ -4,7 +4,7 @@ function sendMessageToTab(tabId, message, retryDelay = 500, maxRetries = 100) {
 
     function sendMessage() {
         ++attempts;
-        chrome.tabs.sendMessage(tabId, message, function(response) {
+        chrome.tabs.sendMessage(tabId, message, () => {
             if (chrome.runtime.lastError) {
                 if (attempts < maxRetries) {
                     // console.error(`Ошибка при отправке сообщения: ${chrome.runtime.lastError.message}. Повторная попытка ${attempts} из ${maxRetries}...`);
@@ -21,55 +21,82 @@ function sendMessageToTab(tabId, message, retryDelay = 500, maxRetries = 100) {
     sendMessage();
 }
 
-function h10scrap(task) {
-    fetch(
+async function h10scrap(task) {
+    const res = await fetch(
         'http://195.201.194.213:8832/tasks/acquire/h10/' + task.taskHeader._id + '/' + task._id,
         {method: 'post'},
-    ).then((res) => {
-        if (res.status !== 200) {
-            if (res.status === 409) {
-                // console.log('This task is busy');
-            } else {
-                console.error('Error when try to acquire task:', res.statusText);
-            }
-            return;
+    );
+    if (res.status !== 200) {
+        if (res.status === 409) {
+            // console.log('This task is busy');
+        } else {
+            console.error('Error when try to acquire task:', res.statusText);
         }
-        res.json().then((data) => {
-            chrome.tabs.create({
-                url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
-                // autoDiscardable: false,
-            }, (tab) => {
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    files: ['helper.js', 'tasks/h10task.js'],
-                });
-
-                sendMessageToTab(tab.id, task);
-            });
-            chrome.tabs.create({
-                url: 'https://www.amazon.com/dp/' + task.data.asins[1],
-                // autoDiscardable: false,
-            }, (tab) => {
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    files: ['helper.js', 'tasks/h10product-task.js'],
-                });
-
-                sendMessageToTab(tab.id, task);
-            });
-            chrome.tabs.create({
-                url: 'https://www.amazon.com/dp/' + task.data.asins[0],
-                // autoDiscardable: false,
-            }, (tab) => {
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    files: ['helper.js', 'tasks/h10target-product-task.js'],
-                });
-
-                sendMessageToTab(tab.id, task);
-            });
+        return;
+    }
+    chrome.tabs.create({
+        url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
+        // autoDiscardable: false,
+    }, (tab) => {
+        chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            files: ['helper.js', 'tasks/h10task.js'],
         });
+
+        sendMessageToTab(tab.id, task);
     });
+    chrome.tabs.create({
+        url: 'https://www.amazon.com/dp/' + task.data.asins[1],
+        // autoDiscardable: false,
+    }, (tab) => {
+        chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            files: ['helper.js', 'tasks/h10product-task.js'],
+        });
+
+        sendMessageToTab(tab.id, task);
+    });
+    chrome.tabs.create({
+        url: 'https://www.amazon.com/dp/' + task.data.asins[0],
+        // autoDiscardable: false,
+    }, (tab) => {
+        chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            files: ['helper.js', 'tasks/h10target-product-task.js'],
+        });
+
+        sendMessageToTab(tab.id, task);
+    });
+}
+
+
+async function sendTask(ext_name, data, script) {
+    const all_extensions = await chrome.management.getAll();
+    let found = false;
+    let tabs = 0;
+    for (const ext of all_extensions) {
+        if (ext.name.toLowerCase().includes(ext_name)) {
+            found = true;
+            const msg = await chrome.runtime.sendMessage(ext.id, data);
+            console.log('Message sent to', ext.name, `[${ext.id}]`);
+            switch (msg) {
+                case 'OK':
+                    console.log('task started:', data);
+                    ++tabs;
+                    break;
+                case 'fail':
+                    console.log('task can not be started due to unknown error:', data);
+                    break;
+                case 'busy':
+                    console.log('task is busy:', data);
+                    break;
+            }
+        }
+    }
+    if (!found) {
+        console.log('No extensions found for script', script);
+    }
+    return tabs;
 }
 
 
@@ -95,31 +122,7 @@ async function main() {
             }
             switch (data[i].script) {
                 case '100asins':
-                    all_extensions = await chrome.management.getAll();
-                    found = false;
-                    all_extensions.forEach((async (ext) => {
-                        if (ext.name.toLowerCase().includes('amazon 100 asins scraper')) {
-                            found = true;
-                            const msg = await chrome.runtime.sendMessage(ext.id, {...data[i].data, task_id: data[i]._id, header_id: data[i].header_id});
-                            console.log('Message sent to', ext.name, `[${ext.id}]`);
-                            switch (msg) {
-                                case 'OK':
-                                    console.log('task started:', data[i]);
-                                    --curr_limit;
-                                    console.log(curr_limit, tabs_limit, tabs_count);
-                                    break;
-                                case 'fail':
-                                    console.log('task can not be started due to unknown error:', data[i]);
-                                    break;
-                                case 'busy':
-                                    console.log('task is busy:', data[i]);
-                                    break;
-                            }
-                        }
-                    }));
-                    if (!found) {
-                        console.log('No extensions found for script products!');
-                    }
+                    curr_limit -= await sendTask('amazon 100 asins scraper', {...data[i].data, task_id: data[i]._id, header_id: data[i].header_id}, '100asins')
                     break;
                 case 'h10':
                     setTimeout(h10scrap, 500, data[i]);
@@ -127,62 +130,13 @@ async function main() {
                     console.log('h10:', curr_limit, tabs_limit, tabs_count);
                     break;
                 case 'products':
-                    all_extensions = await chrome.management.getAll();
-                    found = false;
-                    all_extensions.forEach((async (ext) => {
-                        if (ext.name.toLowerCase().includes('amazon products scraper')) {
-                            found = true;
-                            const msg = await chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]});
-                            console.log('Message sent to', ext.name, `[${ext.id}]`);
-                            switch (msg) {
-                                case 'OK':
-                                    console.log('task started:', data[i]);
-                                    --curr_limit;
-                                    console.log(curr_limit, tabs_limit, tabs_count);
-                                    break;
-                                case 'fail':
-                                    console.log('task can not be started due to unknown error:', data[i]);
-                                    break;
-                                case 'busy':
-                                    console.log('task is busy:', data[i]);
-                                    break;
-                            }
-                        }
-                    }));
-                    if (!found) {
-                        console.log('No extensions found for script products!');
-                    }
+                    curr_limit -= await sendTask('amazon products scraper', {root: self, task: data[i]}, 'products')
                     break;
                 case 'bsr':
                     if ((data[i].stage || 0) >= 2) {
                         break;
                     }
-                    all_extensions = await chrome.management.getAll();
-                    found = false;
-                    all_extensions.forEach(ext => {
-                        if (ext.name.toLowerCase().includes('amazon bsr scraper')) {
-                            found = true;
-                            chrome.runtime.sendMessage(ext.id, {root: self, task: data[i]}, (res) => {
-                                switch (res) {
-                                    case 'OK':
-                                        console.log('task started:', data[i]);
-                                        --curr_limit;
-                                        console.log(curr_limit, tabs_limit, tabs_count);
-                                        break;
-                                    case 'fail':
-                                        console.log('task can not be started due to unknown error:', data[i]);
-                                        break;
-                                    case 'busy':
-                                        console.log('task is busy:', data[i]);
-                                        break;
-                                }
-                            })
-                            console.log('Message sent to', ext.name, `[${ext.id}]`);
-                        }
-                    });
-                    if (!found) {
-                        console.log('No extensions found for script BSR!');
-                    }
+                    curr_limit -= await sendTask('amazon bsr scraper', {root: self, task: data[i]}, 'bsr')
                     break;
                 default:
                     console.log('Unknown script:', data[i].script);
@@ -193,14 +147,6 @@ async function main() {
         console.log(e);
     }
     interval_id = setTimeout(main, 10000);
-}
-
-async function switchTabs() {
-    const tabs = await chrome.tabs.query({});
-    for (const tab of tabs) {
-        await chrome.tabs.switching()
-    }
-    tabs_switching_interval_id = setTimeout(switchTabs, 30000);
 }
 
 await main();
