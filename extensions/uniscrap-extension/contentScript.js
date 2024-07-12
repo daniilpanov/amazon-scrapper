@@ -37,7 +37,7 @@ function h10scrap(task) {
         res.json().then((data) => {
             chrome.tabs.create({
                 url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
-                autoDiscardable: false,
+                // autoDiscardable: false,
             }, (tab) => {
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
@@ -48,7 +48,7 @@ function h10scrap(task) {
             });
             chrome.tabs.create({
                 url: 'https://www.amazon.com/dp/' + task.data.asins[1],
-                autoDiscardable: false,
+                // autoDiscardable: false,
             }, (tab) => {
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},
@@ -59,7 +59,7 @@ function h10scrap(task) {
             });
             chrome.tabs.create({
                 url: 'https://www.amazon.com/dp/' + task.data.asins[0],
-                autoDiscardable: false,
+                // autoDiscardable: false,
             }, (tab) => {
                 chrome.scripting.executeScript({
                     target: {tabId: tab.id},

@@ -6,7 +6,7 @@ chrome.tabs.query({
     if (!tabs || !tabs.length) {
         chrome.tabs.create({
             url: 'control_panel.html',
-            autoDiscardable: false,
+            // autoDiscardable: false,
         });
     }
 });
