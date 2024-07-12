@@ -24,6 +24,7 @@ class TaskStatusEnum(enum.IntEnum):
 TasksListView = db_mongo.db('scrap_process')['tasks_list_view']
 TasksLockView = db_mongo.db('scrap_process')['tasks_lock_view']
 TasksListLockView = db_mongo.db('scrap_process')['tasks_list_lock_view']
+TasksGroups = db_mongo.db('scrap_process')['tasks_groups']
 # Collections
 TasksHeaders = db_mongo.db('scrap_process')['tasks_headers']
 TasksBodies = db_mongo.db('scrap_process')['tasks_bodies']
@@ -214,6 +215,19 @@ def get_all_tasks(_filters=None, exclude=None):
             if task['_id'] in acquired:
                 acquired.remove(task['_id'])
         return res
+    except OperationFailure:
+        # TODO: log
+        return False
+    except PyMongoError:
+        # TODO: log
+        return None
+
+
+def get_tasks_groups(_filters: dict | None = None, visible: bool | None = None, exclude: dict | None = None):
+    try:
+        if visible is not None:
+            _filters.setdefault('visible', visible)
+        return list(TasksGroups.find(_filters or {}, exclude or {}))
     except OperationFailure:
         # TODO: log
         return False
