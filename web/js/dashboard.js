@@ -54,7 +54,7 @@ async function update() {
                         aliases.push(aliasElement);
                     }
 
-                    status.innerHTML = `Done: ${completedFully} of ${tasksGroups}<br />Errors: ${totalErrors}<br />In process: ${tasksGroups - completedFully - totalErrors}`;
+                    status.innerHTML = `Done: ${completedFully} of ${tasksGroups}<br />Errors: ${totalErrors}`;
                     infoBar.appendChild(header);
                     infoBar.appendChild(status);
                     groupElement.appendChild(infoBar);
