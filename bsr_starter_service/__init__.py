@@ -7,7 +7,10 @@ def run():
     print('Script started!')
     while True:
         time.sleep(5)  # low payload
-        ready_bsrs = requests.get('http://localhost:8832/tasks/get_available/bsr?stage=2')
+        try:
+            ready_bsrs = requests.get('http://localhost:8832/tasks/get_available/bsr?stage=2')
+        except (ConnectionError, ConnectionRefusedError, ConnectionResetError, requests.exceptions.RequestException):
+            continue
         if ready_bsrs.status_code != 200:
             continue
         bsr_tasks = ready_bsrs.json()
