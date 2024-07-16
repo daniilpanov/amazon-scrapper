@@ -36,9 +36,8 @@ async function run({root, task}, sender, sendResponse) {
         needle_tab = await chrome.tabs.create({
             url: task.data.bsr,
             active: false,
-        }, (tab) => {
-            chrome.tabs.update(tab.id, {autoDiscardable: false});
         });
+        chrome.tabs.update(needle_tab.id, {autoDiscardable: false});
         created = true;
     }
     console.log(needle_tab);
