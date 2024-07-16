@@ -52,6 +52,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
             active: false,
         }, (tab) => {
             chrome.tabs.update(tab.id, {autoDiscardable: false});
+            return tab;
         });
         const result = await chrome.scripting.executeScript({
             target: {tabId: tab.id},
