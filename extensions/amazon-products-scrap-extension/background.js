@@ -50,15 +50,20 @@ async function run({root, task}, sender, sendResponse) {
     try {
         let result, data, errors;
         // Products lib
-        await chrome.scripting.executeScript({
-            target: {tabId: needle_tab.id},
-            files: ['./products.js'],
-        });
+        try {
+            await chrome.scripting.executeScript({
+                target: {tabId: needle_tab.id},
+                files: ['./products.js'],
+            });
+        } catch (e) {
+            console.warn('Error when importing products.js:', e);
+        }
         // Product card
         result = await chrome.scripting.executeScript({
             target: {tabId: needle_tab.id},
             args: [task],
             func: (task) => {
+                window.finish_collecting = false;
                 window.products_collector = new CollectProducts(task.data.asin);
                 return {data: window.products_collector.getProductCard(task.data.collect_media_config)};
             },
@@ -152,10 +157,14 @@ async function run({root, task}, sender, sendResponse) {
             });
             await new Promise(resolve => setTimeout(resolve, 500));
             // Reviews lib
-            await chrome.scripting.executeScript({
-                target: {tabId: needle_tab.id},
-                files: ['./reviews.js'],
-            });
+            try {
+                await chrome.scripting.executeScript({
+                    target: {tabId: needle_tab.id},
+                    files: ['./reviews.js'],
+                });
+            } catch (e) {
+                console.warn('Error when importing reviews.js:', e);
+            }
             result = await chrome.scripting.executeScript({
                 target: {tabId: needle_tab.id},
                 args: [task],
@@ -240,18 +249,6 @@ async function run({root, task}, sender, sendResponse) {
                     method: 'POST',
                 });
             }
-            fetch('http://45.14.245.223:1802/new_collection/', {
-                headers: {
-                    'accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                method: 'POST',
-                body: JSON.stringify({
-                    'name': task.taskHeader.alias || asin,
-                    'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
-                    'asins': [asin],
-                }),
-            });
         }
     } catch (e) {
         console.log(e);
@@ -269,6 +266,24 @@ async function run({root, task}, sender, sendResponse) {
             }),
         });
     } finally {
+        chrome.scripting.executeScript({
+            target: {tabId: needle_tab.id},
+            func: () => {
+                window.finish_collecting = true;
+            },
+        })
+        fetch('http://45.14.245.223:1802/new_collection/', {
+            headers: {
+                'accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            method: 'POST',
+            body: JSON.stringify({
+                'name': task.taskHeader.alias || asin,
+                'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
+                'asins': [asin],
+            }),
+        });
         if (created) {
             chrome.tabs.remove(needle_tab.id);
         }

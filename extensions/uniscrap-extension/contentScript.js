@@ -1,4 +1,3 @@
-
 function sendMessageToTab(tabId, message, retryDelay = 500, maxRetries = 100) {
     let attempts = 0;
 
@@ -104,7 +103,25 @@ let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) 
 self = await chrome.management.getSelf();
 async function main() {
     // Limit by the tabs counting
-    let tabs_count = (await chrome.tabs.query({})).length;
+    let tabs = await chrome.tabs.query({});
+    let is_finished;
+    for (const tab of tabs) {
+        try {
+            is_finished = await chrome.scripting.executeScript({
+                target: {tabId: tab.id},
+                func: () => {
+                    return window.finish_collecting || false;
+                },
+            });
+            if (is_finished[0]?.result) {
+                await chrome.tabs.remove(tab.id);
+            }
+        } catch (e) {
+        }
+    }
+    tabs = await chrome.tabs.query({});
+    console.log(tabs);
+    let tabs_count = tabs.length;
     if (tabs_count >= tabs_limit) {
         console.log('exit from function! limit!', tabs_limit, tabs_count);
         return interval_id = setTimeout(main, 10000);

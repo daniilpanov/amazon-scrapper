@@ -57,6 +57,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
             target: {tabId: tab.id},
             args: [asinList, type, label],
             func: (asinList, type, label) => {
+                window.finish_collecting = false;
                 function check(kw, str) {
                     str = str.toLowerCase();
                     for (const keyword of kw) {
@@ -95,7 +96,8 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                                 const appElement = document.querySelector('.s-result-item');
                                 if (appElement) {
                                     observer.disconnect();
-                                    resolve(scrap(document));
+                                    window.finish_collecting = true;
+                                    return resolve(scrap(document));
                                 }
                             }
                         }
@@ -109,7 +111,8 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                     const appElement = document.querySelector('.s-result-item');
                     if (appElement) {
                         observer.disconnect();
-                        resolve(scrap(document));
+                        window.finish_collecting = true;
+                        return resolve(scrap(document));
                     }
                 });
             }
