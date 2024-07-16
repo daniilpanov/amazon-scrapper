@@ -49,7 +49,9 @@ async function run({root, task}, sender, sendResponse) {
         if (!created) {
             need_import = await chrome.scripting.executeScript({
                 target: {tabId: needle_tab.id},
-                func: () => {return typeof CollectBSR === 'undefined'},
+                func: () => {
+                    return typeof CollectBSR === 'undefined'
+                },
             });
             need_import = need_import[0].result || false;
         }
@@ -67,6 +69,7 @@ async function run({root, task}, sender, sendResponse) {
             target: {tabId: needle_tab.id},
             args: [task],
             func: (task) => {
+                window.finish_collecting = false;
                 console.log('hello! :)');
                 const bsr_collector = new CollectBSR(task.data.limit, task.data.count, task.data.target, task.data.unique_brands, task.data.domain);
                 console.log('BSR Collector created!');
@@ -79,6 +82,7 @@ async function run({root, task}, sender, sendResponse) {
                 for (const asin of bsr_collector.getASINsLInks(task.data.bsr)) {
                     asins_links[asin] = `https://${task.data.domain}/dp/${asin}`;
                 }
+                window.finish_collecting = true;
                 return {data: {bsr_url: task.data.bsr, asins_links: asins_links}};
             },
         });
