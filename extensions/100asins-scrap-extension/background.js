@@ -118,6 +118,9 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
         asinList = result[0]?.result || asinList;
         await chrome.tabs.remove(tab.id);
         ++counter;
+        if (!asinList || !asinList.length || counter > 100) {
+            break;
+        }
     }
     asinList = new Set(asinList);
     console.log(Array.from(asinList));

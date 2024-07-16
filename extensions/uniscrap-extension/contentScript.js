@@ -100,14 +100,14 @@ async function sendTask(ext_name, data, script) {
 }
 
 
-let interval_id, tabs_switching_interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 10, curr_limit = tabs_limit;
+let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 10, curr_limit = tabs_limit;
 self = await chrome.management.getSelf();
 async function main() {
     // Limit by the tabs counting
     let tabs_count = (await chrome.tabs.query({})).length;
     if (tabs_count >= tabs_limit) {
         console.log('exit from function! limit!', tabs_limit, tabs_count);
-        return;
+        return interval_id = setTimeout(main, 10000);
     }
     curr_limit = tabs_limit - tabs_count;
     try {

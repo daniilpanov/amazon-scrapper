@@ -18,9 +18,9 @@ class CollectReviews {
     named_filters = {};
     named_options = {};
     indexes_map = {};
-    indexes_map_prev = {};
+    directions = {}
     indexes_limits = {};
-    indexes_half_period = {0: 1};
+    indexes_half_period = {};
     format_type_filter = null;
     format_type_options = null;
     params_count = 1;
@@ -219,6 +219,36 @@ class CollectReviews {
             this.indexes_limits[i] = l - 1;
             this.indexes_half_period[i] = this.params_count;
         }
+        this.params_count *= l || 1;
+    }
+
+    // snake-like switching pattern
+    switching() {
+        if (this.index >= this.params_count) {
+            console.log(...Object.values(this.indexes_map), 'END');
+            return false;
+        }
+        let curr = this.index++;
+        if (curr === 0) {
+            console.log(...Object.values(this.indexes_map));
+            return true;
+        }
+        let key;
+        const reversed_keys = Object.keys(this.indexes_map).reverse();
+        for (key of reversed_keys) {
+            if (!(curr % this.indexes_half_period[key])) {
+                break;
+            }
+        }
+        if (this.indexes_map[key] >= this.indexes_limits[key] - 1) {
+            this.directions[key] = -1;
+        } else if (this.indexes_map[key] <= 0) {
+            this.directions[key] = 1;
+        }
+        this.indexes_map[key] += this.directions[key];
+
+        console.log(...Object.values(this.indexes_map));
+        return true;
     }
 
     getDirectionOfIndex(idx) {
