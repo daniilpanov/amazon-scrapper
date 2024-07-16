@@ -113,7 +113,6 @@ async function main() {
     try {
         const res = await fetch('http://195.201.194.213:8832/tasks/get_available');
         const data = await res.json();
-        let all_extensions, found;
         for (let i in data) {
             console.log('Available space left:', curr_limit, '; limit & count:', tabs_limit, tabs_count);
             if (curr_limit <= 0) {

@@ -223,7 +223,7 @@ class CollectReviews {
     }
 
     // snake-like switching pattern
-    switching() {
+    async switching() {
         if (this.index >= this.params_count) {
             console.log(...Object.values(this.indexes_map), 'END');
             return false;
@@ -248,6 +248,31 @@ class CollectReviews {
         this.indexes_map[key] += this.directions[key];
 
         console.log(...Object.values(this.indexes_map));
+
+        try {
+            this.named_filters[key].click();
+        } catch (e) {
+            console.error('Error when trying to click to filter:', e);
+            return false;
+        }
+        const opts = this.named_options[key] = [];
+        await new Promise(resolve => setTimeout(resolve, 100));
+        try {
+            document.querySelectorAll('.a-popover li[aria-labelledby*="' + this.named_filters[key].id + '"] a').forEach(o => opts.push(o));
+        } catch (e) {
+            console.error('Error when looking for options:', e);
+            return false;
+        }
+        try {
+            this.named_options[key][this.indexes_map[key]].scrollIntoView();
+            this.named_options[key][this.indexes_map[key]].click();
+        } catch (e) {
+            console.error('Error when clicking option:', e);
+            return false;
+        }
+        ++this.index;
+        this.page = 1;
+
         return true;
     }
 
@@ -257,34 +282,6 @@ class CollectReviews {
         }
         const diff = Boolean(this.indexes_map_prev[idx] - this.indexes_map[idx] + 1);
         return diff - !diff;
-    }
-
-    // snake-like switching pattern
-    async switching() {
-        let mod = 1, idx;
-        const keys = Object.keys(this.named_options).reverse(), add_keys = Object.keys(this.named_options).reverse();
-        add_keys.push(0);
-        for (idx of keys) {
-            if (!this.index) {
-                ++this.index;
-                return;
-            }
-            mod = this.index % this.indexes_half_period[idx];
-            if (!mod) {
-                break;
-            }
-        }
-        const dir = this.getDirectionOfIndex(idx);
-        this.indexes_map_prev = {...this.indexes_map};
-        this.indexes_map[idx] += dir;
-        this.named_filters[idx].click();
-        const opts = this.named_options[idx] = [];
-        await new Promise(resolve => setTimeout(resolve, 100));
-        document.querySelectorAll('.a-popover li[aria-labelledby*="' + this.named_filters[idx].id + '"] a').forEach(o => opts.push(o));
-        this.named_options[idx][this.indexes_map[idx]].scrollIntoView();
-        this.named_options[idx][this.indexes_map[idx]].click();
-        ++this.index;
-        this.page = 1;
     }
 
     async collect() {
@@ -301,7 +298,9 @@ class CollectReviews {
         let result, res_arr = [];
         for (; this.index < this.params_count; ++this.index) {
             await this.waitLoad();
-            await this.switching();
+            if (!await this.switching()) {
+                break;
+            }
             for (; this.page <= 10; ++this.page) {
                 await this.waitLoad();
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -338,7 +337,7 @@ class CollectReviews {
                     document.querySelector('.a-pagination .a-last > a').click();
                     document.querySelector('.a-pagination .a-last > a').scrollIntoView();
                 } catch (e) {
-                    console.log(e);
+                    console.log('No pagination found:', e);
                     break;
                 }
             }
