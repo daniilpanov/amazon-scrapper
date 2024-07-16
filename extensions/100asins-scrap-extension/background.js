@@ -50,10 +50,8 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
         tab = await chrome.tabs.create({
             url: encodeURI(`https://amazon.com/s?k=${query}&page=${counter}`),
             active: false,
-        }, (tab) => {
-            chrome.tabs.update(tab.id, {autoDiscardable: false});
-            return tab;
         });
+        chrome.tabs.update(tab.id, {autoDiscardable: false});
         const result = await chrome.scripting.executeScript({
             target: {tabId: tab.id},
             args: [asinList, type, label],
