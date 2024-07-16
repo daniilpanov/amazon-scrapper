@@ -120,7 +120,6 @@ async function main() {
         }
     }
     tabs = await chrome.tabs.query({});
-    console.log(tabs);
     let tabs_count = tabs.length;
     if (tabs_count >= tabs_limit) {
         console.log('exit from function! limit!', tabs_limit, tabs_count);
