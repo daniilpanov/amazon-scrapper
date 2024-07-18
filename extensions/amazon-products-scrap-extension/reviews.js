@@ -215,7 +215,6 @@ class CollectReviews {
             this.params_count *= l || 1;
             l = this.named_options[i].length;
             this.indexes_map[i] = 0;
-            this.indexes_map_prev[i] = 0;
             this.indexes_limits[i] = l - 1;
             this.indexes_half_period[i] = this.params_count;
         }
@@ -274,14 +273,6 @@ class CollectReviews {
         this.page = 1;
 
         return true;
-    }
-
-    getDirectionOfIndex(idx) {
-        if (this.indexes_map[idx] >= this.indexes_limits[idx]) {
-            return -1;
-        }
-        const diff = Boolean(this.indexes_map_prev[idx] - this.indexes_map[idx] + 1);
-        return diff - !diff;
     }
 
     async collect() {

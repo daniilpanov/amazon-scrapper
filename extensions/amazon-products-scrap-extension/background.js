@@ -290,5 +290,5 @@ async function run({root, task}, sender, sendResponse) {
     }
 }
 
-chrome.runtime.onMessageExternal.addListener(run)
-chrome.runtime.onMessage.addListener(run)
+chrome.runtime.onMessageExternal.addListener(run);
+chrome.runtime.onMessage.addListener(run);

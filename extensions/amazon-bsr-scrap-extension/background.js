@@ -13,12 +13,12 @@ async function run({root, task}, sender, sendResponse) {
     let acq = await fetch(
         'http://195.201.194.213:8832/tasks/acquire/bsr/' + task.header_id + '/' + task._id,
         {method: 'post'},
-    )
+    );
     if (acq.status !== 200) {
         if (acq.status === 409) {
-            sendResponse('busy')
+            sendResponse('busy');
         } else {
-            sendResponse('fail')
+            sendResponse('fail');
             console.error('Error when try to acquire task:', acq.statusText);
         }
         return;
@@ -139,5 +139,5 @@ async function run({root, task}, sender, sendResponse) {
     }
 }
 
-chrome.runtime.onMessageExternal.addListener(run)
-chrome.runtime.onMessage.addListener(run)
+chrome.runtime.onMessageExternal.addListener(run);
+chrome.runtime.onMessage.addListener(run);
