@@ -81,7 +81,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
                         }
                         const brandTitle = card.querySelector('h2 > span')?.textContent;
 
-                        if (check(type, cardDescription) && (!brandTitle || check(label, brandTitle))) {
+                        if (check(type, cardDescription) && (!brandTitle || check(label, brandTitle) || check(label, cardDescription))) {
                             asinList.push(asin);
                         }
                     }
