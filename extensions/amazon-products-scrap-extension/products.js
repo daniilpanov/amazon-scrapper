@@ -135,7 +135,7 @@ class CollectProducts {
                         media_config = JSON.parse(t[0].replaceAll("'", '"').replaceAll('Date.now()', Date.now()).replaceAll(/A\.\$\.parseJSON\(".*"\)/gm, '{}'));
                         if (media_config.videos && media_config.videos.length) {
                             for (const video of media_config.videos) {
-                                if (video.url.endsWith('.m3u8')) {
+                                if (!video.url || video.url.endsWith('.m3u8')) {
                                     continue;
                                 }
                                 videos.add(video.url);
@@ -143,7 +143,13 @@ class CollectProducts {
                         }
                         if (media_config.colorImages && media_config.colorImages.initial) {
                             for (const image of media_config.colorImages.initial) {
-                                images.add(image.hiRes);
+                                if (image) {
+                                    if (image.hiRes) {
+                                        images.add(image.hiRes);
+                                    } else if (image.large) {
+                                        images.add(image.large);
+                                    }
+                                }
                             }
                         }
                     } catch (e) {

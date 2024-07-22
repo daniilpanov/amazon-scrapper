@@ -75,6 +75,7 @@ async function run({root, task}, sender, sendResponse) {
                 }
             },
         });
+        console.log(result);
         data = result[0].result?.data;
         // handle errors
         if (data.error) {
