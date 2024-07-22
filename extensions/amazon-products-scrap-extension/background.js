@@ -28,7 +28,7 @@ async function run({root, task}, sender, sendResponse) {
         return;
     }
     sendResponse('OK');
-    let needle_tab = null, created = false;
+    let needle_tab = null;
     const {asin} = task.data;
     // check if needle tab is already opened
     for (const tab of await chrome.tabs.query({})) {
@@ -43,7 +43,6 @@ async function run({root, task}, sender, sendResponse) {
             active: false,
         });
         chrome.tabs.update(needle_tab.id, {autoDiscardable: false});
-        created = true;
     }
 
     const date = new Date();

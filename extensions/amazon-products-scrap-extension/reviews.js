@@ -187,39 +187,41 @@ class CollectReviews {
 
     async updateParams() {
         const filters = document.querySelectorAll('[id*="cm_cr-view_opt_"] select');
-        filters[0].scrollIntoView();
         this.named_filters = {};
         this.named_options = {};
         let opts;
-        for (let filter of filters) {
-            filter.click();
-            const key = filter.id.replace('-dropdown', '');
-            this.named_filters[key] = filter;
-            await new Promise(resolve => setTimeout(resolve, 500));
-            opts = [];
-            document.querySelectorAll('.a-popover li[aria-labelledby*="' + filter.id + '"] a').forEach(o => opts.push(o));
-            this.named_options[key] = opts;
-        }
-        // Remove redundant params
-        this.named_options['star-count'].pop(7);
-        this.named_options['star-count'].pop(6);
-        // Move special filters
-        if ('format-type' in this.named_filters) {
-            this.format_type_filter = this.named_filters['format-type'];
-            this.format_type_options = this.named_options['format-type'];
-            delete this.named_filters['format-type'];
-            delete this.named_options['format-type'];
-        }
-        // Count filters params variants
-        let l;
-        for (const i in this.named_options) {
+        if (filters && filters.length) {
+            filters[0].scrollIntoView();
+            for (let filter of filters) {
+                filter.click();
+                const key = filter.id.replace('-dropdown', '');
+                this.named_filters[key] = filter;
+                await new Promise(resolve => setTimeout(resolve, 500));
+                opts = [];
+                document.querySelectorAll('.a-popover li[aria-labelledby*="' + filter.id + '"] a').forEach(o => opts.push(o));
+                this.named_options[key] = opts;
+            }
+            // Remove redundant params
+            this.named_options['star-count'].pop(7);
+            this.named_options['star-count'].pop(6);
+            // Move special filters
+            if ('format-type' in this.named_filters) {
+                this.format_type_filter = this.named_filters['format-type'];
+                this.format_type_options = this.named_options['format-type'];
+                delete this.named_filters['format-type'];
+                delete this.named_options['format-type'];
+            }
+            // Count filters params variants
+            let l;
+            for (const i in this.named_options) {
+                this.params_count *= l || 1;
+                l = this.named_options[i].length;
+                this.indexes_map[i] = 0;
+                this.indexes_limits[i] = l - 1;
+                this.indexes_half_period[i] = this.params_count;
+            }
             this.params_count *= l || 1;
-            l = this.named_options[i].length;
-            this.indexes_map[i] = 0;
-            this.indexes_limits[i] = l - 1;
-            this.indexes_half_period[i] = this.params_count;
         }
-        this.params_count *= l || 1;
     }
 
     // snake-like switching pattern
