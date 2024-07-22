@@ -133,9 +133,7 @@ async function run({root, task}, sender, sendResponse) {
             }),
         });
     } finally {
-        if (created) {
-            await chrome.tabs.remove(needle_tab.id);
-        }
+        // await chrome.tabs.remove(needle_tab.id);
     }
 }
 
