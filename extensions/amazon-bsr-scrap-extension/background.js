@@ -67,7 +67,7 @@ async function run({root, task}, sender, sendResponse) {
         result = await chrome.scripting.executeScript({
             target: {tabId: needle_tab.id},
             args: [task],
-            func: (task) => {
+            func: async (task) => {
                 window.finish_collecting = false;
                 console.log('hello! :)');
                 const bsr_collector = new CollectBSR(task.data.limit, task.data.count, task.data.target, task.data.unique_brands, task.data.domain);
@@ -78,7 +78,7 @@ async function run({root, task}, sender, sendResponse) {
                 }
                 let asins_links = {};
                 console.log('Collect asins');
-                for (const asin of bsr_collector.getASINsLInks(task.data.bsr)) {
+                for (const asin of await bsr_collector.getASINsLInks(task.data.bsr)) {
                     asins_links[asin] = `https://${task.data.domain}/dp/${asin}`;
                 }
                 window.finish_collecting = true;
@@ -133,7 +133,7 @@ async function run({root, task}, sender, sendResponse) {
             }),
         });
     } finally {
-        // await chrome.tabs.remove(needle_tab.id);
+        await chrome.tabs.remove(needle_tab.id);
     }
 }
 
