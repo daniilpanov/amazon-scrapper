@@ -50,8 +50,22 @@ class CollectBSR {
         return url*/
     }
 
-    getASINsLInks() {
-        const links_a = document.querySelectorAll('div.a-cardui[id*="asin-index"]'), res = [];
+    async getASINsLInks() {
+        const pagination = document.getElementsByClassName('a-pagination');
+        let links_a, old_links_a_count = 0, res = [];
+        if (pagination && pagination.length) {
+            pagination[0].scrollIntoView();
+            await new Promise(r => setTimeout(r, 2000));
+        } else {
+            links_a = document.querySelectorAll('div.a-cardui[id*="asin-index"]');
+            while (old_links_a_count < links_a.length) {
+                links_a[links_a.length - 1].scrollIntoView();
+                old_links_a_count = links_a.length;
+                await new Promise(r => setTimeout(r, 1000));
+                links_a = document.querySelectorAll('div.a-cardui[id*="asin-index"]');
+            }
+        }
+        links_a = document.querySelectorAll('div.a-cardui[id*="asin-index"]');
         let i = 0, link;
         for (link of links_a) {
             if (i >= this.count) {
@@ -64,11 +78,22 @@ class CollectBSR {
                 continue;
             }
             const asin = link.querySelector('a')?.href.match(/B0[0-9A-Z]{8}/g)
-            if (asin) {
-                i += 1
-                res.push(asin);
+            if (asin && asin.length) {
+                ++i;
+                res.push(asin[0]);
             }
         }
+        if (this.target && !(this.target in res)) {
+            res.push(this.target);
+        }
+        /*if (i < this.count) {
+            const new_page = pagination.querySelector('.a-last:not(.a-disabled) > a');
+            if (new_page) {
+                new_page.click();
+                await new Promise(r => setTimeout(r, 2000));
+                res = [...res, await this.getASINsLInks()];
+            }
+        }*/
         return res;
     }
 }
