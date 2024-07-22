@@ -219,35 +219,6 @@ def parse_media_links(html):
     return data
 
 
-def get_media_links(asin, data):
-    titles_mapping = data['colorToAsin']
-    title = None
-    for t, value in titles_mapping.items():
-        if value['asin'] == asin:
-            title = t
-            break
-    if not title:
-        print('no title')
-        return [], []
-    images_links = []
-    for img in data['colorImages'][title]:
-        if 'hiRes' in img:
-            images_links.append(img['hiRes'])
-        else:
-            res_max = 0
-            media_link = None
-            for link, resolution in img['main'].items():
-                if int(resolution[0]) > res_max:
-                    res_max = int(resolution[0])
-                    media_link = link
-            if media_link:
-                images_links.append(media_link)
-    video_links = []
-    if data['videos']:
-        video_links.append(data['videos'][0]['url'])
-    return images_links, video_links
-
-
 def parse_product(asin, html, tiny=False, domain='amazon.com'):
     if isinstance(html, str):
         bs = BeautifulSoup(html, features='lxml')

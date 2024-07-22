@@ -177,7 +177,6 @@ async def collect_product_media(asin: str):
         raise HTTPException(HTTP_404_NOT_FOUND)
     if not (media_data := product_card.get('media_data')):
         raise HTTPException(HTTP_400_BAD_REQUEST)
-    images, videos = parser.get_media_links(asin, media_data)
 
     def add_task(i, link, mimetype, ext):
         fname = asin + '-' + str(i + 1)
@@ -188,13 +187,13 @@ async def collect_product_media(asin: str):
             'mimetype': mimetype,
             'media_type': ext,
             'media_url': link,
-            'service': 'sellercentral',
+            'service': 'target',
         }])
 
-    for i, image_url in enumerate(images):
+    for i, image_url in enumerate(media_data.get('images', [])):
         add_task(i, image_url, 'image/jpeg', 'jpg')
 
-    for i, video_url in enumerate(videos):
+    for i, video_url in enumerate(media_data.get('videos', [])):
         add_task(i, video_url, 'video/mp4', 'mp4')
     return Response(status_code=HTTP_201_CREATED)
 
