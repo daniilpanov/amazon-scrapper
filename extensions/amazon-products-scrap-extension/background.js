@@ -4,6 +4,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             fetch(request[i][0], request[i][1]).then((response) => {
                 sendResponse(response);
             });
+        } else if (i === 'log') {
+            console.log(request[i]);
         }
     }
 });
@@ -183,7 +185,8 @@ async function run({root, task}, sender, sendResponse) {
                                             method: 'POST',
                                             body: JSON.stringify(data),
                                         },
-                                    ]
+                                    ],
+                                    log: data,
                                 },
                                 (response) => {
                                 },
@@ -287,8 +290,11 @@ async function run({root, task}, sender, sendResponse) {
                 'asins': [asin],
             }),
         });
-        if (created) {
-            chrome.tabs.remove(needle_tab.id);
+        try {
+            await chrome.tabs.remove(needle_tab.id);
+        } catch (e) {
+            console.log(e);
+            console.error(e);
         }
     }
 }

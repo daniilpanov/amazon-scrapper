@@ -230,7 +230,6 @@ def parse_product(asin, html, tiny=False, domain='amazon.com'):
         canonical_link_parts = urllib.parse.urlparse(canonical_link)
         canonical_prefix = canonical_link_parts.path.split('/')[1]
     else:
-        canonical_link = None
         canonical_prefix = None
     if not bs:
         print('NO BS! ASIN:', asin)

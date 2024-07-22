@@ -37,6 +37,7 @@ class CollectReviews {
         this.URL = 'https://www.' + domain + '/' + (prefix ? prefix + '/' : '') + 'dp/' + asin + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews';
     }
 
+    // TODO: replace with observer
     async waitLoad() {
         for (let i = 0; i < 1000; ++i) {
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -225,11 +226,13 @@ class CollectReviews {
     async switching() {
         if (this.index >= this.params_count) {
             console.log(...Object.values(this.indexes_map), 'END');
+            chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map), 'END']}, (response) => {});
             return false;
         }
         let curr = this.index++;
         if (curr === 0) {
             console.log(...Object.values(this.indexes_map));
+            chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map)]}, (response) => {});
             return true;
         }
         let key;
@@ -247,11 +250,13 @@ class CollectReviews {
         this.indexes_map[key] += this.directions[key];
 
         console.log(...Object.values(this.indexes_map));
+        chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map)]}, (response) => {});
 
         try {
             this.named_filters[key].click();
         } catch (e) {
             console.error('Error when trying to click to filter:', e);
+            chrome.runtime.sendMessage({log: ['Error when trying to click to filter:', e]}, (response) => {});
             return false;
         }
         const opts = this.named_options[key] = [];
@@ -260,6 +265,7 @@ class CollectReviews {
             document.querySelectorAll('.a-popover li[aria-labelledby*="' + this.named_filters[key].id + '"] a').forEach(o => opts.push(o));
         } catch (e) {
             console.error('Error when looking for options:', e);
+            chrome.runtime.sendMessage({log: ['Error when looking for options:', e]}, (response) => {});
             return false;
         }
         try {
@@ -267,6 +273,7 @@ class CollectReviews {
             this.named_options[key][this.indexes_map[key]].click();
         } catch (e) {
             console.error('Error when clicking option:', e);
+            chrome.runtime.sendMessage({log: ['Error when clicking option:', e]}, (response) => {});
             return false;
         }
         ++this.index;
@@ -329,6 +336,7 @@ class CollectReviews {
                     document.querySelector('.a-pagination .a-last > a').scrollIntoView();
                 } catch (e) {
                     console.log('No pagination found:', e);
+                    chrome.runtime.sendMessage({log: ['No pagination found:', e]}, (response) => {});
                     break;
                 }
             }
@@ -348,6 +356,7 @@ class CollectReviews {
     }
 }
 
+// Universal and fast method FOR DIFFERENT LANGUAGES (tested on Spanish and English)
 function monthToNum(month) {
     month = month.toLowerCase();
     let r;
