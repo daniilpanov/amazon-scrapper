@@ -85,7 +85,7 @@ async function run({root, task}, sender, sendResponse) {
                 return {data: {bsr_url: task.data.bsr, asins_links: asins_links}};
             },
         });
-        console.log('result!');
+        console.log('result!', result);
         data = result[0].result?.data;
         data.with_continue = Boolean(task.stage > 0);
         data.task_id = task._id;
