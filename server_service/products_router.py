@@ -196,4 +196,5 @@ async def collect_product_media(asin: str):
 
     for i, video_url in enumerate(videos):
         add_task(i, video_url, 'video/mp4', 'mp4')
+    return Response(status_code=HTTP_201_CREATED)
 

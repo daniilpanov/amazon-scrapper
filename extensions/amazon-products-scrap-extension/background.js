@@ -9,9 +9,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function run({root, task}, sender, sendResponse) {
-    console.log(task);
     if (!task || !root || !task.header_id) {
-        sendResponse('bad request');
+        return sendResponse('bad request');
     }
     let acq = await fetch(
         'http://195.201.194.213:8832/tasks/acquire/products/' + task.header_id + '/' + task._id,
@@ -55,7 +54,8 @@ async function run({root, task}, sender, sendResponse) {
                 files: ['./products.js'],
             });
         } catch (e) {
-            console.warn('Error when importing products.js:', e);
+            console.log('Error when importing products.js:', e);
+            console.error('Error when importing products.js:', e);
         }
         // Product card
         result = await chrome.scripting.executeScript({
@@ -63,15 +63,20 @@ async function run({root, task}, sender, sendResponse) {
             args: [task],
             func: (task) => {
                 window.finish_collecting = false;
-                window.products_collector = new CollectProducts(task.data.asin);
-                return {data: window.products_collector.getProductCard(task.data.collect_media_config)};
+                const products_collector = new CollectProducts(task.data.asin);
+                try {
+                    const product_card = products_collector.getProductCard(task.data.collect_media_config);
+                    const aspects = (task.data.collect_aspects) ? products_collector.getAspects() : null;
+                    return {product_card, aspects};
+                } catch (e) {
+                    return {'error': e};
+                }
             },
         });
         data = result[0].result?.data;
-        console.log(result);
-        errors = result[0].result?.errors;
         // handle errors
-        if (errors) {
+        if (data.error) {
+            console.log(data.error);
             fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -80,66 +85,50 @@ async function run({root, task}, sender, sendResponse) {
                 body: JSON.stringify({
                     confirm: false,
                     errors: [
-                        [date.toISOString() + ' [products.card]', errors],
+                        [date.toISOString() + ' [products.card]' + data.error.message],
                     ],
                     stop: false,
                 }),
             });
         }
         // load data
-        if (Object.keys(data || {}).length) {
+        if (Object.keys(data.product_card || {}).length) {
             fetch('http://195.201.194.213:8832/products/set_result/card/' + task.data.asin, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 method: 'POST',
-                body: JSON.stringify(data),
+                body: JSON.stringify(data.product_card),
+            }).then((res) => {
+                if (res.status > 204) {
+                    console.log('card write error:', res.statusText, '\ndata:', data.product_card);
+                    console.error('card write error:', res.statusText, '\ndata:', data.product_card);
+                }
             });
         }
-        // Aspects
-        if (task.data.collect_aspects) {
-            result = await chrome.scripting.executeScript({
-                target: {tabId: needle_tab.id},
-                args: [task],
-                func: (task) => {
-                    if (!window.products_collector) {
-                        window.products_collector = new CollectProducts(task.data.asin);
-                    }
-                    return {data: window.products_collector.getAspects()};
+        if (data.aspects && data.aspects.length) {
+            fetch('http://195.201.194.213:8832/products/set_result/aspects/' + task.data.asin, {
+                headers: {
+                    'Content-Type': 'application/json',
                 },
+                method: 'POST',
+                body: JSON.stringify(data.aspects),
+            }).then((res) => {
+                if (res.status > 201) {
+                    console.log('aspects write error:', res.statusText, '\ndata:', data.aspects);
+                    console.error('aspects write error:', res.statusText, '\ndata:', data.aspects);
+                }
             });
-            data = result[0].result?.data;
-            errors = result[0].result?.errors;
-            // handle errors
-            if (errors) {
-                fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                        confirm: false,
-                        errors: [
-                            [date.toISOString() + ' [products.aspects]', errors]
-                        ],
-                        stop: false,
-                    }),
-                });
-            }
-            // load data
-            if (data?.length) {
-                fetch('http://195.201.194.213:8832/products/set_result/aspects/' + task.data.asin, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                });
-            }
         }
         // If it is target - run target collecting
         if (task.data.collect_media_config && task.data.target) {
-            fetch('http://localhost:8832/products/target/collect/' + task.data.asin, {method: 'POST'})
+            console.log('collect product media: ' + task.data.asin);
+            fetch('http://localhost:8832/products/target/collect/' + task.data.asin, {method: 'POST'}).then((res) => {
+                if (res.status > 201) {
+                    console.log('product ' + task.data.asin + ' target collecting start error:', res.statusText);
+                    console.error('product ' + task.data.asin + ' target collecting start error:', res.statusText);
+                }
+            });
         }
         // Reviews
         if (task.stage) {
@@ -163,7 +152,8 @@ async function run({root, task}, sender, sendResponse) {
                     files: ['./reviews.js'],
                 });
             } catch (e) {
-                console.warn('Error when importing reviews.js:', e);
+                console.log('Error when importing reviews.js:', e);
+                console.error('Error when importing reviews.js:', e);
             }
             result = await chrome.scripting.executeScript({
                 target: {tabId: needle_tab.id},
@@ -176,7 +166,7 @@ async function run({root, task}, sender, sendResponse) {
                             task.result?.prefix || null,
                             task.data.current_format,
                             task.data.keywords || '',
-                            task.data.domain || 'amazon.com'
+                            task.data.domain || 'amazon.com',
                         );
                         // setup callbacks
                         // send res
@@ -229,7 +219,7 @@ async function run({root, task}, sender, sendResponse) {
                     method: 'PATCH',
                     body: JSON.stringify({
                         confirm: false,
-                        errors: [date.toISOString() + ' [products.aspects]', errors],
+                        errors: [date.toISOString() + ' [products.reviews]', errors],
                         stop: false,
                     }),
                 });
@@ -249,6 +239,19 @@ async function run({root, task}, sender, sendResponse) {
                     method: 'POST',
                 });
             }
+        } else {
+            fetch('http://195.201.194.213:8832/tasks/finish/' + task._id, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'PATCH',
+            });
+            fetch('http://195.201.194.213:8832/tasks/release/' + task._id, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'POST',
+            });
         }
     } catch (e) {
         console.log(e);

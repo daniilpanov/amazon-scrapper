@@ -2,7 +2,7 @@ class CollectProducts {
     asin;
     domain;
 
-    constructor(asin, domain='amazon.com') {
+    constructor(asin, domain = 'amazon.com') {
         this.asin = asin;
         this.domain = domain;
     }
@@ -119,20 +119,39 @@ class CollectProducts {
     }
 
     getMediaConfig() {
-        const root_js = document.querySelector('div#imageBlockVariations_feature_div script')?.innerText;
-        if (!root_js) {
-            return null;
+        const scripts = document.getElementsByTagName('script');
+        const r = [], videos = new Set(), images = new Set();
+        let media_config;
+        for (const script of scripts) {
+            if (script.innerHTML.includes('colorImages')) {
+                r.push(script.innerHTML.replaceAll('\n', ''));
+            }
+        }
+        for (const rr of r) {
+            for (const i of rr.split(';')) {
+                const t = i.match(/{ *(('.+':.+)|(".+":.+)) *}/mg)
+                if (t) {
+                    try {
+                        media_config = JSON.parse(t[0].replaceAll("'", '"').replaceAll('Date.now()', Date.now()).replaceAll(/A\.\$\.parseJSON\(".*"\)/gm, '{}'));
+                        if (media_config.videos && media_config.videos.length) {
+                            for (const video of media_config.videos) {
+                                if (video.url.endsWith('.m3u8')) {
+                                    continue;
+                                }
+                                videos.add(video.url);
+                            }
+                        }
+                        if (media_config.colorImages && media_config.colorImages.initial) {
+                            for (const image of media_config.colorImages.initial) {
+                                images.add(image.hiRes);
+                            }
+                        }
+                    } catch (e) {
+                    }
+                }
+            }
         }
 
-        let data_json = root_js.match(/var obj = jQuery.parseJSON\('(.+)'\)/);
-        if (!data_json || !data_json.length) {
-            return null;
-        }
-        data_json = data_json[1].replaceAll('\n', '').replaceAll('\\', '');
-        try {
-            return JSON.parse(data_json);
-        } catch (e) {
-            return null;
-        }
+        return {'images': images.values().toArray(), 'videos': videos.values().toArray()};
     }
 }
