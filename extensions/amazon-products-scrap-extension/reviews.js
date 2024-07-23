@@ -39,9 +39,9 @@ class CollectReviews {
 
     // TODO: replace with observer
     async waitLoad() {
-        for (let i = 0; i < 1000; ++i) {
+        for (let i = 0; i < 100; ++i) {
             await new Promise(resolve => setTimeout(resolve, 100));
-            if (!document.querySelector('.cr-list-loading.reviews-loading:not(.aok-hidden)') && document.querySelector('.a-pagination .a-last')) {
+            if (!document.querySelector('.cr-list-loading.reviews-loading:not(.aok-hidden)')) {
                 return;
             }
         }
