@@ -334,8 +334,12 @@ class CollectReviews {
                     }
                 }
                 try {
-                    document.querySelector('.a-pagination .a-last > a').click();
-                    document.querySelector('.a-pagination .a-last > a').scrollIntoView();
+                    const next = document.querySelector('.a-pagination .a-last:not(.a-disabled) > a');
+                    if (!next) {
+                        break;
+                    }
+                    next.scrollIntoView();
+                    next.click();
                 } catch (e) {
                     console.log('No pagination found:', e);
                     chrome.runtime.sendMessage({log: ['No pagination found:', e]}, (response) => {});
