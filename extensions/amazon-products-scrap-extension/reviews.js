@@ -214,13 +214,13 @@ class CollectReviews {
             // Count filters params variants
             let l;
             for (const i in this.named_options) {
-                this.params_count *= l || 1;
                 l = this.named_options[i].length;
                 this.indexes_map[i] = 0;
-                this.indexes_limits[i] = l - 1;
+                this.indexes_limits[i] = l;
                 this.indexes_half_period[i] = this.params_count;
+                this.directions[i] = 1;
+                this.params_count *= l || 1;
             }
-            this.params_count *= l || 1;
         }
     }
 
@@ -278,7 +278,6 @@ class CollectReviews {
             chrome.runtime.sendMessage({log: ['Error when clicking option:', e]}, (response) => {});
             return false;
         }
-        ++this.index;
         this.page = 1;
 
         return true;
