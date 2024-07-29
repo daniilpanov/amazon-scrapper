@@ -277,7 +277,7 @@ async function run({root, task}, sender, sendResponse) {
                 window.finish_collecting = true;
             },
         })
-        fetch('http://45.14.245.223:1802/new_collection/', {
+        console.log(await fetch('http://45.14.245.223:1802/new_collection/', {
             headers: {
                 'accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -288,7 +288,7 @@ async function run({root, task}, sender, sendResponse) {
                 'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
                 'asins': [asin],
             }),
-        });
+        }));
         try {
             await chrome.tabs.remove(needle_tab.id);
         } catch (e) {
