@@ -2,7 +2,7 @@
 chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
     sendResponse('OK');  // Success
     waitForElement('#feature-bullets, #productFactsDesktop_feature_div div[aria-expanded]', (els, c) => {
-        let description = null, title = null, brand = null;
+        let description = null, title = null, brand;
 
         for (const el_id of ['titleSection', 'title', 'productTitle']) {
             title = document.getElementById(el_id)?.innerText || null;
