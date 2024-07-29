@@ -4,7 +4,6 @@ import typing
 import pytz
 from fastapi import APIRouter, HTTPException
 
-import parser
 from helpers import orjson_response
 from pydantic import BaseModel, field_validator
 from pymongo.errors import PyMongoError, BulkWriteError

@@ -64,10 +64,10 @@ async function update() {
                 }
             } catch (error) {
                 console.log(error);
-                pageContent.innerHTML = '<h1>Unknown error. Check console</h1>';
+                pageContent.innerHTML = '<h4>Unknown error. Check console</h4>';
             }
         } else {
-            pageContent.innerHTML = '<h1>No active tasks</h1>';
+            pageContent.innerHTML = '<h4>No active tasks</h4>';
         }
     } catch (error) {
         console.log(error);
