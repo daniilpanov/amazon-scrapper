@@ -33,6 +33,7 @@ class HeliumAdditionalResult(BaseModel):
 class HeliumAdditional2Result(BaseModel):
     title: str | None
     description: str | None
+    brand: str | None
 
 
 class HeliumTask(BaseModel):
@@ -79,7 +80,7 @@ async def set_helium_result(helium_id: str, result: HeliumResult):
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     task = tasks_manager.get_task(helium_id)
-    if 'amazon_data' in task['result']:
+    if 'amazon_data' in task['result'] and len(task['result']['amazon_data']) >= 2:
         tasks_manager.finish_task(helium_id, True)
         tasks_manager.release_task(helium_id)
     return Response(str(res))
@@ -100,7 +101,7 @@ async def set_helium_amazon_result(helium_id: str, result: HeliumAdditionalResul
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     task = tasks_manager.get_task(helium_id)
-    if 'helium_data' in task['result']:
+    if 'helium_data' in task['result'] and 'amazon_data' in task['result']:
         tasks_manager.finish_task(helium_id, True)
         tasks_manager.release_task(helium_id)
     return Response(str(res))
@@ -113,12 +114,13 @@ async def set_helium_amazon_result(helium_id: str, result: HeliumAdditional2Resu
         res = tasks_manager.TasksBodies.update_one({'_id': helium_id}, {'$set': {'result.amazon_data.target': {
             'title': result.title,
             'description': result.description,
+            'brand': result.brand,
         }}}).modified_count
     except PyMongoError as e:
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     task = tasks_manager.get_task(helium_id)
-    if 'helium_data' in task['result']:
+    if 'helium_data' in task['result'] and 'amazon_data' in task['result']:
         tasks_manager.finish_task(helium_id, True)
         tasks_manager.release_task(helium_id)
     return Response(str(res))

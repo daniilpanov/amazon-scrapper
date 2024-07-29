@@ -2,19 +2,20 @@
 chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
     sendResponse('OK');  // Success
     waitForElement('#feature-bullets, #productFactsDesktop_feature_div div[aria-expanded]', (els, c) => {
-        console.log(c);
-        let description = null, title = null;
+        let description = null, title = null, brand = null;
 
         for (const el_id of ['titleSection', 'title', 'productTitle']) {
-            title = document.getElementById(el_id)?.innerText;
+            title = document.getElementById(el_id)?.innerText || null;
             if (title) {
                 break;
             }
         }
 
         if (els && els.length) {
-            description = els[0]?.innerText;
+            description = els[0]?.innerText || null;
         }
+
+        brand = document.querySelector('.po-brand')?.innerText.split(/\s+/) || null;
 
         chrome.runtime.sendMessage(
             {
@@ -27,8 +28,9 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                         },
                         method: 'POST',
                         body: JSON.stringify({
-                            title: title,
-                            description: description,
+                            title,
+                            description,
+                            brand,
                         }),
                     },
                 ]

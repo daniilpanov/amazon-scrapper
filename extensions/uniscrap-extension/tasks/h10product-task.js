@@ -2,7 +2,6 @@
 chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
     sendResponse('OK');  // Success
     waitForElement('#feature-bullets, #productFactsDesktop_feature_div div[aria-expanded]', (els, c) => {
-        console.log(c);
         let variation = {}, characteristics = {}, about = [], manufacturer = null;
 
         const variation_cont = (typeof twisterContainer === 'undefined' ? null : twisterContainer.querySelector('[id^=variation_]'));
