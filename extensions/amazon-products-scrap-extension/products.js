@@ -26,8 +26,6 @@ class CollectProducts {
             product_title: null,
             product_descr: null,
             picture_url: null,
-            features: {},
-            top_5_phrases: [],
             product_price: null,
         };
 
@@ -47,26 +45,32 @@ class CollectProducts {
         const features_els = document.querySelectorAll(
             '[data-hook="cr-widget-SummaryAttribute"] #cr-summarization-attributes-list > div',
         );
-        let key, val;
+        let key, val, features = {};
         for (const feat of features_els) {
             key = feat.querySelector('div > div > div:first-child span')?.innerText.trim();
             val = feat.querySelector('div > div > div:last-child > span:last-child')?.innerText.trim();
             if (key && val) {
-                res.features[key] = val;
+                features[key] = val;
             }
+        }
+        if (features && Object.keys(features).length) {
+            res.features = features;
         }
         // top 5 phrases
         const top5_els = document.querySelectorAll('[data-hook="lighthut-terms-list"] > div').values().toArray();
-        let counter = 0;
+        let counter = 0, top_5_phrases = [];
         for (const lighthum of top5_els) {
             val = lighthum.querySelector('span')?.innerText.trim();
             if (val) {
-                res.top_5_phrases.push(val);
+                top_5_phrases.push(val);
                 ++counter;
                 if (counter >= 5) {
                     break;
                 }
             }
+        }
+        if (top_5_phrases.length) {
+            res.top_5_phrases = top_5_phrases;
         }
 
         // Product price

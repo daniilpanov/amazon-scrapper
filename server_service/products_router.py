@@ -60,8 +60,8 @@ class ProductsResultItem(BaseModel):
     product_title: str
     product_descr: str
     picture_url: str
-    features: dict[str, str] | None
-    top_5_phrases: list[str] | None
+    features: dict[str, str] = {}
+    top_5_phrases: list[str] = []
     product_price: int | float | None
     media_data: dict | list | None = None
 
