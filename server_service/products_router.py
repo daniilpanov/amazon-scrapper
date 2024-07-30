@@ -62,7 +62,7 @@ class ProductsResultItem(BaseModel):
     picture_url: str
     features: dict[str, str] = {}
     top_5_phrases: list[str] = []
-    product_price: int | float | None
+    product_price: int | float | None = None
     media_data: dict | list | None = None
 
 

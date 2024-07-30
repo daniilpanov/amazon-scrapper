@@ -74,14 +74,14 @@ class CollectProducts {
         }
 
         // Product price
-        res.product_price = document.querySelector('.a-price')?.innerText.split('$')[1]?.trim().replaceAll(',', '');
+        res.product_price = document.querySelector('.a-price')?.innerText.split('$')[1]?.trim().replaceAll(',', '') || null;
         if (res.product_price) {
             res.product_price = Number(res.product_price);
         }
 
         // Media config
         if (collect_media_config) {
-            res['media_data'] = this.getMediaConfig();
+            res.media_data = this.getMediaConfig();
         }
 
         return res;
