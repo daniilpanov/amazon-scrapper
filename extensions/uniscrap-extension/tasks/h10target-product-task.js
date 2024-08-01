@@ -18,8 +18,9 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
         const raw_brand = document.querySelector('.po-brand')?.innerText.split(/\s+/) || null;
         if (raw_brand && raw_brand.length) {
             for (const i in raw_brand) {
-                if (raw_brand[i].toLowerCase() === 'brand' && i + 1 < raw_brand.length) {
-                    brand = raw_brand[i + 1];
+                const next = Number(i) + 1;
+                if (raw_brand[i].toLowerCase() === 'brand' && next < raw_brand.length) {
+                    brand = raw_brand[next];
                     break;
                 }
             }
