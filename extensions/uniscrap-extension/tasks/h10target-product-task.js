@@ -17,7 +17,7 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
 
         brand = document.querySelector('.po-brand')?.innerText.split(/\s+/) || null;
 
-        chrome.runtime.sendMessage(
+        console.log(chrome.runtime.sendMessage(
             {
                 fetch: [
                     'http://195.201.194.213:8832/helium/set/' + task._id + '/amazon_target',
@@ -37,8 +37,8 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
             },
             (response) => {
                 // Close the window!!!
-                window.close();
+                // window.close();
             },
-        );
+        ));
     });
 });
