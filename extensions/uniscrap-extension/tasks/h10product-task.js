@@ -89,5 +89,11 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                 window.close();
             },
         );
+    }, c => {
+        if (c > 10) {
+            window.close();
+            return true;
+        }
+        return false;
     });
 });
