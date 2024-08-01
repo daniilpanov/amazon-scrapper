@@ -16,6 +16,9 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
         }
 
         brand = document.querySelector('.po-brand')?.innerText.split(/\s+/) || null;
+        if (brand && brand.length&& brand.length === 2) {
+            brand = brand[1];
+        }
 
         console.log(chrome.runtime.sendMessage(
             {
@@ -37,7 +40,7 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
             },
             (response) => {
                 // Close the window!!!
-                // window.close();
+                window.close();
             },
         ));
     });
