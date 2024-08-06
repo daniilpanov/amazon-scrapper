@@ -23,6 +23,7 @@ api_key = '2dBtEL2DRjO0AAQqaKLWEAN4xr4XTaqwSRyUXepJRDYEiseSs7JzfGTVLc3b0poS'
 api_key_hashed = sha256(api_key.encode('utf-8')).hexdigest()
 
 
+# TODO: add universal method
 @app.post('/import/report')
 async def import_report(request: Request, document: UploadFile = File(...)):
     auth_token = request.headers.get('Authorization')
