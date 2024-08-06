@@ -124,7 +124,7 @@ async function run({root, task}, sender, sendResponse) {
         // If it is target - run target collecting
         if (task.data.collect_media_config && task.data.target) {
             console.log('collect product media: ' + task.data.asin);
-            fetch('http://localhost:8832/products/target/collect/' + task.data.asin, {method: 'POST'}).then((res) => {
+            fetch('http://195.201.194.213:8832/products/target/collect/' + task.data.asin, {method: 'POST'}).then((res) => {
                 if (res.status > 201) {
                     console.log('product ' + task.data.asin + ' target collecting start error:', res.statusText);
                     console.error('product ' + task.data.asin + ' target collecting start error:', res.statusText);
@@ -146,71 +146,80 @@ async function run({root, task}, sender, sendResponse) {
                 },
             });
             await new Promise(resolve => setTimeout(resolve, 500));
-            // Reviews lib
+            // Reviews
+            const f = (task) => {
+                return new Promise(async (resolve, reject) => {
+                    // create parser
+                    const collector = new CollectReviews(
+                        task.data.asin,
+                        task.result?.prefix || null,
+                        task.data.current_format,
+                        task.data.keywords || '',
+                        task.data.domain || 'amazon.com',
+                    );
+                    // setup callbacks
+                    // send res
+                    collector.per_index_callback = (data) => {
+                        chrome.runtime.sendMessage(
+                            {
+                                fetch: [
+                                    'http://195.201.194.213:8832/products/set_result/reviews',
+                                    {
+                                        headers: {
+                                            // 'Content-Encoding': 'gzip',
+                                            'Content-Type': 'application/json',
+                                        },
+                                        method: 'POST',
+                                        body: JSON.stringify(data),
+                                    },
+                                ],
+                                log: data,
+                            },
+                            (response) => {
+                            },
+                        );
+                    };
+                    // reject on a lot of errors
+                    let fails_counter = 0;
+                    collector.serviceunavailableerror_callback = () => {
+                        if (fails_counter > 20) {
+                            reject({errors: ['unknown error']});
+                            return false;
+                        }
+                        return ++fails_counter;
+                    };
+                    // resolve on finish
+                    collector.finish_callback = () => {
+                        resolve();
+                    };
+                    // startup
+                    collector.index = task.data.index || 0;
+                    collector.page = task.data.page || 1;
+                    await collector.collect();
+                });
+            };
             try {
-                await chrome.scripting.executeScript({
+                result = await chrome.scripting.executeScript({
                     target: {tabId: needle_tab.id},
-                    files: ['./reviews.js'],
+                    args: [task],
+                    func: f,
                 });
             } catch (e) {
-                console.log('Error when importing reviews.js:', e);
-                console.error('Error when importing reviews.js:', e);
-            }
-            result = await chrome.scripting.executeScript({
-                target: {tabId: needle_tab.id},
-                args: [task],
-                func: (task) => {
-                    return new Promise(async (resolve, reject) => {
-                        // create parser
-                        const collector = new CollectReviews(
-                            task.data.asin,
-                            task.result?.prefix || null,
-                            task.data.current_format,
-                            task.data.keywords || '',
-                            task.data.domain || 'amazon.com',
-                        );
-                        // setup callbacks
-                        // send res
-                        collector.per_index_callback = (data) => {
-                            chrome.runtime.sendMessage(
-                                {
-                                    fetch: [
-                                        'http://195.201.194.213:8832/products/set_result/reviews',
-                                        {
-                                            headers: {
-                                                // 'Content-Encoding': 'gzip',
-                                                'Content-Type': 'application/json',
-                                            },
-                                            method: 'POST',
-                                            body: JSON.stringify(data),
-                                        },
-                                    ],
-                                    log: data,
-                                },
-                                (response) => {
-                                },
-                            );
-                        };
-                        // reject on a lot of errors
-                        let fails_counter = 0;
-                        collector.serviceunavailableerror_callback = () => {
-                            if (fails_counter > 20) {
-                                reject({errors: ['unknown error']});
-                                return false;
-                            }
-                            return ++fails_counter;
-                        };
-                        // resolve on finish
-                        collector.finish_callback = () => {
-                            resolve();
-                        };
-                        // startup
-                        collector.index = task.data.index || 0;
-                        collector.page = task.data.page || 1;
-                        await collector.collect();
+                try {
+                    await chrome.scripting.executeScript({
+                        target: {tabId: needle_tab.id},
+                        files: ['./reviews.js'],
                     });
-                },
-            });
+                    result = await chrome.scripting.executeScript({
+                        target: {tabId: needle_tab.id},
+                        args: [task],
+                        func: f,
+                    });
+                } catch (e) {
+                    console.log('Error when importing reviews.js:', e);
+                    console.error('Error when importing reviews.js:', e);
+                }
+            }
             // report errors of reviews collecting if exist
             errors = result[0].result?.errors;
             if (errors) {

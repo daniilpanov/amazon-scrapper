@@ -236,6 +236,8 @@ class CollectReviews {
             console.log(...Object.values(this.indexes_map));
             chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map)]}, (response) => {});
             return true;
+        } else if (this.reviews_count <= 125) {
+            return false;
         }
         let key;
         const reversed_keys = Object.keys(this.indexes_map).reverse();
@@ -285,6 +287,7 @@ class CollectReviews {
 
     async collect() {
         await this.updateParams();
+        this.parse(true);
 
         if (this.format_type_filter) {
             this.format_type_filter.click();
@@ -305,7 +308,6 @@ class CollectReviews {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 try {
                     result = this.parse();
-                    console.log(result);
                     if (!result || !result.length) {
                         break;
                     }
