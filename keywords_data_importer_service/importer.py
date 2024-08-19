@@ -24,13 +24,13 @@ api_key_hashed = sha256(api_key.encode('utf-8')).hexdigest()
 
 
 @app.post('/import/{collection}')
-async def import_tiktok(request: Request, collection: str, document: UploadFile = File(...)):
+async def import_items(request: Request, collection: str, document: UploadFile = File(...)):
     if collection == 'report':
         collection = 'keyword_tracker'
     auth_token = request.headers.get('Authorization')
     if not auth_token or sha256(auth_token.encode('utf-8')).hexdigest() != api_key_hashed or auth_token != api_key:
         raise HTTPException(status_code=403, detail='Invalid API KEY')
-    df = pd.read_csv(io.BytesIO(await document.read()), header=0, index_col=None, delimiter=';', lineterminator='\n')
+    df = pd.read_csv(io.BytesIO(await document.read()), header=0, index_col=None, delimiter=';')
     try:
         db_mongo.db('Keywords')[collection].insert_many(list(df.T.to_dict().values()), ordered=False)
     except BulkWriteError:
