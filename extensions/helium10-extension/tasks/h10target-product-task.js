@@ -28,7 +28,7 @@ function runTargetProductTask(task_id) {
         console.log(chrome.runtime.sendMessage(
             {
                 fetch: [
-                    'http://195.201.194.213:8832/helium/set/' + task._id + '/amazon_target',
+                    'http://195.201.194.213:8832/helium/set/' + task_id + '/amazon_target',
                     {
                         headers: {
                             // 'Content-Encoding': 'gzip',
