@@ -5,7 +5,44 @@
     <title>UniScrap Control Panel</title>
 </head>
 <body>
-Hello!
+<h1>Extensions Control Centre is HERE</h1>
+<h3>Please choose what extension will be on this window and which script of task will be process?</h3>
+
+<label for="script-types">Type of script: </label>
+<select id="script-types">
+    <option value="">None</option>
+    <option value="100asins">100 ASINs collecting</option>
+    <option value="bsr">BSR collecting</option>
+    <option value="products">Products collecting</option>
+    <option value="h10">Helium10 mix collecting</option>
+</select>
+
+<table id="tasks-list">
+    <tr>
+        <th>Скрипт</th>
+        <th>Название задачи</th>
+        <th>Заголовок вкладки</th>
+        <th>Прогресс выполнения</th>
+        <th>Время выполнения</th>
+        <th>Действия</th>
+    </tr>
+    <template>
+        <tr>
+            <td><span class="task-script-name"></span></td>
+            <td><span class="task-name"></span></td>
+            <td><span class="task-window-title"></span></td>
+            <td><span class="task-progress"></span></td>
+            <td><span class="task-time"></span></td>
+            <td>
+                <div class="task-actions">
+                    <button class="action-stop" title="Stop task">&block;</button>
+                    <button class="action-delete" title="Stop & Delete task">&times;</button>
+                </div>
+            </td>
+        </tr>
+    </template>
+</table>
+
 <script src="contentScript.js" type="module"></script>
 </body>
 </html>

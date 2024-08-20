@@ -31,7 +31,7 @@ async function update() {
                         ++tasksGroups;
                         const aliasElement = document.createElement('div');
                         aliasElement.classList.add('alias');
-                        aliasElement.innerHTML += `<div class="alias-header">${key.split(' ')[0]}</div>`;
+                        aliasElement.innerHTML += `<div class="alias-header">${key}</div>`;
                         let tasksCount = 0;
                         let errorsCount = 0;
                         let completedCount = 0;

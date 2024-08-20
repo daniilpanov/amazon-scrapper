@@ -1,8 +1,6 @@
 // Wait data
-chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
-    sendResponse('OK');  // Success
+function runProductTask(task_id) {
     waitForElement('#feature-bullets, #productFactsDesktop_feature_div div[aria-expanded]', (els, c) => {
-        console.log(c);
         let variation = {}, characteristics = {}, about = [], manufacturer = null;
 
         const variation_cont = (typeof twisterContainer === 'undefined' ? null : twisterContainer.querySelector('[id^=variation_]'));
@@ -68,7 +66,7 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
         chrome.runtime.sendMessage(
             {
                 fetch: [
-                    'http://195.201.194.213:8832/helium/set/' + task._id + '/amazon',
+                    'http://195.201.194.213:8832/helium/set/' + task_id + '/amazon',
                     {
                         headers: {
                             // 'Content-Encoding': 'gzip',
@@ -90,5 +88,11 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
                 window.close();
             },
         );
+    }, c => {
+        if (c > 10) {
+            window.close();
+            return true;
+        }
+        return false;
     });
-});
+}

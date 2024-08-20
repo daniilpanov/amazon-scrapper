@@ -99,7 +99,7 @@ async function sendTask(ext_name, data, script) {
 }
 
 
-let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 10, curr_limit = tabs_limit;
+let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 2, curr_limit = tabs_limit;
 self = await chrome.management.getSelf();
 async function main() {
     // Limit by the tabs counting
@@ -140,18 +140,15 @@ async function main() {
                     curr_limit -= await sendTask('amazon 100 asins scraper', {...data[i].data, task_id: data[i]._id, header_id: data[i].header_id}, '100asins')
                     break;
                 case 'h10':
-                    setTimeout(h10scrap, 500, data[i]);
-                    --curr_limit;
-                    console.log('h10:', curr_limit, tabs_limit, tabs_count);
+                    curr_limit -= await sendTask('amazon helium10 scraper', data[i], 'h10')
                     break;
                 case 'products':
                     curr_limit -= await sendTask('amazon products scraper', {root: self, task: data[i]}, 'products')
                     break;
                 case 'bsr':
-                    if ((data[i].stage || 0) >= 2) {
-                        break;
+                    if ((data[i].stage || 0) < 2) {
+                        curr_limit -= await sendTask('amazon bsr scraper', {root: self, task: data[i]}, 'bsr')
                     }
-                    curr_limit -= await sendTask('amazon bsr scraper', {root: self, task: data[i]}, 'bsr')
                     break;
                 default:
                     console.log('Unknown script:', data[i].script);

@@ -140,8 +140,7 @@ function waitStatus(id, bearer, callback) {
 }
 
 // Wait data
-chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
-    sendResponse('OK');  // Success
+function runH10Task(task) {
     const {data} = task;
     const {asins} = data;
     // Wait for loading base form
@@ -172,7 +171,7 @@ chrome.runtime.onMessage.addListener((task, sender, sendResponse) => {
     }, (counter) => {
         return counter >= 500
     });
-});
+}
 
 function main(task_id, asins) {
     // The second query -- create-multiple-search
