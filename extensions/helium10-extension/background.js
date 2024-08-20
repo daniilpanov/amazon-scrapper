@@ -47,73 +47,58 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
 });
 
 async function startH10(task) {
-    fetch(
-        'http://195.201.194.213:8832/tasks/acquire/h10/' + task.header_id + '/' + task.task_id,
-        {method: 'post'},
-    ).then((res) => {
-        if (res.status !== 200) {
-            if (res.status === 409) {
-                // console.log('This task is busy');
-            } else {
-                console.error('Error when try to acquire task:', res.statusText);
-            }
-            return;
-        }
-        res.json().then((data) => {
-            chrome.tabs.create({
-                url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
-                windowId: task.windowId,
-            }, (tab) => {
-                chrome.tabs.update(tab.id, {autoDiscardable: false});
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    files: ['helper.js', 'tasks/h10task.js'],
-                });
+    chrome.tabs.create({
+        url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
+        windowId: task.windowId,
+    }, async (tab) => {
+        chrome.tabs.update(tab.id, {autoDiscardable: false});
+        await chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            files: ['helper.js', 'tasks/h10task.js'],
+        });
 
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    args: [task],
-                    func: (task) => {
-                        runH10Task(task);
-                    },
-                });
-            });
-            chrome.tabs.create({
-                url: 'https://www.amazon.com/dp/' + task.asins[1],
-                windowId: task.windowId,
-            }, (tab) => {
-                chrome.tabs.update(tab.id, {autoDiscardable: false});
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    files: ['helper.js', 'tasks/h10product-task.js'],
-                });
+        await chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            args: [task],
+            func: (task) => {
+                runH10Task(task);
+            },
+        });
+    });
+    chrome.tabs.create({
+        url: 'https://www.amazon.com/dp/' + task.asins[1],
+        windowId: task.windowId,
+    }, async (tab) => {
+        chrome.tabs.update(tab.id, {autoDiscardable: false});
+        await chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            files: ['helper.js', 'tasks/h10product-task.js'],
+        });
 
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    args: [task.task_id],
-                    func: (task_id) => {
-                        runProductTask(task_id);
-                    },
-                });
-            });
-            chrome.tabs.create({
-                url: 'https://www.amazon.com/dp/' + task.asins[0],
-                windowId: task.windowId,
-            }, (tab) => {
-                chrome.tabs.update(tab.id, {autoDiscardable: false});
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    files: ['helper.js', 'tasks/h10target-product-task.js'],
-                });
+        await chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            args: [task.task_id],
+            func: (task_id) => {
+                runProductTask(task_id);
+            },
+        });
+    });
+    chrome.tabs.create({
+        url: 'https://www.amazon.com/dp/' + task.asins[0],
+        windowId: task.windowId,
+    }, async (tab) => {
+        chrome.tabs.update(tab.id, {autoDiscardable: false});
+        await chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            files: ['helper.js', 'tasks/h10target-product-task.js'],
+        });
 
-                chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    args: [task.task_id],
-                    func: (task_id) => {
-                        runTargetProductTask(task_id);
-                    },
-                });
-            });
+        await chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            args: [task.task_id],
+            func: (task_id) => {
+                runTargetProductTask(task_id);
+            },
         });
     });
 }
