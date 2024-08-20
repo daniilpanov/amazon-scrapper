@@ -2,6 +2,7 @@ import pako from './pako.esm.mjs';
 
 chrome.tabs.query({
     url: 'chrome-extension://' + chrome.runtime.id + '/control_panel.html',
+    currentWindow: true,
 }, (tabs) => {
     if (!tabs || !tabs.length) {
         chrome.tabs.create({

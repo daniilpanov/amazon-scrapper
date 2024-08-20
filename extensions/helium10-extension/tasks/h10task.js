@@ -141,8 +141,7 @@ function waitStatus(id, bearer, callback) {
 
 // Wait data
 function runH10Task(task) {
-    const {data} = task;
-    const {asins} = data;
+    const {asins} = task;
     // Wait for loading base form
     waitForElement('div[name=asins] input', (els) => {
         // Removing ASINs if exist
@@ -160,12 +159,12 @@ function runH10Task(task) {
             }).then(data => {
                 // [ignore response]
                 data.json().then(data => {
-                    main(task._id, asins);
+                    main(task.task_id, asins);
                 }).catch(reason => {
-                    main(task._id, asins, reason);
+                    main(task.task_id, asins, reason);
                 });
             }).catch(reason => {
-                main(task._id, asins, reason);
+                main(task.task_id, asins, reason);
             });
         }, 500);
     }, (counter) => {
@@ -173,7 +172,7 @@ function runH10Task(task) {
     });
 }
 
-function main(task_id, asins) {
+function main(task_id, asins, _) {
     // The second query -- create-multiple-search
     fetch("https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple?accountId=1545531519", {
         "headers": {

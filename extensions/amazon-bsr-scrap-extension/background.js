@@ -8,10 +8,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-async function run({root, task}, sender, sendResponse) {
-    console.log(task);
+async function run(task, sender, sendResponse) {
     let acq = await fetch(
-        'http://195.201.194.213:8832/tasks/acquire/bsr/' + task.header_id + '/' + task._id,
+        'http://195.201.194.213:8832/tasks/acquire/bsr/' + task.header_id + '/' + task.task_id,
         {method: 'post'},
     );
     if (acq.status !== 200) {
@@ -26,21 +25,21 @@ async function run({root, task}, sender, sendResponse) {
     sendResponse('OK');
     let needle_tab = null, created = false;
     // check if needle tab is already opened
-    for (const tab of await chrome.tabs.query({})) {
-        if (tab.url === task.data.bsr) {
+    for (const tab of await chrome.tabs.query({windowId: task.windowId})) {
+        if (tab.url === task.bsr) {
             needle_tab = tab;
             break;
         }
     }
     if (!needle_tab) {
         needle_tab = await chrome.tabs.create({
-            url: task.data.bsr,
+            url: task.bsr,
             active: false,
+            windowId: task.windowId,
         });
         chrome.tabs.update(needle_tab.id, {autoDiscardable: false});
         created = true;
     }
-    console.log(needle_tab);
 
     const date = new Date();
     try {
@@ -49,12 +48,11 @@ async function run({root, task}, sender, sendResponse) {
             need_import = await chrome.scripting.executeScript({
                 target: {tabId: needle_tab.id},
                 func: () => {
-                    return typeof CollectBSR === 'undefined'
+                    return typeof CollectBSR === 'undefined';
                 },
             });
             need_import = need_import[0].result || false;
         }
-        console.log(need_import);
         // BSR lib
         if (need_import) {
             await chrome.scripting.executeScript({
@@ -70,30 +68,30 @@ async function run({root, task}, sender, sendResponse) {
             func: async (task) => {
                 window.finish_collecting = false;
                 console.log('hello! :)');
-                const bsr_collector = new CollectBSR(task.data.limit, task.data.count, task.data.target, task.data.unique_brands, task.data.domain);
+                const bsr_collector = new CollectBSR(task.limit, task.count, task.target, task.unique_brands, task.domain);
                 console.log('BSR Collector created!');
-                if (!task?.data?.bsr) {
+                if (!task?.bsr) {
                     console.log('Fail!');
                     return {errors: ['Can not get BSR URL! Please enter full URL']};
                 }
                 let asins_links = {};
                 console.log('Collect asins');
-                for (const asin of await bsr_collector.getASINsLInks(task.data.bsr)) {
-                    asins_links[asin] = `https://${task.data.domain}/dp/${asin}`;
+                for (const asin of await bsr_collector.getASINsLInks(task.bsr)) {
+                    asins_links[asin] = `https://${task.domain}/dp/${asin}`;
                 }
                 window.finish_collecting = true;
-                return {data: {bsr_url: task.data.bsr, asins_links: asins_links}};
+                return {data: {bsr_url: task.bsr, asins_links: asins_links}};
             },
         });
         console.log('result!', result);
         data = result[0].result?.data;
         data.with_continue = Boolean(task.stage > 0);
-        data.task_id = task._id;
+        data.task_id = task.task_id;
         errors = result[0].result?.errors;
         console.log(data, errors);
         // handle errors
         if (errors) {
-            fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
+            fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -119,7 +117,7 @@ async function run({root, task}, sender, sendResponse) {
         }
     } catch (e) {
         console.log(e);
-        fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
+        fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
             headers: {
                 'Content-Type': 'application/json',
             },

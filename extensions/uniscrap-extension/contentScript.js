@@ -1,74 +1,3 @@
-function sendMessageToTab(tabId, message, retryDelay = 500, maxRetries = 100) {
-    let attempts = 0;
-
-    function sendMessage() {
-        ++attempts;
-        chrome.tabs.sendMessage(tabId, message, () => {
-            if (chrome.runtime.lastError) {
-                if (attempts < maxRetries) {
-                    // console.error(`Ошибка при отправке сообщения: ${chrome.runtime.lastError.message}. Повторная попытка ${attempts} из ${maxRetries}...`);
-                    setTimeout(sendMessage, retryDelay);
-                } else {
-                    console.error(`Не удалось отправить сообщение после ${maxRetries} попыток.`);
-                }
-            } else {
-                // console.log('Сообщение отправлено успешно:', response);
-            }
-        });
-    }
-
-    sendMessage();
-}
-
-async function h10scrap(task) {
-    const res = await fetch(
-        'http://195.201.194.213:8832/tasks/acquire/h10/' + task.taskHeader._id + '/' + task._id,
-        {method: 'post'},
-    );
-    if (res.status !== 200) {
-        if (res.status === 409) {
-            // console.log('This task is busy');
-        } else {
-            console.error('Error when try to acquire task:', res.statusText);
-        }
-        return;
-    }
-    chrome.tabs.create({
-        url: 'https://members.helium10.com/cerebro/?accountId=1545531519',
-    }, (tab) => {
-        chrome.tabs.update(tab.id, {autoDiscardable: false});
-        chrome.scripting.executeScript({
-            target: {tabId: tab.id},
-            files: ['helper.js', 'tasks/h10task.js'],
-        });
-
-        sendMessageToTab(tab.id, task);
-    });
-    chrome.tabs.create({
-        url: 'https://www.amazon.com/dp/' + task.data.asins[1],
-    }, (tab) => {
-        chrome.tabs.update(tab.id, {autoDiscardable: false});
-        chrome.scripting.executeScript({
-            target: {tabId: tab.id},
-            files: ['helper.js', 'tasks/h10product-task.js'],
-        });
-
-        sendMessageToTab(tab.id, task);
-    });
-    chrome.tabs.create({
-        url: 'https://www.amazon.com/dp/' + task.data.asins[0],
-    }, (tab) => {
-        chrome.tabs.update(tab.id, {autoDiscardable: false});
-        chrome.scripting.executeScript({
-            target: {tabId: tab.id},
-            files: ['helper.js', 'tasks/h10target-product-task.js'],
-        });
-
-        sendMessageToTab(tab.id, task);
-    });
-}
-
-
 async function sendTask(ext_name, data, script) {
     const all_extensions = await chrome.management.getAll();
     let found = false;
@@ -99,11 +28,15 @@ async function sendTask(ext_name, data, script) {
 }
 
 
-let interval_id, self, tabs_limit = ((await chrome.tabs.query({})).length || 2) + 2, curr_limit = tabs_limit;
-self = await chrome.management.getSelf();
+const current_window = await chrome.windows.getCurrent();
+let interval_id, tabs_limit = ((await chrome.tabs.query({windowId: current_window.id})).length || 2), curr_limit = tabs_limit;
+const self = await chrome.management.getSelf();
+
 async function main() {
+    const config = getConfig();
+    const curr_tabs_limit = tabs_limit + config.limit;
     // Limit by the tabs counting
-    let tabs = await chrome.tabs.query({});
+    let tabs = await chrome.tabs.query({windowId: current_window.id});
     let is_finished;
     for (const tab of tabs) {
         try {
@@ -119,41 +52,33 @@ async function main() {
         } catch (e) {
         }
     }
-    tabs = await chrome.tabs.query({});
+    tabs = await chrome.tabs.query({windowId: current_window.id});
     let tabs_count = tabs.length;
-    if (tabs_count >= tabs_limit) {
-        console.log('exit from function! limit!', tabs_limit, tabs_count);
+    if (tabs_count >= curr_tabs_limit) {
+        console.log('exit from function! limit!', curr_tabs_limit, tabs_count);
         return interval_id = setTimeout(main, 10000);
     }
-    curr_limit = tabs_limit - tabs_count;
+    curr_limit = curr_tabs_limit - tabs_count;
     try {
         const res = await fetch('http://195.201.194.213:8832/tasks/get_available');
         const data = await res.json();
         for (let i in data) {
-            console.log('Available space left:', curr_limit, '; limit & count:', tabs_limit, tabs_count);
+            console.log('Available space left:', curr_limit, '; limit & count:', curr_tabs_limit, tabs_count);
             if (curr_limit <= 0) {
                 console.log('exit from cycle! limit!');
                 break;
             }
-            switch (data[i].script) {
-                case '100asins':
-                    curr_limit -= await sendTask('amazon 100 asins scraper', {...data[i].data, task_id: data[i]._id, header_id: data[i].header_id}, '100asins')
-                    break;
-                case 'h10':
-                    curr_limit -= await sendTask('amazon helium10 scraper', data[i], 'h10')
-                    break;
-                case 'products':
-                    curr_limit -= await sendTask('amazon products scraper', {root: self, task: data[i]}, 'products')
-                    break;
-                case 'bsr':
-                    if ((data[i].stage || 0) < 2) {
-                        curr_limit -= await sendTask('amazon bsr scraper', {root: self, task: data[i]}, 'bsr')
-                    }
-                    break;
-                default:
-                    console.log('Unknown script:', data[i].script);
-                    break;
+            if (data[i].script !== config.scriptType) {
+                continue;
             }
+            curr_limit -= await sendTask(config.extensionKeywords, {
+                ...data[i].data,
+                task_id: data[i]._id,
+                header_id: data[i].header_id,
+                stage: data[i].stage,
+                alias: data[i].taskHeader.alias,
+                windowId: current_window.id,
+            }, data[i].script)
         }
     } catch (e) {
         console.log(e);

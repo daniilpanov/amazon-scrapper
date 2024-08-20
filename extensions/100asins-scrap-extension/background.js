@@ -7,7 +7,7 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     )
     if (res.status === 200) {
         sendResponse('OK');
-        res = await startScraping100ASINS(message.label, message.type, message.task_id, sender.id);
+        res = await startScraping100ASINS(message.label, message.type, message.task_id, sender.id, message.windowId);
         if (res) {
             fetch(
                 'http://195.201.194.213:8832/tasks/finish/' + message.task_id,
@@ -37,7 +37,7 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     }
 });
 
-async function startScraping100ASINS(label, type, task_id, sender_id) {
+async function startScraping100ASINS(label, type, task_id, sender_id, window_id) {
     let asinList = [];
     label = label.split(' ');
     type = type.split(' ');
@@ -50,6 +50,7 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
         tab = await chrome.tabs.create({
             url: encodeURI(`https://amazon.com/s?k=${query}&page=${counter}`),
             active: false,
+            windowId: window_id,
         });
         chrome.tabs.update(tab.id, {autoDiscardable: false});
         const result = await chrome.scripting.executeScript({
@@ -126,10 +127,10 @@ async function startScraping100ASINS(label, type, task_id, sender_id) {
     }
     asinList = new Set(asinList);
     console.log(Array.from(asinList));
-    return await sendData(Array.from(asinList), task_id, sender_id);
+    return await sendData(Array.from(asinList), task_id);
 }
 
-async function sendData(asins, task_id, sender_id) {
+async function sendData(asins, task_id) {
     const sendDelay = 500;
     const maxAttemptsCount = 50;
     let attempts = 0;

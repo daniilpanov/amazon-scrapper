@@ -8,8 +8,8 @@
 <h1>Extensions Control Centre is HERE</h1>
 <h3>Please choose what extension will be on this window and which script of task will be process?</h3>
 
-<label for="script-types">Type of script: </label>
-<select id="script-types">
+<label for="scriptTypes">Type of script: </label>
+<select id="scriptTypes">
     <option value="">None</option>
     <option value="100asins">100 ASINs collecting</option>
     <option value="bsr">BSR collecting</option>
@@ -17,17 +17,29 @@
     <option value="h10">Helium10 mix collecting</option>
 </select>
 
-<table id="tasks-list">
+<label>Custom type: <input id="customScriptType"></label>
+
+<label>Extension keywords: <input id="extensionKeywords"></label>
+
+<label>Tasks limit: <input type="number" id="tasksLimit" value="10"></label>
+
+<input type="submit" id="saveConfig" value="Save Config">
+
+<p></p>
+<hr>
+<p></p>
+
+<table id="tasksList" style="display: none">
     <tr>
-        <th>Скрипт</th>
-        <th>Название задачи</th>
-        <th>Заголовок вкладки</th>
-        <th>Прогресс выполнения</th>
-        <th>Время выполнения</th>
-        <th>Действия</th>
+        <th>Script</th>
+        <th>Task name</th>
+        <th>Tab title</th>
+        <th>Execution progress</th>
+        <th>Execution time</th>
+        <th><s>Actions</s></th>
     </tr>
-    <template>
-        <tr>
+    <template id="taskRowTemplate">
+        <tr data-bs-task-id="" data-bs-tab-id="">
             <td><span class="task-script-name"></span></td>
             <td><span class="task-name"></span></td>
             <td><span class="task-window-title"></span></td>
@@ -35,14 +47,16 @@
             <td><span class="task-time"></span></td>
             <td>
                 <div class="task-actions">
-                    <button class="action-stop" title="Stop task">&block;</button>
-                    <button class="action-delete" title="Stop & Delete task">&times;</button>
+                    <button class="action-stop" disabled title="Stop task">&block;</button>
+                    <button class="action-start" disabled title="Continue task">&blacktriangleright;</button>
+                    <button class="action-delete" disabled title="Stop & Delete task">&times;</button>
                 </div>
             </td>
         </tr>
     </template>
 </table>
 
+<script src="tasksController.js"></script>
 <script src="contentScript.js" type="module"></script>
 </body>
 </html>

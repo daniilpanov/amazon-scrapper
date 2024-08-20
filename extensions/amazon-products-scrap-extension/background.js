@@ -10,12 +10,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-async function run({root, task}, sender, sendResponse) {
-    if (!task || !root || !task.header_id) {
+async function run(task, sender, sendResponse) {
+    if (!task || !task.header_id || !task.task_id) {
         return sendResponse('bad request');
     }
     let acq = await fetch(
-        'http://195.201.194.213:8832/tasks/acquire/products/' + task.header_id + '/' + task._id,
+        'http://195.201.194.213:8832/tasks/acquire/products/' + task.header_id + '/' + task.task_id,
         {method: 'post'},
     );
     if (acq.status !== 200) {
@@ -29,9 +29,9 @@ async function run({root, task}, sender, sendResponse) {
     }
     sendResponse('OK');
     let needle_tab = null;
-    const {asin} = task.data;
+    const asin = task.asin;
     // check if needle tab is already opened
-    for (const tab of await chrome.tabs.query({})) {
+    for (const tab of await chrome.tabs.query({windowId: task.windowId})) {
         if (tab.url.startsWith('https://www.amazon.') && tab.url.includes('/dp/' + asin)) {
             needle_tab = tab;
             break;
@@ -39,8 +39,9 @@ async function run({root, task}, sender, sendResponse) {
     }
     if (!needle_tab) {
         needle_tab = await chrome.tabs.create({
-            url: 'https://www.' + (task.data.domain || 'amazon.com') + '/' + (task.result?.prefix ? task.result.prefix + '/' : '') + 'dp/' + asin + '?th=1',
+            url: 'https://www.' + (task.domain || 'amazon.com') + '/dp/' + asin + '?th=1',
             active: false,
+            windowId: task.windowId,
         });
         chrome.tabs.update(needle_tab.id, {autoDiscardable: false});
     }
@@ -64,10 +65,10 @@ async function run({root, task}, sender, sendResponse) {
             args: [task],
             func: (task) => {
                 window.finish_collecting = false;
-                const products_collector = new CollectProducts(task.data.asin);
+                const products_collector = new CollectProducts(task.asin);
                 try {
-                    const product_card = products_collector.getProductCard(task.data.collect_media_config);
-                    const aspects = (task.data.collect_aspects) ? products_collector.getAspects() : null;
+                    const product_card = products_collector.getProductCard(task.collect_media_config);
+                    const aspects = (task.collect_aspects) ? products_collector.getAspects() : null;
                     return {product_card, aspects};
                 } catch (e) {
                     return {'error': e};
@@ -78,7 +79,7 @@ async function run({root, task}, sender, sendResponse) {
         // handle errors
         if (data.error) {
             console.log(data.error);
-            fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
+            fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -94,7 +95,7 @@ async function run({root, task}, sender, sendResponse) {
         }
         // load data
         if (Object.keys(data.product_card || {}).length) {
-            fetch('http://195.201.194.213:8832/products/set_result/card/' + task.data.asin, {
+            fetch('http://195.201.194.213:8832/products/set_result/card/' + task.asin, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -108,7 +109,7 @@ async function run({root, task}, sender, sendResponse) {
             });
         }
         if (data.aspects && data.aspects.length) {
-            fetch('http://195.201.194.213:8832/products/set_result/aspects/' + task.data.asin, {
+            fetch('http://195.201.194.213:8832/products/set_result/aspects/' + task.asin, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -122,12 +123,12 @@ async function run({root, task}, sender, sendResponse) {
             });
         }
         // If it is target - run target collecting
-        if (task.data.collect_media_config && task.data.target) {
-            console.log('collect product media: ' + task.data.asin);
-            fetch('http://195.201.194.213:8832/products/target/collect/' + task.data.asin, {method: 'POST'}).then((res) => {
+        if (task.collect_media_config && task.target) {
+            console.log('collect product media: ' + task.asin);
+            fetch('http://195.201.194.213:8832/products/target/collect/' + task.asin, {method: 'POST'}).then((res) => {
                 if (res.status > 201) {
-                    console.log('product ' + task.data.asin + ' target collecting start error:', res.statusText);
-                    console.error('product ' + task.data.asin + ' target collecting start error:', res.statusText);
+                    console.log('product ' + task.asin + ' target collecting start error:', res.statusText);
+                    console.error('product ' + task.asin + ' target collecting start error:', res.statusText);
                 }
             });
         }
@@ -146,16 +147,25 @@ async function run({root, task}, sender, sendResponse) {
                 },
             });
             await new Promise(resolve => setTimeout(resolve, 500));
+            try {
+                await chrome.scripting.executeScript({
+                    target: {tabId: needle_tab.id},
+                    files: ['./reviews.js'],
+                });
+            } catch (e) {
+                console.log(e);
+                console.error(e);
+            }
             // Reviews
             const f = (task) => {
                 return new Promise(async (resolve, reject) => {
                     // create parser
                     const collector = new CollectReviews(
-                        task.data.asin,
-                        task.result?.prefix || null,
-                        task.data.current_format,
-                        task.data.keywords || '',
-                        task.data.domain || 'amazon.com',
+                        task.asin,
+                        null,
+                        task.current_format,
+                        task.keywords || '',
+                        task.domain || 'amazon.com',
                     );
                     // setup callbacks
                     // send res
@@ -193,8 +203,8 @@ async function run({root, task}, sender, sendResponse) {
                         resolve();
                     };
                     // startup
-                    collector.index = task.data.index || 0;
-                    collector.page = task.data.page || 1;
+                    collector.index = task.index || 0;
+                    collector.page = task.page || 1;
                     await collector.collect();
                 });
             };
@@ -210,6 +220,7 @@ async function run({root, task}, sender, sendResponse) {
                         target: {tabId: needle_tab.id},
                         files: ['./reviews.js'],
                     });
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     result = await chrome.scripting.executeScript({
                         target: {tabId: needle_tab.id},
                         args: [task],
@@ -223,7 +234,7 @@ async function run({root, task}, sender, sendResponse) {
             // report errors of reviews collecting if exist
             errors = result[0].result?.errors;
             if (errors) {
-                fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
+                fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -237,13 +248,13 @@ async function run({root, task}, sender, sendResponse) {
             }
             // else release and finish
             else {
-                fetch('http://195.201.194.213:8832/tasks/finish/' + task._id, {
+                fetch('http://195.201.194.213:8832/tasks/finish/' + task.task_id, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     method: 'PATCH',
                 });
-                fetch('http://195.201.194.213:8832/tasks/release/' + task._id, {
+                fetch('http://195.201.194.213:8832/tasks/release/' + task.task_id, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -251,13 +262,13 @@ async function run({root, task}, sender, sendResponse) {
                 });
             }
         } else {
-            fetch('http://195.201.194.213:8832/tasks/finish/' + task._id, {
+            fetch('http://195.201.194.213:8832/tasks/finish/' + task.task_id, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 method: 'PATCH',
             });
-            fetch('http://195.201.194.213:8832/tasks/release/' + task._id, {
+            fetch('http://195.201.194.213:8832/tasks/release/' + task.task_id, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -266,7 +277,7 @@ async function run({root, task}, sender, sendResponse) {
         }
     } catch (e) {
         console.log(e);
-        fetch('http://195.201.194.213:8832/tasks/report/' + task._id, {
+        fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -293,7 +304,7 @@ async function run({root, task}, sender, sendResponse) {
             },
             method: 'POST',
             body: JSON.stringify({
-                'name': task.taskHeader.alias || asin,
+                'name': task.alias || asin,
                 'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
                 'asins': [asin],
             }),
