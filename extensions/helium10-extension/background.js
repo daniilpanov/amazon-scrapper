@@ -16,8 +16,8 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     )
     if (res.status === 200) {
         sendResponse('OK');
-        res = await startH10(message);
-        if (res) {
+        try {
+            await startH10(message);
             fetch(
                 'http://195.201.194.213:8832/tasks/finish/' + message.task_id,
                 {method: 'PATCH'},
@@ -26,7 +26,7 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
                 'http://195.201.194.213:8832/tasks/release/' + message.task_id,
                 {method: 'POST'},
             )
-        } else {
+        } catch (e) {
             fetch('http://195.201.194.213:8832/tasks/report/' + message.task_id, {
                 headers: {
                     'Content-Type': 'application/json',
