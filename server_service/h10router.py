@@ -66,7 +66,6 @@ async def get_helium_result(helium_id: str):
         return Response(status_code=HTTP_204_NO_CONTENT)
     if task['status'] == tasks_manager.TaskStatusEnum.critical_error:
         return {'errors': task['errors']}
-    print('H10 Result:', task['result'].keys())
     return task['result']
 
 
@@ -82,7 +81,6 @@ async def set_helium_result(helium_id: str, result: HeliumResult):
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     task = tasks_manager.get_task(helium_id)
     if 'amazon_data' in task['result'] and len(task['result']['amazon_data']) >= 2 and 'helium_data' in task['result']:
-        print('[helium] H10 has all needed keys:', task['result'].keys(), 'so we can mark it as done!')
         tasks_manager.finish_task(helium_id, True)
         tasks_manager.release_task(helium_id)
     return Response(str(res))
@@ -104,7 +102,6 @@ async def set_helium_amazon_result(helium_id: str, result: HeliumAdditionalResul
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     task = tasks_manager.get_task(helium_id)
     if 'amazon_data' in task['result'] and len(task['result']['amazon_data']) >= 2 and 'helium_data' in task['result']:
-        print('[other] H10 has all needed keys:', task['result'].keys(), 'so we can mark it as done!')
         tasks_manager.finish_task(helium_id, True)
         tasks_manager.release_task(helium_id)
     return Response(str(res))
@@ -124,7 +121,6 @@ async def set_helium_amazon_result(helium_id: str, result: HeliumAdditional2Resu
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
     task = tasks_manager.get_task(helium_id)
     if 'amazon_data' in task['result'] and len(task['result']['amazon_data']) >= 2 and 'helium_data' in task['result']:
-        print('[target] H10 has all needed keys:', task['result'].keys(), 'so we can mark it as done!')
         tasks_manager.finish_task(helium_id, True)
         tasks_manager.release_task(helium_id)
     return Response(str(res))
