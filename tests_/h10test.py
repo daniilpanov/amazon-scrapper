@@ -8,10 +8,10 @@ def h10process(client: TestClient):
         'alias': 'Test task (B0D1CBVWYK, B001PMHUSW)',
         'asins': ['B0D1CBVWYK', 'B001PMHUSW'],
     })
-    assert response.status_code == 200, "Invalid status code returned"
+    assert response.status_code == 200, "Invalid status code received"
     ids = response.text
     print('H10 Task ID:', ids)
-    assert len(ids.split('--')) == 2, "Invalid task ID returned"
+    assert len(ids.split('--')) == 2, "Invalid task ID received"
     result = None
 
     for _ in range(30):
@@ -35,3 +35,27 @@ def h10process(client: TestClient):
     assert list(result['amazon_data']['other'].keys()) == ['characteristics', 'about', 'variant', 'manufacturer', 'aplus'], \
         "Some amazon other data keys lost"
     assert list(result['helium_data'].keys()) == ['titles', 'image_urls', 'csv_data'], "Some helium data keys lost"
+
+
+def find100asins_process(client: TestClient):
+    response = client.post('/helium/get100asins', json={
+        'alias': 'Test task (lipton tea)',
+        'label': 'lipton',
+        'type': 'tea',
+    })
+    assert response.status_code == 200, "Invalid status code received"
+    ids = response.text
+    print('100asins Task ID:', ids)
+    assert len(ids.split('--')) == 2, "Invalid task ID received"
+    result = None
+
+    for _ in range(30):
+        res = client.get('/helium/result_100asins/' + ids)
+        if res.status_code == 200:
+            result = res.json()
+            break
+        assert res.status_code == 204
+        time.sleep(1)
+    assert result is not None, "No result or very long process time error"
+    assert result, "Empty result error"
+    assert len(result) > 50, "So small result!"

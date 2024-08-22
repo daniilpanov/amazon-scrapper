@@ -138,7 +138,7 @@ async def get_helium_result(task_id: str):
     if '--' not in task_id:
         raise HTTPException(HTTP_400_BAD_REQUEST)
     header_id, body_id = task_id.split('--')
-    task = tasks_manager.get_task(body_id, True)
+    task = tasks_manager.get_task(body_id)
     if not task or task['status'] == tasks_manager.TaskStatusEnum.stopped:
         raise HTTPException(HTTP_404_NOT_FOUND)
     if task['status'] < tasks_manager.TaskStatusEnum.finished:
