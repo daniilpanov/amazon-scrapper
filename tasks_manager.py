@@ -4,7 +4,7 @@ from time import sleep
 
 import pytz
 from bson import ObjectId
-from pymongo.errors import OperationFailure, PyMongoError, DuplicateKeyError
+from pymongo.errors import OperationFailure, PyMongoError, DuplicateKeyError, WriteError
 
 import db_mongo
 
@@ -50,7 +50,7 @@ def add_task(script, view, data, visible: bool = True, stage=0):
             'status': TaskStatusEnum.created,
             'confirmed_status': TaskStatusEnum.created,
             'stage': stage,
-            'errors': {},  # key -- variable param, value -- error body
+            'errors': [],  # TODO: key -- variable param, value -- error body
             'created_at': datetime.datetime.now(pytz.UTC),
             'started_at': None,
             'ended_at': None,
@@ -142,10 +142,16 @@ def report_task(task_id, errors, confirm=True, stop=False, **params):
         res = set_status(task_id, TaskStatusEnum.critical_error, confirm, errors=errors, **params)
         release_task(task_id)
         return res
-    return TasksBodies.update_one(
-        {'_id': task_id},
-        {'$push': {'errors': errors}} | params,
-    ).modified_count
+    try:
+        return TasksBodies.update_one(
+            {'_id': task_id},
+            {'$push': {'errors': errors}} | params,
+        ).modified_count
+    except WriteError:
+        return TasksBodies.update_one(
+            {'_id': task_id},
+            {'$set': {'errors': errors}} | params,
+        ).modified_count
 
 
 def set_status(task_id, status, confirmation=False, **params):

@@ -1,3 +1,9 @@
+AbortSignal.timeout ??= function timeout(ms) {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), ms);
+    return ctrl.signal;
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     for (let i in request) {
         if (i === 'fetch') {
@@ -170,24 +176,26 @@ async function run(task, sender, sendResponse) {
                     // setup callbacks
                     // send res
                     collector.per_index_callback = (data) => {
-                        chrome.runtime.sendMessage(
-                            {
-                                fetch: [
-                                    'http://195.201.194.213:8832/products/set_result/reviews',
-                                    {
-                                        headers: {
-                                            // 'Content-Encoding': 'gzip',
-                                            'Content-Type': 'application/json',
+                        if (data && data.length) {
+                            chrome.runtime.sendMessage(
+                                {
+                                    fetch: [
+                                        'http://195.201.194.213:8832/products/set_result/reviews',
+                                        {
+                                            headers: {
+                                                // 'Content-Encoding': 'gzip',
+                                                'Content-Type': 'application/json',
+                                            },
+                                            method: 'POST',
+                                            body: JSON.stringify(data),
                                         },
-                                        method: 'POST',
-                                        body: JSON.stringify(data),
-                                    },
-                                ],
-                                log: data,
-                            },
-                            (response) => {
-                            },
-                        );
+                                    ],
+                                    log: data,
+                                },
+                                (response) => {
+                                },
+                            );
+                        }
                     };
                     // reject on a lot of errors
                     let fails_counter = 0;
@@ -296,21 +304,41 @@ async function run(task, sender, sendResponse) {
             func: () => {
                 window.finish_collecting = true;
             },
-        })
-        console.log(await fetch('http://45.14.245.223:1802/new_collection/', {
-            headers: {
-                'accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            method: 'POST',
-            body: JSON.stringify({
-                'name': task.alias || asin,
-                'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
-                'asins': [asin],
-            }),
-        }));
+        });
+        console.log('End! wait for sending... [' + asin + ']');
+        try {
+            console.log(asin, await fetch('http://45.14.245.223:1802/new_collection/', {
+                headers: {
+                    'accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                method: 'POST',
+                body: JSON.stringify({
+                    'name': task.alias || asin,
+                    'date': (new Date(date.getTime() + date.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
+                    'asins': [asin],
+                }),
+                signal: AbortSignal.timeout(15000),
+            }));
+        } catch (e) {
+            fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'PATCH',
+                body: JSON.stringify({
+                    confirm: false,
+                    errors: [
+                        [date.toISOString() + ' [products.next] Error on trying to send new asins: ' + e.message],
+                    ],
+                    stop: false,
+                }),
+            });
+        }
+        console.log('Data sent! Remove tab [' + asin + ']');
         try {
             await chrome.tabs.remove(needle_tab.id);
+            console.log('Tab removed! [' + asin + ']');
         } catch (e) {
             console.log(e);
             console.error(e);
