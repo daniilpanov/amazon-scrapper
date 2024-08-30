@@ -50,6 +50,7 @@ function runTargetProductTask(task_id) {
         ));
     }, c => {
         if (c > 10) {
+            chrome.runtime.sendMessage({log: ['window.close call [target]']}, (response) => {});
             window.close();
             return true;
         }

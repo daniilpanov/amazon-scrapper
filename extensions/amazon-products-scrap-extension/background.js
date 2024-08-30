@@ -103,8 +103,8 @@ async function run(task, sender, sendResponse) {
                 body: JSON.stringify(data.product_card),
             }).then((res) => {
                 if (res.status > 204) {
-                    console.log('card write error:', res.statusText, '\ndata:', data.product_card);
-                    console.error('card write error:', res.statusText, '\ndata:', data.product_card);
+                    console.log('card write error:', res.statusText, '\ndata:', JSON.stringify(data.product_card));
+                    console.error('card write error:', res.statusText, '\ndata:', JSON.stringify(data.product_card));
                 }
             });
         }
@@ -117,8 +117,8 @@ async function run(task, sender, sendResponse) {
                 body: JSON.stringify(data.aspects),
             }).then((res) => {
                 if (res.status > 201) {
-                    console.log('aspects write error:', res.statusText, '\ndata:', data.aspects);
-                    console.error('aspects write error:', res.statusText, '\ndata:', data.aspects);
+                    console.log('aspects write error:', res.statusText, '\ndata:', JSON.stringify(data.aspects));
+                    console.error('aspects write error:', res.statusText, '\ndata:', JSON.stringify(data.aspects));
                 }
             });
         }

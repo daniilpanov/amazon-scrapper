@@ -3,7 +3,7 @@ function waitForElement(path_to_element, callback, stop_callback, counter = 0) {
     const el = document.querySelectorAll(path_to_element);
     if (!el || (typeof el.length !== 'undefined' && !el.length)) {
         if (!stop_callback || !stop_callback(counter++)) {
-            return setTimeout(waitForElement, 250, path_to_element, callback);
+            return setTimeout(waitForElement, 250, path_to_element, callback, stop_callback, counter);
         }
     }
     else {
