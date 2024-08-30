@@ -56,12 +56,12 @@ class AspectsResultItem(BaseModel):
 class ProductsResultItem(BaseModel):
     asin: str
     product_url: str
-    canonical_prefix: str
     product_title: str
     product_descr: str
     picture_url: str
     features: dict[str, str] = {}
     top_5_phrases: list[str] = []
+    canonical_prefix: str | None = None
     product_price: int | float | None = None
     media_data: dict | list | None = None
 
