@@ -1,11 +1,26 @@
+chrome.runtime.onConnect.addListener(function (port) {
+    if (port.action === 'L2P') {
+        port.onMessage.addListener(async function (msg) {
+            if (msg.end) {
+                port.disconnect();
+                return;
+            }
+            const tab = (await chrome.tabs.query({ currentWindow: true, active: true }))[0];
+            if (tab.title === 'TikTok Shop Affiliate') {
+                const tabId = tab?.id;
+                const res = await runProfileScrap(tabId);
+                port.postMessage(res);
+            }
+            port.postMessage('Invalid tab!');
+        });
+    }
+});
 
-async function scrap(request) {
+
+async function scrap(request, send = null) {
     console.log(request);
     switch (request.action) {
-        case 'NEWTAB':
-            // TODO: add new method
-            return 'unavailable';
-        case 'CURRTAB':
+        case 'L1':
             if (typeof request.tabId !== 'undefined' && request.tabId !== null) {
                 const data = await runScrap(request.tabId, request.count || 100)
                 if (data && data.length) {
@@ -21,7 +36,24 @@ async function scrap(request) {
                 } else {
                     return 'invalid tab';
                 }
-
+            }
+            break;
+        case 'L2':
+            if (typeof request.tabId !== 'undefined' && request.tabId !== null) {
+                const data = await runFullScrap(request.tabId, request.count || 100)
+                if (data && data.length) {
+                    const filedata = convertToCSV(data);
+                    await chrome.scripting.executeScript({
+                        target: {tabId: request.tabId},
+                        args: [filedata],
+                        func: (filedata) => {
+                            downloadCSV(filedata, 'result-fll.csv');
+                        },
+                    });
+                    return 'OK';
+                } else {
+                    return 'invalid tab';
+                }
             }
             break;
         default:
@@ -33,7 +65,7 @@ async function scrap(request) {
 async function runScrap(tabId, count) {
     await chrome.scripting.executeScript({
         target: {tabId: tabId},
-        files: ['./tiktoksellerparser.js'],
+        files: ['./utils.js', './tiktoksellerparser.js'],
     });
     let data = [];
     for (let i = 0; i < count;) {
@@ -64,13 +96,88 @@ async function runScrap(tabId, count) {
     return false;
 }
 
+async function runFullScrap(tabId, count) {
+    await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        files: ['./utils.js', './tiktokgetlinks.js'],
+    });
+    let result = await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        args: [count],
+        func: async (count) => {
+            let rows = [];
+            while (rows.length < count) {
+                try {
+                    await scrollToTheEnd();
+                    rows = [...rows, ...await getElementLinks(rows.length)];
+                } catch (e) {
+                    console.log(e);
+                    break;
+                }
+            }
+            console.log(rows);
+            let port = null;
+            const res = await new Promise(async (r) => {
+                port = chrome.runtime.connect({action: 'L2P'});
+                const data = [];
+                port.onmessage.addListener(function (msg) {
+                    data.push(msg);
+                    if (data.length >= count || !rows.length) {
+                        return r(data);
+                    }
+                    rows.shift()?.click();
+                    console.log('clicked!');
+                    port.postMessage({});
+                });
+            });
+            if (port) {
+                port.disconnect();
+            }
+            return res;
+        },
+    });
+    console.log(result);
+    result = result[0]?.result || null;
+    if (result && result.length) {
+        return result;
+    }
+    return null;
+}
+
+async function runProfileScrap(tabId) {
+    await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        files: ['./tiktokprofile.js'],
+    });
+    await new Promise((r) => setTimeout(r, 250));
+    const result = await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        args: [],
+        func: () => {
+            try {
+                return parsePage();
+            } catch (e) {
+                console.log(e);
+                return null;
+            }
+        },
+    });
+    chrome.tabs.remove(tabId);
+    return result;
+}
+
+async function test(s) {
+    await new Promise((r) => setTimeout(r, 500));
+    s('OK!');
+}
+
 function scrapWrapper(request, sender, sendResponse) {
     sendResponse('OK');
     scrap(request);
 }
 
-chrome.runtime.onMessage.addListener(scrap);
-chrome.runtime.onMessageExternal.addListener(scrap);
+chrome.runtime.onMessage.addListener(scrapWrapper);
+chrome.runtime.onMessageExternal.addListener(scrapWrapper);
 
 
 function convertToCSV(arr) {
