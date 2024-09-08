@@ -20,8 +20,15 @@ function getUsualMetrics(el) {
 function getDiagrams(diagrams) {
     const data = {};
     for (const diagram of diagrams) {
-        const diagram_items = diagram?.children[0].children;
+        const diagram_items = diagram?.children[0]?.children;
+        if (!diagram_items) {
+            continue;
+        }
         let key = diagram_items[0]?.innerText.trim() + ', %';
+        if ((diagram_items[1]?.children?.length || 0) < 2) {
+            data[key] = null;
+            continue;
+        }
         let [sub_keys, sub_values] = [...(diagram_items[1]?.children[1]?.children || [])].slice(1);
         sub_keys = sub_keys.children;
         sub_values = sub_values.children;
@@ -57,11 +64,19 @@ function parsePage() {
         const [raw_data, diagrams_root] = sales_data?.children[0]?.children;
 
         // Metrics
-        data = {...data, ...getUsualMetrics(raw_data)};
+        try  {
+            data = {...data, ...getUsualMetrics(raw_data)};
+        } catch (e) {
+            return null;
+        }
+        console.log(data);
 
         // Diagrams
         const diagrams = diagrams_root.children[0].children[0].children[0].children[0].children[0].children;
         data = {...data, ...getDiagrams(diagrams)};
+    } else {
+        console.log('err! no sales')
+        return null;
     }
 
     // Collaboration metrics

@@ -1,19 +1,22 @@
 chrome.runtime.onConnect.addListener(function (port) {
-    if (port.action === 'L2P') {
-        port.onMessage.addListener(async function (msg) {
-            if (msg.end) {
-                port.disconnect();
-                return;
-            }
-            const tab = (await chrome.tabs.query({ currentWindow: true, active: true }))[0];
-            if (tab.title === 'TikTok Shop Affiliate') {
-                const tabId = tab?.id;
-                const res = await runProfileScrap(tabId);
-                port.postMessage(res);
-            }
-            port.postMessage('Invalid tab!');
-        });
-    }
+    port.onMessage.addListener(async function (msg) {
+        if (msg.action === 'end') {
+            port.disconnect();
+            return;
+        }
+        let tab = (await chrome.tabs.query({ active: true }))[0];
+        for (let i = 0; i < 100 && (tab.status !== 'complete' || tab.title !== 'TikTok Shop Affiliate'); ++i) {
+            await new Promise((r) => setTimeout(r, 100));
+            tab = (await chrome.tabs.query({ active: true }))[0];
+        }
+        if (tab.title === 'TikTok Shop Affiliate') {
+            const tabId = tab?.id;
+            const res = await runProfileScrap(tabId);
+            port.postMessage(res);
+        } else {
+            port.postMessage(null);
+        }
+    });
 });
 
 
@@ -115,20 +118,27 @@ async function runFullScrap(tabId, count) {
                     break;
                 }
             }
-            console.log(rows);
             let port = null;
             const res = await new Promise(async (r) => {
-                port = chrome.runtime.connect({action: 'L2P'});
+                port = chrome.runtime.connect();
                 const data = [];
-                port.onmessage.addListener(function (msg) {
-                    data.push(msg);
+                let row;
+                port.onMessage.addListener(async (msg) => {
+                    if (msg) {
+                        data.push(msg);
+                    }
                     if (data.length >= count || !rows.length) {
                         return r(data);
                     }
-                    rows.shift()?.click();
-                    console.log('clicked!');
+                    row = rows.shift();
+                    row.scrollIntoView();
+                    row.click();
                     port.postMessage({});
                 });
+                row = rows.shift();
+                row.scrollIntoView();
+                row.click();
+                port.postMessage({});
             });
             if (port) {
                 port.disconnect();
@@ -149,26 +159,25 @@ async function runProfileScrap(tabId) {
         target: {tabId: tabId},
         files: ['./tiktokprofile.js'],
     });
-    await new Promise((r) => setTimeout(r, 250));
-    const result = await chrome.scripting.executeScript({
-        target: {tabId: tabId},
-        args: [],
-        func: () => {
-            try {
-                return parsePage();
-            } catch (e) {
-                console.log(e);
-                return null;
-            }
-        },
-    });
-    chrome.tabs.remove(tabId);
+    let result = null;
+    for (let i = 0; i < 100 && result === null; ++i) {
+        await new Promise((r) => setTimeout(r, 250));
+        result = await chrome.scripting.executeScript({
+            target: {tabId: tabId},
+            args: [],
+            func: () => {
+                try {
+                    return parsePage();
+                } catch (e) {
+                    console.log(e);
+                    return null;
+                }
+            },
+        });
+        result = result[0]?.result || null;
+    }
+    // chrome.tabs.remove(tabId);
     return result;
-}
-
-async function test(s) {
-    await new Promise((r) => setTimeout(r, 500));
-    s('OK!');
 }
 
 function scrapWrapper(request, sender, sendResponse) {
@@ -195,6 +204,9 @@ function convertToCSV(arr) {
         // Приводим к строке
         values = headers.map(header => {
             let item = (row[header] ?? '') + '';
+            if (typeof item === 'object') {
+                item = JSON.stringify(item);
+            }
             if (item.includes(',')) {
                 item = '"' + item.replaceAll('"', '\\"') + '"';
             }
