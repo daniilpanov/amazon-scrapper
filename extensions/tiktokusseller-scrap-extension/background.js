@@ -50,7 +50,7 @@ async function scrap(request, send = null) {
                         target: {tabId: request.tabId},
                         args: [filedata],
                         func: (filedata) => {
-                            downloadCSV(filedata, 'result-fll.csv');
+                            downloadCSV(filedata, 'result-full.csv');
                         },
                     });
                     return 'OK';
@@ -159,24 +159,16 @@ async function runProfileScrap(tabId) {
         target: {tabId: tabId},
         files: ['./tiktokprofile.js'],
     });
-    let result = null;
-    for (let i = 0; i < 100 && result === null; ++i) {
-        await new Promise((r) => setTimeout(r, 250));
-        result = await chrome.scripting.executeScript({
-            target: {tabId: tabId},
-            args: [],
-            func: () => {
-                try {
-                    return parsePage();
-                } catch (e) {
-                    console.log(e);
-                    return null;
-                }
-            },
-        });
-        result = result[0]?.result || null;
-    }
-    // chrome.tabs.remove(tabId);
+    let result = await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        args: [],
+        func: () => {
+            return parsePage();
+        },
+    });
+    result = result[0]?.result || null;
+    console.log(result);
+    chrome.tabs.remove(tabId);
     return result;
 }
 
@@ -201,14 +193,17 @@ function convertToCSV(arr) {
     // Преобразовать каждый объект в строку CSV
     for (let row of arr) {
         row = {...row};
+        console.log(row);
         // Приводим к строке
         values = headers.map(header => {
-            let item = (row[header] ?? '') + '';
-            if (typeof item === 'object') {
+            let item = row[header];
+            if (typeof item === 'object' && item) {
                 item = JSON.stringify(item);
+            } else {
+                item = (item ?? '') + '';
             }
             if (item.includes(',')) {
-                item = '"' + item.replaceAll('"', '\\"') + '"';
+                item = '"' + item.replaceAll('"', '\"') + '"';
             }
             return item;
         });
