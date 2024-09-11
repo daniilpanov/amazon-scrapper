@@ -140,7 +140,51 @@ async function parsePage() {
 }
 
 function parser() {
-    let data = {url: document.location.href};
+    let data = {Profile_url: document.location.href};
+    // Name and description
+    const [avatar_container, name_description_container] =
+    document.querySelectorAll('#creator-detail-profile-container > div > div') || [];
+    if (!avatar_container || !name_description_container) {
+        return null;
+    }
+    data.Profile_avatar_link = avatar_container.getElementsByTagName('img')[0]?.src.trim() ?? null;
+
+    const [name_cont, det_cont] = name_description_container?.children || [];
+    const [name, ...tags] = name_cont?.children[0]?.children[0]?.children || [];
+    data.Profile_name = name?.innerText || null;
+    if (!data.Profile_name) {
+        return null;
+    }
+
+    const parsed_tags = [];
+    for (let tag of tags) {
+        tag = tag.innerText;
+        if (tag) {
+            parsed_tags.push(tag);
+        }
+    }
+    data.Profile_tags = parsed_tags.join(', ');
+    data.Profile_description = name_cont?.children[0]?.children[1]?.innerText || null;
+
+    const [cat_fol, div, roles] = det_cont?.children || [];
+    const cat_fol_items = cat_fol?.children;
+    for (const catFolItem of cat_fol_items) {
+        let [key, val] = catFolItem.children || [];
+        key = key?.innerText?.trim() || null;
+        if (!key || !val) {
+            continue;
+        }
+        data['Profile_' + key] = val;
+    }
+    const profileRoles = [];
+    const roles_items = roles?.innerText?.split('\n') || [];
+    for (const rolesItem of roles_items) {
+        if (rolesItem.trim()) {
+            profileRoles.push(rolesItem.trim());
+        }
+    }
+    data.Profile_roles = profileRoles.join(', ');
+
     // Get all divs
     const divs = document.querySelectorAll('main > div > div > div.arco-spin-children > div > div:nth-child(2) > div');
     // Group all divs. Example:
@@ -158,7 +202,7 @@ function parser() {
     // Sales tab
     if (grouped_divs.sales_tab) {
         const items = grouped_divs.sales_tab.children;
-        data['Sales period'] = items[1]?.innerText.trim();
+        data['Sales period'] = items[1]?.innerText.trim() || null;
         const sales_data = items[2];
         const [raw_data, diagrams_root] = sales_data?.children[0]?.children;
 
@@ -172,8 +216,10 @@ function parser() {
         console.log(data);
 
         // Diagrams
-        const diagrams = diagrams_root.children[0].children[0].children[0].children[0].children[0].children;
-        data = {...data, ...getDiagrams(diagrams)};
+        const diagrams = diagrams_root?.children[0]?.children[0]?.children[0]?.children[0]?.children[0]?.children;
+        if (diagrams) {
+            data = {...data, ...getDiagrams(diagrams)};
+        }
     } else {  // If no main tab - return null
         console.log('err! no sales');
         return null;
@@ -199,8 +245,8 @@ function parser() {
 
     // LIVE tab
     if (grouped_divs.live_tab) {
-        const items = grouped_divs.live_tab.children;
-        data['LIVE period'] = items[0]?.children[0]?.children[1]?.innerText.trim();
+        const items = grouped_divs.live_tab.children || [];
+        data['LIVE period'] = items[0]?.children[0]?.children[1]?.innerText.trim() || null;
         const raw_data = items[1]?.children[0]?.children[0];
 
         // Metrics
@@ -209,11 +255,15 @@ function parser() {
 
     // Followers tab
     if (grouped_divs.followers_tab) {
-        const items = grouped_divs.followers_tab.children[1]?.children[0]?.children[0].children[0].children[0].children;
+        const items = grouped_divs.followers_tab.children[1]?.children[0]?.children[0]?.children[0]?.children[0]?.children;
 
         // Diagrams
-        const diagrams = items[0]?.children;
-        data = {...data, ...getDiagrams(diagrams)};
+        if (items) {
+            const diagrams = items[0]?.children;
+            if (diagrams) {
+                data = {...data, ...getDiagrams(diagrams)};
+            }
+        }
     }
 
     return data;

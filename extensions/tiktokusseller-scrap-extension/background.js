@@ -168,7 +168,7 @@ async function runProfileScrap(tabId) {
     });
     result = result[0]?.result || null;
     console.log(result);
-    chrome.tabs.remove(tabId);
+    // chrome.tabs.remove(tabId);
     return result;
 }
 
@@ -203,7 +203,7 @@ function convertToCSV(arr) {
                 item = (item ?? '') + '';
             }
             if (item.includes(',')) {
-                item = '"' + item.replaceAll('"', '\"') + '"';
+                item = '"' + item.replaceAll('"', '\\"') + '"';
             }
             return item;
         });
