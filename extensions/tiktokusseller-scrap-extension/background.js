@@ -4,10 +4,10 @@ chrome.runtime.onConnect.addListener(function (port) {
             port.disconnect();
             return;
         }
-        let tab = (await chrome.tabs.query({ active: true }))[0];
+        let tab = (await chrome.tabs.query({ currentWindow: true, active: true }))[0];
         for (let i = 0; i < 100 && (tab.status !== 'complete' || tab.title !== 'TikTok Shop Affiliate'); ++i) {
             await new Promise((r) => setTimeout(r, 100));
-            tab = (await chrome.tabs.query({ active: true }))[0];
+            tab = (await chrome.tabs.query({ currentWindow: true, active: true }))[0];
         }
         if (tab.title === 'TikTok Shop Affiliate') {
             const tabId = tab?.id;
@@ -44,8 +44,8 @@ async function scrap(request, send = null) {
         case 'L2':
             if (typeof request.tabId !== 'undefined' && request.tabId !== null) {
                 const data = await runFullScrap(request.tabId, request.count || 100)
-                if (data && data.length) {
-                    const filedata = convertToCSV(data);
+                if (data && data.length === 2 && data[0].length) {
+                    const filedata = convertToCSV(data[0], data[1]);
                     await chrome.scripting.executeScript({
                         target: {tabId: request.tabId},
                         args: [filedata],
@@ -119,12 +119,15 @@ async function runFullScrap(tabId, count) {
                 }
             }
             let port = null;
+            let headers = new Set();
             const res = await new Promise(async (r) => {
                 port = chrome.runtime.connect();
                 const data = [];
                 let row;
                 port.onMessage.addListener(async (msg) => {
                     if (msg) {
+                        headers = headers.union(new Set(msg.headers));
+                        delete msg.headers;
                         data.push(msg);
                     }
                     if (data.length >= count || !rows.length) {
@@ -143,10 +146,9 @@ async function runFullScrap(tabId, count) {
             if (port) {
                 port.disconnect();
             }
-            return res;
+            return [res, headers.values().toArray()];
         },
     });
-    console.log(result);
     result = result[0]?.result || null;
     if (result && result.length) {
         return result;
@@ -181,11 +183,13 @@ chrome.runtime.onMessage.addListener(scrapWrapper);
 chrome.runtime.onMessageExternal.addListener(scrapWrapper);
 
 
-function convertToCSV(arr) {
-    // Взять заголовки из ключей первого объекта
+function convertToCSV(arr, headers) {
     const csvRows = [];
-    const headers = Object.keys({...arr[0]});
     let values = [];
+    // Взять заголовки из ключей первого объекта, если они не заданы
+    if (!headers) {
+        headers = Object.keys({...arr[0]});
+    }
     for (const header of headers) {
         values.push('"' + header + '"');
     }

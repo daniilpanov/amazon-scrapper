@@ -140,7 +140,16 @@ async function parsePage() {
 }
 
 function parser() {
-    let data = {Profile_url: document.location.href};
+    const headers = new Set();
+    const handler = {
+        set: function(obj, prop, value) {
+            headers.add(prop);
+            obj[prop] = value;
+        }
+    };
+    const data = new Proxy({}, handler);
+    // URL
+    data.Profile_url = document.location.href;
     // Name and description
     const [avatar_container, name_description_container] =
     document.querySelectorAll('#creator-detail-profile-container > div > div') || [];
@@ -178,9 +187,10 @@ function parser() {
     }
     const profileRoles = [];
     const roles_items = roles?.innerText?.split('\n') || [];
-    for (const rolesItem of roles_items) {
-        if (rolesItem.trim()) {
-            profileRoles.push(rolesItem.trim());
+    for (let rolesItem of roles_items) {
+        rolesItem = rolesItem.trim();
+        if (rolesItem) {
+            profileRoles.push(rolesItem);
         }
     }
     data.Profile_roles = profileRoles.join(', ');
@@ -208,17 +218,23 @@ function parser() {
 
         // Metrics
         try {
-            data = {...data, ...getUsualMetrics(raw_data, true)};  // Fail on non-numeric values
+            const d = getUsualMetrics(raw_data, true);
+            for (const i in d) {  // Fail on non-numeric values
+                data[i] = d[i];
+            }
+
         } catch (e) {
             console.log(e);
             return null;  // If it was not numeric data - page is not loaded!
         }
-        console.log(data);
 
         // Diagrams
         const diagrams = diagrams_root?.children[0]?.children[0]?.children[0]?.children[0]?.children[0]?.children;
         if (diagrams) {
-            data = {...data, ...getDiagrams(diagrams)};
+            const d = getDiagrams(diagrams);
+            for (const i in d) {  // Fail on non-numeric values
+                data[i] = d[i];
+            }
         }
     } else {  // If no main tab - return null
         console.log('err! no sales');
@@ -231,7 +247,10 @@ function parser() {
         const raw_data = items[1]?.children[0]?.children[0];
 
         // Metrics
-        data = {...data, ...getUsualMetrics(raw_data)};
+        const d = getUsualMetrics(raw_data);
+        for (const i in d) {  // Fail on non-numeric values
+            data[i] = d[i];
+        }
     }
 
     // Video tab
@@ -240,7 +259,10 @@ function parser() {
         const raw_data = items[1]?.children[0]?.children[0];
 
         // Metrics
-        data = {...data, ...getUsualMetrics(raw_data)};
+        const d = getUsualMetrics(raw_data);
+        for (const i in d) {  // Fail on non-numeric values
+            data[i] = d[i];
+        }
     }
 
     // LIVE tab
@@ -250,7 +272,10 @@ function parser() {
         const raw_data = items[1]?.children[0]?.children[0];
 
         // Metrics
-        data = {...data, ...getUsualMetrics(raw_data)};
+        const d = getUsualMetrics(raw_data);
+        for (const i in d) {  // Fail on non-numeric values
+            data[i] = d[i];
+        }
     }
 
     // Followers tab
@@ -261,10 +286,16 @@ function parser() {
         if (items) {
             const diagrams = items[0]?.children;
             if (diagrams) {
-                data = {...data, ...getDiagrams(diagrams)};
+                const d = getDiagrams(diagrams);
+                for (const i in d) {  // Fail on non-numeric values
+                    data[i] = d[i];
+                }
             }
         }
     }
 
-    return data;
+    const preparedData = {...data};
+    preparedData.headers = headers.values().toArray();
+
+    return preparedData;
 }
