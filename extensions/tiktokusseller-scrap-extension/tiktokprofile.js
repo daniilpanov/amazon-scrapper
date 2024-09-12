@@ -180,8 +180,13 @@ function parser() {
     for (const catFolItem of cat_fol_items) {
         let [key, val] = catFolItem.children || [];
         key = key?.innerText?.trim() || null;
+        val = val?.innerText?.trim().replaceAll('\n', '') || null;
         if (!key || !val) {
             continue;
+        }
+        const numVal = parseNumber(val)[1];
+        if (!Number.isNaN(numVal)) {
+            val = numVal;
         }
         data['Profile_' + key] = val;
     }
@@ -250,6 +255,15 @@ function parser() {
         const d = getUsualMetrics(raw_data);
         for (const i in d) {  // Fail on non-numeric values
             data[i] = d[i];
+        }
+
+        const brandsCollabListButton = document.querySelector('.creator_video_data_card_trigger_is_display > button');
+        if (brandsCollabListButton) {
+            brandsCollabListButton.click();
+            data['Brands Collab List'] = document.querySelector('.creator_video_data_card_trigger_is_display > div')?.innerText.split('\n')?.slice(1) || null;
+            brandsCollabListButton.click();
+        } else {
+            data['Brands Collab List'] = null;
         }
     }
 
