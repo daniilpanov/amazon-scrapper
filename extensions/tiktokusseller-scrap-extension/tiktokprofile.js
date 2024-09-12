@@ -237,7 +237,7 @@ function parser() {
         const diagrams = diagrams_root?.children[0]?.children[0]?.children[0]?.children[0]?.children[0]?.children;
         if (diagrams) {
             const d = getDiagrams(diagrams);
-            for (const i in d) {  // Fail on non-numeric values
+            for (const i in d) {
                 data[i] = d[i];
             }
         }
@@ -253,14 +253,14 @@ function parser() {
 
         // Metrics
         const d = getUsualMetrics(raw_data);
-        for (const i in d) {  // Fail on non-numeric values
+        for (const i in d) {
             data[i] = d[i];
         }
 
         const brandsCollabListButton = document.querySelector('.creator_video_data_card_trigger_is_display > button');
         if (brandsCollabListButton) {
             brandsCollabListButton.click();
-            data['Brands Collab List'] = document.querySelector('.creator_video_data_card_trigger_is_display > div')?.innerText.split('\n')?.slice(1) || null;
+            data['Brands Collab List'] = document.querySelector('.creator_video_data_card_trigger_is_display > div')?.innerText.split('\n')?.slice(1)?.join(', ') || null;
             brandsCollabListButton.click();
         } else {
             data['Brands Collab List'] = null;
@@ -274,7 +274,7 @@ function parser() {
 
         // Metrics
         const d = getUsualMetrics(raw_data);
-        for (const i in d) {  // Fail on non-numeric values
+        for (const i in d) {
             data[i] = d[i];
         }
     }
@@ -287,7 +287,7 @@ function parser() {
 
         // Metrics
         const d = getUsualMetrics(raw_data);
-        for (const i in d) {  // Fail on non-numeric values
+        for (const i in d) {
             data[i] = d[i];
         }
     }
@@ -301,8 +301,10 @@ function parser() {
             const diagrams = items[0]?.children;
             if (diagrams) {
                 const d = getDiagrams(diagrams);
-                for (const i in d) {  // Fail on non-numeric values
-                    data[i] = d[i];
+                for (const title in d) {
+                    for (const ti in d[title]) {
+                        data[title + ' [' + ti + ']'] = d[title][ti];
+                    }
                 }
             }
         }
