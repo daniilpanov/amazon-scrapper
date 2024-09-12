@@ -170,7 +170,7 @@ async function runProfileScrap(tabId) {
     });
     result = result[0]?.result || null;
     console.log(result);
-    // chrome.tabs.remove(tabId);
+    chrome.tabs.remove(tabId);
     return result;
 }
 

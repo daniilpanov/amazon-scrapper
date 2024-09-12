@@ -74,7 +74,7 @@ function getUsualMetrics(el, thr = false) {
         let value = metric?.children[1]?.querySelector('span')?.innerText.trim() || metric?.children[1]?.innerText.trim();
         let [symbol, parsedValue, plusSymbol] = parseNumber(value);
         // Check value
-        if (parsedValue) {
+        if (parsedValue !== null) {
             if (symbol) {
                 key += ', ' + symbol;
             }
