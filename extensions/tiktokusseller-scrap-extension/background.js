@@ -1,13 +1,19 @@
+chrome.runtime.onInstalled.addListener(function (details) {
+    chrome.storage.local.set({tasks: 0});
+});
+
 chrome.runtime.onConnect.addListener(function (port) {
     port.onMessage.addListener(async function (msg) {
         if (msg.action === 'end') {
             port.disconnect();
+            const count = await chrome.storage.local.get();
+            await chrome.storage.local.set({tasks: count.tasks - 1});
             return;
         }
-        let tab = (await chrome.tabs.query({ currentWindow: true, active: true }))[0];
+        let tab = (await chrome.tabs.query({currentWindow: true, active: true}))[0];
         for (let i = 0; i < 100 && (tab.status !== 'complete' || tab.title !== 'TikTok Shop Affiliate'); ++i) {
             await new Promise((r) => setTimeout(r, 100));
-            tab = (await chrome.tabs.query({ currentWindow: true, active: true }))[0];
+            tab = (await chrome.tabs.query({currentWindow: true, active: true}))[0];
         }
         if (tab.title === 'TikTok Shop Affiliate') {
             const tabId = tab?.id;
@@ -21,7 +27,6 @@ chrome.runtime.onConnect.addListener(function (port) {
 
 
 async function scrap(request, send = null) {
-    console.log(request);
     switch (request.action) {
         case 'L1':
             if (typeof request.tabId !== 'undefined' && request.tabId !== null) {
@@ -144,7 +149,11 @@ async function runFullScrap(tabId, count) {
                 port.postMessage({});
             });
             if (port) {
-                port.disconnect();
+                port.postMessage({action: 'end'});
+                try {
+                    port.disconnect();
+                } catch (e) {
+                }
             }
             return [res, headers.values().toArray()];
         },
@@ -169,7 +178,6 @@ async function runProfileScrap(tabId) {
         },
     });
     result = result[0]?.result || null;
-    console.log(result);
     chrome.tabs.remove(tabId);
     return result;
 }

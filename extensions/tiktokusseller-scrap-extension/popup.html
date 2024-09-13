@@ -17,6 +17,7 @@
         }
 
         .container {
+            color: white !important;
             height: 98%;
             width: 98%;
             display: flex;
@@ -24,21 +25,20 @@
             justify-content: center;
             align-items: center;
             background-color: #000000;
-            border-radius: 7vh;
+            border-radius: .25em;
             box-shadow: 0 3px 4px rgba(0, 0, 0, 0.5);
         }
 
 
         .parse_button {
             background-color: #FF9900;
-            width: 85px;
-            height: 40px;
-            color: white;
+            padding: .5em;
+            margin: .1em;
             font-weight: bold;
             font-size: 20px;
             border: solid 0;
             text-shadow: 0 2px 2px rgba(0, 0, 0, 0.5);
-            border-radius: 5vh;
+            border-radius: .25em;
         }
 
         .parse_button:hover {
@@ -47,9 +47,8 @@
         }
 
         h1 {
-            color: white;
             background-color: #FF9900;
-            border-radius: 4vh;
+            border-radius: .25em;
             border: 1px solid black;
             padding: 7px;
             text-align: center;
@@ -62,14 +61,23 @@
 
 <div class="container">
     <h1>Tiktok Seller Us Scraper</h1>
-<!--    <h3 id="status" style="color: white;">Status: not started</h3>-->
+    <!--    <h3 id="status" style="color: white;">Status: not started</h3>-->
 
     <div style="display: flex; flex-direction: row;">
-        <!--<p style="font-size: large; font-weight: 900; color: #ffffff;" id="pagesCounter">0</p>
-        <p style="font-size: large; font-weight: 900; color: #ffffff;">&nbsp;/&nbsp;</p>-->
-        <p style="font-size: large; font-weight: 900; color: #ffffff;"><label for="totalPagesCount">Please enter the quantity limit:</label></p>
-        <p style="font-size: large; font-weight: 900; color: #ffffff;"><input type="number" name="totalPagesCount" id="totalPagesCount" value="100"></p>
+        <!--<p style="font-size: large;" id="pagesCounter">0</p>
+        <p style="font-size: large;">&nbsp;/&nbsp;</p>-->
+        <div style="font-size: large;"><label for="totalPagesCount">Quantity
+            limit:</label></div>
+        <div style="font-size: large;"><input type="number" name="totalPagesCount" id="totalPagesCount" value="100"></div>
     </div>
+
+    <p></p>
+
+    <div>
+        <span style="font-size: large;">Status: <span id="status">No tasks</span></span>
+    </div>
+
+    <p></p>
 
     <button class="parse_button" id="toParseButton">
         Scrape

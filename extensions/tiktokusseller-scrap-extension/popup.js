@@ -1,8 +1,15 @@
-// const status = document.getElementById('status');
+chrome.storage.onChanged.addListener((changes, area) => {
+    console.log(changes);
+});
+
+const status = document.getElementById('status');
 const scrapeButton = document.getElementById('toParseButton');
 const fullScrapeButton = document.getElementById('toFullParseButton');
 // const pagesCounter = document.getElementById('pagesCounter');
 const totalPagesCount = document.getElementById('totalPagesCount');
+
+const localData = await chrome.storage.local.get();
+status.innerHTML = localData?.tasks ? localData.tasks + ' tasks active' : 'No tasks';
 
 scrapeButton.addEventListener('click', async () => {
     let num;
@@ -17,9 +24,10 @@ scrapeButton.addEventListener('click', async () => {
             action: 'L1',
             tabId: (await chrome.tabs.query({ currentWindow: true, active: true }))[0].id,
             count: num,
-        }, (res) => {
-            console.log(res);
-            // status.innerHTML = 'Status: end';
+        }, async (res) => {
+            const count = await chrome.storage.local.get();
+            await chrome.storage.local.set({tasks: count + 1});
+            console.log(res, count);
         });
     } catch (e) {
     }
@@ -38,9 +46,11 @@ fullScrapeButton.addEventListener('click', async () => {
             action: 'L2',
             tabId: (await chrome.tabs.query({ currentWindow: true, active: true }))[0].id,
             count: num,
-        }, (res) => {
+        }, async (res) => {
             console.log(res);
-            // status.innerHTML = 'Status: end';
+            const count = await chrome.storage.local.get();
+            await chrome.storage.local.set({tasks: count.tasks + 1});
+            console.log(res, count);
         });
     } catch (e) {
     }
