@@ -7,7 +7,6 @@ from pymongo.mongo_client import MongoClient
 import settings
 
 client: MongoClient | None = None
-client_spec: MongoClient | None = None
 
 config = {
     'url': settings.MONGO_DB_HOST,
@@ -15,10 +14,6 @@ config = {
     'password': settings.MONGO_DB_PASS,
     'proxy': settings.MONGO_DB_PROXY,
     'url_prefix': settings.MONGO_DB_HOST_SCHEMA,
-}
-config_special = {
-    'username': settings.MONGO_DB_USER_RESERVE,
-    'password': settings.MONGO_DB_PASS_RESERVE,
 }
 
 
@@ -54,18 +49,6 @@ def inst() -> MongoClient | bool:
         return client
     client = init(config['username'], config['password'])
     return client
-
-
-def spec_inst():
-    global client_spec
-    if client_spec:
-        return client_spec
-    client_spec = init(**config_special)
-    return client_spec
-
-
-def spec_db(dbname: str) -> Database:
-    return spec_inst()[dbname]
 
 
 def db(dbname: str) -> Database:
