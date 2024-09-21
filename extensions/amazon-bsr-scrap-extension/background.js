@@ -33,7 +33,7 @@ async function run(task, sender, sendResponse) {
     }
     if (!needle_tab) {
         needle_tab = await chrome.tabs.create({
-            url: task.bsr,
+            url: 'https://www.amazon.com/' + task.bsr,
             active: false,
             windowId: task.windowId,
         });
