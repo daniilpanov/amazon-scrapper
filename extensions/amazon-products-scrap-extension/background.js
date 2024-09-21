@@ -106,7 +106,7 @@ async function run(task, sender, sendResponse) {
                     'Content-Type': 'application/json',
                 },
                 method: 'POST',
-                body: JSON.stringify(data.product_card),
+                body: JSON.stringify(data.product_card).replaceAll('\n', '\\n'),
             }).then((res) => {
                 if (res.status > 204) {
                     console.log('card write error:', res.statusText, '\ndata:', JSON.stringify(data.product_card));
