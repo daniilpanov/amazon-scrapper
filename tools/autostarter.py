@@ -1,11 +1,12 @@
 import datetime
 
+import pymongo
 import pytz
 
 import db_mongo
 
-priority_deps = db_mongo.spec_db('ai_highlights')['departments'].find({'priority': {'$exists': True}}).sort({'priority': 1})
-usual_deps = db_mongo.spec_db('ai_highlights')['departments'].find({'priority': {'$exists': False}})
+priority_deps = list(db_mongo.db('ai_highlights')['departments'].find({'priority': {'$exists': True}}).sort('priority', pymongo.ASCENDING))
+usual_deps = list(db_mongo.db('ai_highlights')['departments'].find({'priority': {'$exists': False}}))
 
 godown_map = [
     'Department',
@@ -21,7 +22,7 @@ godown_map = [
 ]
 
 
-def startBSR(deps, visible=False, status=2):
+def startBSR(deps, visible, status):
     exist_bsrs = db_mongo.db('scrap_process')['tasks_bodies'].find({'script': 'bsr'})
     exist_bsr_urls = set()
     for bsr in exist_bsrs:
@@ -30,6 +31,8 @@ def startBSR(deps, visible=False, status=2):
     headers = {}
     bodies = {}
     for dep in deps:
+        if 'URL' not in dep:
+            continue
         url = dep['URL']
         if url in exist_bsr_urls:
             print('Already exists:', url)
@@ -72,13 +75,20 @@ def startBSR(deps, visible=False, status=2):
             'ended_at': None,
             'result': {},
         }
+    c = 0
     for bsr_name, data in headers.items():
+        c += 1
         res = db_mongo.db('scrap_process')['tasks_headers'].insert_one(data)
         if res.inserted_id:
             bodies[bsr_name]['header_id'] = res.inserted_id
-    return ([item['header_id'] for item in bodies.values()],
-            db_mongo.db('scrap_process')['tasks_headers'].insert_many(list(bodies.values())).inserted_ids)
+            db_mongo.db('scrap_process')['tasks_bodies'].insert_one(bodies[bsr_name])
+        print(c)
+        # bodies[bsr_name]['header_id'] = res.inserted_id
+    # return ([item['header_id'] for item in bodies.values()],
+    #         db_mongo.db('scrap_process')['tasks_headers'].insert_many(list(bodies.values())).inserted_ids)
 
 
-print(startBSR(priority_deps, True, 0))
-print(startBSR(usual_deps))
+if priority_deps:
+    print(startBSR(priority_deps, True, 0))
+if usual_deps:
+    print(startBSR(usual_deps, True, 0))

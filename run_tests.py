@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 import server_service as serv
-from tests_ import h10test
-
+from tests_ import h10test, asins100test
 
 client = TestClient(serv.app)
 
@@ -11,4 +10,4 @@ def test_h10():
 
 
 def test_100asins():
-    h10test.find100asins_process(client)
+    asins100test.find100asins_process(client)

@@ -6,4 +6,4 @@ needle = ['B072Z7M7JZ', 'B0819FZ3N7', 'B0948TSRGS', 'B07YNXG2HZ', 'B076FG7V61', 
 df = df.query("asin in ('" + "','".join(needle) + "')")
 vals = list(df.T.to_dict().values())
 print(vals[0])
-db.spec_db('ai_highlights')['aspects'].insert_many(vals, False)
+db.db('ai_highlights')['aspects'].insert_many(vals, False)
