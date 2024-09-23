@@ -3,6 +3,7 @@ from hashlib import sha256
 
 import fastapi
 import pandas as pd
+import numpy as np
 from fastapi import HTTPException, File, UploadFile
 from pymongo.errors import BulkWriteError
 from starlette.middleware.cors import CORSMiddleware
@@ -30,7 +31,18 @@ async def import_items(request: Request, collection: str, document: UploadFile =
     auth_token = request.headers.get('Authorization')
     if not auth_token or sha256(auth_token.encode('utf-8')).hexdigest() != api_key_hashed or auth_token != api_key:
         raise HTTPException(status_code=403, detail='Invalid API KEY')
+
     df = pd.read_csv(io.BytesIO(await document.read()), header=0, index_col=None, delimiter=';')
+    for col in df.columns:
+        if pd.api.types.is_string_dtype(df[col]):
+            try:
+                df[col] = df[col].str.strip()
+            except AttributeError:
+                continue
+            df[col] = df[col].replace({'true': True, 'false': False, 'null': None, 'NaN': np.nan})
+            temp = pd.to_datetime(df[col], errors='coerce')
+            if temp.notna().any():
+                df[col] = temp
     try:
         db_mongo.db('Keywords')[collection].insert_many(list(df.T.to_dict().values()), ordered=False)
     except BulkWriteError:
