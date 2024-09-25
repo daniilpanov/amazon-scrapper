@@ -12,16 +12,7 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     if (res.status === 200) {
         sendResponse('OK');
         res = await startScraping100ASINS(message.label, message.type, message.limit, message.task_id, sender.id, message.windowId);
-        if (res) {
-            fetch(
-                'http://195.201.194.213:8832/tasks/finish/' + message.task_id,
-                {method: 'PATCH'},
-            )
-            fetch(
-                'http://195.201.194.213:8832/tasks/release/' + message.task_id,
-                {method: 'POST'},
-            )
-        } else {
+        if (!res) {
             fetch('http://195.201.194.213:8832/tasks/report/' + message.task_id, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -136,30 +127,27 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
 }
 
 async function sendData(asins, task_id) {
-    const sendDelay = 500;
-    const maxAttemptsCount = 50;
+    const sendDelay = 10000;
+    const maxAttemptsCount = 3;
     let attempts = 0;
 
     while (attempts < maxAttemptsCount) {
-        try {
-            const response = await fetch(`${endpoint}/${task_id}`, {
-                method: 'POST',
-                body: JSON.stringify({asins: asins}),
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+        const response = await fetch(`${endpoint}/${task_id}`, {
+            method: 'POST',
+            body: JSON.stringify({asins: asins}),
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
 
-            if (response.ok && response.status === 200) {
-                console.log('Данные отправлены успешно, статус код: ', response.status);
-                return true;
-            } else {
-                throw new Error('Получен статус код: ', response.status)
-            }
-        } catch (error) {
-            attempts++;
+        if (response.ok && response.status === 200) {
+            console.log('Данные отправлены успешно, статус код: ', response.status);
+            return true;
+        } else {
+            console.log('Получен статус код: ', response.status);
             console.log(`Ошибка при отправке данных, новая попытка через: ${sendDelay}ms...`);
             await new Promise(resolve => setTimeout(resolve, sendDelay));
+            ++attempts;
         }
     }
 
