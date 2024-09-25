@@ -56,8 +56,8 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
         chrome.tabs.update(tab.id, {autoDiscardable: false});
         const result = await chrome.scripting.executeScript({
             target: {tabId: tab.id},
-            args: [asinList, type, label],
-            func: (asinList, type, label) => {
+            args: [asinList, type, label, limit],
+            func: (asinList, type, label, limit) => {
                 window.finish_collecting = false;
                 function check(kw, str) {
                     str = str.toLowerCase();
