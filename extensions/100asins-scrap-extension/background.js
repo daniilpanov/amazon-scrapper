@@ -1,4 +1,4 @@
-const endpoint = 'http://195.201.194.213:8832/helium/set_`100`asins';
+const endpoint = 'http://195.201.194.213:8832/helium/set_100asins';
 
 chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
     let res = await fetch(
