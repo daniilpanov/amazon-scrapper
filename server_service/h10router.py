@@ -37,11 +37,12 @@ class HeliumTask(BaseModel):
     asins: tuple[str, ...]
 
 
-# H10
 @router.post('/get')
 async def get_helium(config: HeliumTask):
-    data = tasks_manager.add_task('h10', {'alias': config.alias or ','.join(config.asins) + '#h10'}, [{'asins': config.asins}]),
-    return Response(str(data[0][0]) + '--' + str(data[0][1][0]), status_code=HTTP_200_OK)
+    data = tasks_manager.add_task('h10', {
+        'alias': config.alias or ','.join(config.asins) + '#h10',
+    }, [{'asins': config.asins}])
+    return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
 
 
 @router.get('/result/{helium_id}')

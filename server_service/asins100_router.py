@@ -17,9 +17,8 @@ class Get100AsinsResult(BaseModel):
 class Get100AsinsTask(BaseModel):
     alias: str | None = None
     label: str
-    type: str
+    type: str = ''
     limit: int = 100
-    stage: int = 0
 
 
 router = APIRouter(prefix='/helium')
@@ -31,7 +30,7 @@ async def get_100asins(config: Get100AsinsTask):
         '100asins',
         {'alias': config.alias or config.type + ' ' + config.label + '#100asins'},
         [{'label': config.label, 'type': config.type, 'limit': config.limit}],
-        stage=config.stage,
+        stage=0,
     )
     return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
 
