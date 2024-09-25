@@ -57,8 +57,8 @@ class ProductsResultItem(BaseModel):
     asin: str
     product_url: str
     product_title: str
-    product_descr: str
-    picture_url: str
+    product_descr: str | None = None
+    picture_url: str | None = None
     features: dict[str, str] = {}
     top_5_phrases: list[str] = []
     canonical_prefix: str | None = None
