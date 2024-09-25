@@ -63,7 +63,11 @@ async def set_100asins_result(task_id: str, result: Get100AsinsResult):
     except PyMongoError as e:
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
+    print(stage)
     if stage != 1:
+        print(stage, '???')
         tasks_manager.finish_task(task_id, True)
+    else:
+        print(task)
     tasks_manager.release_task(task_id)
     return Response(str(res))
