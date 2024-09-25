@@ -1,6 +1,10 @@
 const endpoint = 'http://195.201.194.213:8832/helium/set_100asins';
 
 chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
+    if (message.stage > 1) {
+        sendResponse('Bad task');
+        return;
+    }
     let res = await fetch(
         'http://195.201.194.213:8832/tasks/acquire/100asins/' + message.header_id + '/' + message.task_id,
         {method: 'post'},
