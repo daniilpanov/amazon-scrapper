@@ -55,14 +55,14 @@ async def get_helium_result(task_id: str):
 async def set_100asins_result(task_id: str, result: Get100AsinsResult):
     task_id = ObjectId(task_id)
     try:
-        res = tasks_manager.TasksBodies.update_one({'_id': task_id}, {'$set': {'result': result.asins}}).modified_count
+        task = tasks_manager.get_task(task_id)
+        data = {'result': result.asins}
+        if stage := task.get('stage'):
+            data['stage'] = int(stage) + 1
+        res = tasks_manager.TasksBodies.update_one({'_id': task_id}, {'$set': data}).modified_count
     except PyMongoError as e:
         print(e)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    task = tasks_manager.get_task(task_id)
-    if task.get('stage'):
-        pass
-    else:
-        tasks_manager.finish_task(task_id, True)
-        tasks_manager.release_task(task_id)
+    tasks_manager.finish_task(task_id, True)
+    tasks_manager.release_task(task_id)
     return Response(str(res))
