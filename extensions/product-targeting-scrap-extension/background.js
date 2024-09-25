@@ -1,4 +1,4 @@
-const endpoint = 'http://195.201.194.213:8832/helium/set_`100`asins';
+const endpoint = 'http://195.201.194.213:8832/helium/set_100asins';
 
 chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
     let res = await fetch(
@@ -7,7 +7,7 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     )
     if (res.status === 200) {
         sendResponse('OK');
-        res = await startScraping100ASINS(message.label, message.type, message.limit, message.task_id, sender.id, message.windowId);
+        res = await startScraping100ASINS(message.label, message.type, message.task_id, sender.id, message.windowId);
         if (res) {
             fetch(
                 'http://195.201.194.213:8832/tasks/finish/' + message.task_id,
@@ -37,8 +37,7 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     }
 });
 
-async function startScraping100ASINS(label, type, limit, task_id, sender_id, window_id) {
-    limit = limit || 100;
+async function startScraping100ASINS(label, type, task_id, sender_id, window_id) {
     let asinList = [];
     label = label.split(' ');
     type = type.split(' ');
@@ -47,7 +46,7 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
     let counter = 1;
     let tab;
 
-    while (asinList.length < limit) {
+    while (asinList.length < 100) {
         tab = await chrome.tabs.create({
             url: encodeURI(`https://amazon.com/s?k=${query}&page=${counter}`),
             active: false,
@@ -72,7 +71,7 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
                 function scrap(document) {
                     const productCards = document.querySelectorAll('div[data-asin]');
                     for (const card of productCards) {
-                        if (asinList.length >= limit) {
+                        if (asinList.length >= 100) {
                             console.log(asinList);
                             return asinList;
                         }
@@ -122,7 +121,7 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
         asinList = result[0]?.result || asinList;
         await chrome.tabs.remove(tab.id);
         ++counter;
-        if (!asinList || !asinList.length || counter > limit) {
+        if (!asinList || !asinList.length || counter > 100) {
             break;
         }
     }
