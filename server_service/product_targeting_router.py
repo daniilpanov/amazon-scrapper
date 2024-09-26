@@ -4,7 +4,7 @@ import pytz
 from bson import ObjectId
 from fastapi import APIRouter
 from pydantic import BaseModel
-from pymongo.errors import PyMongoError, BulkWriteError
+from pymongo.errors import PyMongoError, BulkWriteError, DuplicateKeyError
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT, \
@@ -130,34 +130,36 @@ async def start_product_item_target(config: ProductTargetingItemTask):
     return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
 
 
-@router.post('/result/set/item')
-async def load_result(res: list[ProductTargetingItemResult]):
-    data = [{
+@router.post('/result/set/item/{task_id}')
+async def load_result(task_id: str, item: ProductTargetingItemResult):
+    data = {
         'reference': item.reference,
         'query': item.query,
         'asin': item.asin,
         'title': item.title,
         'description': item.description,
-    } for item in res]
-    db_res = []
+    }
+    db_res = False
     try:
-        db_res = db_mongo.db('amazon_data')['product_targeting'].insert_many(data, ordered=False).inserted_ids
-    except BulkWriteError:
+        db_res = db_mongo.db('amazon_data')['product_targeting'].insert_one(data).inserted_id
+    except (BulkWriteError, DuplicateKeyError):
         pass
     except PyMongoError as e:
         print(e)
         tasks_manager.report_task(
-            res[0].root_task_id,
+            item.root_task_id,
             [datetime.datetime.now(pytz.UTC).isoformat() + ' [PT] ' + str(e)],
             stop=True,
             confirm=True,
         )
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    root_task_id = ObjectId(res[0].root_task_id)
-    tasks_manager.TasksBodies.update_one({'_id': root_task_id}, {'$inc': {'asins_count': -1}})
+    tasks_manager.finish_task(task_id)
+    tasks_manager.release_task(task_id)
+    root_task_id = ObjectId(item.root_task_id)
+    tasks_manager.TasksBodies.update_one({'_id': root_task_id}, {'$inc': {'data.asins_count': -1}})
     task = tasks_manager.get_task(root_task_id)
     if task and task.get('asins_count', 0) <= 0:
         tasks_manager.finish_task(root_task_id, confirm=True)
         tasks_manager.release_task(root_task_id)
-    return Response(str(len(db_res)))
+    return Response(str(db_res))
 

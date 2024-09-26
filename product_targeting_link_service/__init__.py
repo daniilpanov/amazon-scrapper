@@ -28,13 +28,13 @@ def run():
             continue
         if ready_100asins.status_code != 200:
             continue
-        bsr_tasks = ready_100asins.json()
-        for task in bsr_tasks:
+        pt_tasks = ready_100asins.json()
+        for task in pt_tasks:
             res = requests.post(
                 'http://localhost:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
             if res.status_code == 409:
                 continue
-            asins = set(task['result'])
+            asins = task['result']
             cards = []
             duplicated_rows = []
             new_data = []
@@ -42,13 +42,16 @@ def run():
                 finding_condition = {'asin': {'$in': asins_chunk}}
                 duplicated_rows.extend(results_collection.find(finding_condition))
                 cards.extend(asins_collection.find(finding_condition))
+            asins = set(asins)
             for row in duplicated_rows:
-                row['reference'] = task['reference']
+                row['reference'] = task['data']['reference']
+                row['query'] = task['data']['label']
                 new_data.append(row)
                 asins.remove(row['asin'])
             for card in cards:
                 new_data.append({
-                    'reference': task['reference'],
+                    'reference': task['data']['reference'],
+                    'query': task['data']['label'],
                     'asin': card['asin'],
                     'title': card['product_title'],
                     'description': card['product_descr'],
@@ -60,12 +63,12 @@ def run():
                 except BulkWriteError:
                     pass
             task_id = ObjectId(task['_id'])
-            tasks_manager.TasksBodies.update_one({'_id': task_id}, {'$set': {'asins_count': len(asins)}})
+            tasks_manager.TasksBodies.update_one({'_id': task_id}, {'$set': {'data.asins_count': len(asins)}})
             for asin in asins:
                 res = requests.post('http://localhost:8832/product-targeting/start/item', json={
                     'root_task_id': str(task['_id']),
-                    'query': task['label'],
-                    'reference': task.get('reference'),
+                    'query': task['data']['label'],
+                    'reference': task['data']['reference'],
                     'asin': asin,
                 }, headers={
                     'Content-Type': 'application/json',

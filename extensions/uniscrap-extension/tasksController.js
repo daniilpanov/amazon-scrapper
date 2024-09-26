@@ -40,6 +40,16 @@ const baseConfig = {
         extensionKeywords: 'amazon 100 asins scraper',
         limit: 3,
     },
+    'PT-Ref': {
+        scriptType: 'PT-Ref',
+        extensionKeywords: 'product targeting',
+        limit: 2,
+    },
+    'PT-Item': {
+        scriptType: 'PT-Item',
+        extensionKeywords: 'product targeting',
+        limit: 10,
+    },
 
 };
 

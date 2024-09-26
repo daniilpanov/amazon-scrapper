@@ -60,7 +60,7 @@ async function main() {
     }
     curr_limit = curr_tabs_limit - tabs_count;
     try {
-        const res = await fetch('http://195.201.194.213:8832/tasks/get_available');
+        const res = await fetch('http://localhost:8832/tasks/get_available');
         const data = await res.json();
         for (let i in data) {
             console.log('Available space left:', curr_limit, '; limit & count:', curr_tabs_limit, tabs_count);
@@ -78,6 +78,7 @@ async function main() {
                 stage: data[i].stage,
                 alias: data[i].taskHeader.alias,
                 windowId: current_window.id,
+                script: data[i].script,
             }, data[i].script)
         }
     } catch (e) {
