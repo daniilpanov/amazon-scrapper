@@ -14,37 +14,14 @@ import db_mongo
 import tasks_manager
 
 
-# 1
-class ProductTargetingASINTask(BaseModel):
-    alias: str | None = None
-    reference_asin: str
-
-
-class ProductTargetingASINResult(BaseModel):
-    alias: str | None = None
-    reference_asin: str
-    query: str
-
-
-# 2
 class ProductTargetingQueryTask(BaseModel):
     alias: str | None = None
     query: str | None = None
     reference: str
-    limit: int = 1000
-
-
-# 3
-class ProductTargetingItemTask(BaseModel):
-    alias: str | None = None
-    query: str | None = None
-    reference: str
-    asin: str
-    root_task_id: str
+    limit: int = 500
 
 
 class ProductTargetingItemResult(BaseModel):
-    root_task_id: str
     query: str
     reference: str
     asin: str
@@ -56,56 +33,18 @@ router = APIRouter(prefix='/product-targeting')
 
 
 # GET QUERY AND REFERENCE (1)
-@router.post('/start/asin')
-async def start_product_target(config: ProductTargetingASINTask):
-    data = tasks_manager.add_task('PT-Ref', {
-        'alias': config.alias,
-    }, [{'reference_asin': config.reference_asin}])
-    return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
-
-
-@router.get('/result/asin/{task_id}')
-async def get_pt_asin_result(task_id: str):
-    if '--' not in task_id:
-        raise HTTPException(HTTP_400_BAD_REQUEST)
-    header_id, body_id = task_id.split('--')
-    task = tasks_manager.get_task(body_id)
-    if not task or task['status'] == tasks_manager.TaskStatusEnum.stopped or task['script'] != 'PT-Ref':
-        raise HTTPException(HTTP_404_NOT_FOUND)
-    if task['status'] < tasks_manager.TaskStatusEnum.finished:
-        return Response(status_code=HTTP_204_NO_CONTENT)
-    if task['status'] == tasks_manager.TaskStatusEnum.critical_error:
-        return {'errors': task['errors']}
-    return task['result']
-
-
-@router.post('/result/set/asin/{task_id}')
-async def set_pt_asin_result(task_id: str, result: ProductTargetingASINResult):
-    task_id = ObjectId(task_id)
-    try:
-        data = {'result': {'reference': result.reference_asin, 'query': result.query}}
-        res = tasks_manager.TasksBodies.update_one({'_id': task_id}, {'$set': data}).modified_count
-    except PyMongoError as e:
-        print(e)
-        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    tasks_manager.finish_task(task_id, True)
-    tasks_manager.release_task(task_id)
-    return Response(str(res))
-
-
 # START 100ASINS (2)
-@router.post('/start/query')
+@router.post('/start')
 async def start_product_target(config: ProductTargetingQueryTask):
     data = tasks_manager.add_task(
-        '100asins',
+        'pt',
         {'alias': config.alias or config.query + '#PT-Query'},
-        [{'label': config.query, 'type': '', 'limit': config.limit, 'reference': config.reference}],
-        stage=1,
+        [{'query': config.query, 'limit': config.limit, 'reference': config.reference}],
     )
     return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
 
 
-@router.get('/result/query/{task_id}')
+@router.get('/result/{task_id}')
 async def get_pt_query_result(task_id: str):
     if '--' not in task_id:
         raise HTTPException(HTTP_400_BAD_REQUEST)
@@ -116,22 +55,8 @@ async def get_pt_query_result(task_id: str):
     return int(task['status'] >= tasks_manager.TaskStatusEnum.finished)
 
 
-# GET ASIN INFO (3)
-@router.post('/start/item')
-async def start_product_item_target(config: ProductTargetingItemTask):
-    data = tasks_manager.add_task('PT-Item', {
-        'alias': config.alias,
-    }, [{
-        'root_task_id': config.root_task_id,
-        'query': config.query or config.reference,
-        'reference': config.reference,
-        'asin': config.asin,
-    }])
-    return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
-
-
-@router.post('/result/set/item/{task_id}')
-async def load_result(task_id: str, item: ProductTargetingItemResult):
+@router.post('/result/add')
+async def load_result(item: ProductTargetingItemResult):
     data = {
         'reference': item.reference,
         'query': item.query,
@@ -153,13 +78,4 @@ async def load_result(task_id: str, item: ProductTargetingItemResult):
             confirm=True,
         )
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    tasks_manager.finish_task(task_id)
-    tasks_manager.release_task(task_id)
-    root_task_id = ObjectId(item.root_task_id)
-    tasks_manager.TasksBodies.update_one({'_id': root_task_id}, {'$inc': {'data.asins_count': -1}})
-    task = tasks_manager.get_task(root_task_id)
-    if task and task.get('asins_count', 0) <= 0:
-        tasks_manager.finish_task(root_task_id, confirm=True)
-        tasks_manager.release_task(root_task_id)
     return Response(str(db_res))
-
