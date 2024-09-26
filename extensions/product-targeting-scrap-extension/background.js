@@ -15,7 +15,7 @@ async function run(task, sender, sendResponse) {
         return sendResponse('bad request');
     }
     let acq = await fetch(
-        'http://localhost:8832/tasks/acquire/' + task.script + '/' + task.header_id + '/' + task.task_id,
+        'http://195.201.194.213:8832/tasks/acquire/' + task.script + '/' + task.header_id + '/' + task.task_id,
         {method: 'post'},
     );
     if (acq.status !== 200) {
@@ -98,7 +98,7 @@ async function run(task, sender, sendResponse) {
                     root_task_id: task.root_task_id,
                 };
             }
-            fetch('http://localhost:8832/product-targeting/result/set/' + script + '/' + task.task_id, {
+            fetch('http://195.201.194.213:8832/product-targeting/result/set/' + script + '/' + task.task_id, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -114,7 +114,7 @@ async function run(task, sender, sendResponse) {
         }
     } catch (e) {
         console.log(e);
-        fetch('http://localhost:8832/tasks/report/' + task.task_id, {
+        fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
             headers: {
                 'Content-Type': 'application/json',
             },
