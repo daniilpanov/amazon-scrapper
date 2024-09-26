@@ -1,7 +1,6 @@
 import datetime
 
 import pytz
-from bson import ObjectId
 from fastapi import APIRouter
 from pydantic import BaseModel
 from pymongo.errors import PyMongoError, BulkWriteError, DuplicateKeyError
@@ -13,20 +12,29 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOU
 import db_mongo
 import tasks_manager
 
+results_collection = db_mongo.db('amazon_data')['product_targeting']
+asins_collection = db_mongo.db('amazon_data')['product_card']
 
-class ProductTargetingQueryTask(BaseModel):
+
+class ProductTargetingTask(BaseModel):
     alias: str | None = None
     query: str | None = None
     reference: str
     limit: int = 500
 
 
-class ProductTargetingItemResult(BaseModel):
+class ProductTargetingResult(BaseModel):
     query: str
     reference: str
     asin: str
     title: str
     description: str | None = None
+
+
+class FilterAsinsRequest(BaseModel):
+    asins: list[str]
+    reference: str
+    query: str
 
 
 router = APIRouter(prefix='/product-targeting')
@@ -35,7 +43,7 @@ router = APIRouter(prefix='/product-targeting')
 # GET QUERY AND REFERENCE (1)
 # START 100ASINS (2)
 @router.post('/start')
-async def start_product_target(config: ProductTargetingQueryTask):
+async def start_pt(config: ProductTargetingTask):
     data = tasks_manager.add_task(
         'pt',
         {'alias': config.alias or config.query + '#PT-Query'},
@@ -45,7 +53,7 @@ async def start_product_target(config: ProductTargetingQueryTask):
 
 
 @router.get('/result/{task_id}')
-async def get_pt_query_result(task_id: str):
+async def get_pt_result(task_id: str):
     if '--' not in task_id:
         raise HTTPException(HTTP_400_BAD_REQUEST)
     header_id, body_id = task_id.split('--')
@@ -55,8 +63,48 @@ async def get_pt_query_result(task_id: str):
     return int(task['status'] >= tasks_manager.TaskStatusEnum.finished)
 
 
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+
+@router.post('/filter-asins')
+async def get_pt_result(conf: FilterAsinsRequest):
+    asins = conf.asins
+    cards = []
+    duplicated_rows = []
+    new_data = []
+    for asins_chunk in chunks(asins, 25):
+        finding_condition = {'asin': {'$in': asins_chunk}}
+        duplicated_rows.extend(results_collection.find(finding_condition))
+        cards.extend(asins_collection.find(finding_condition))
+    asins = set(asins)
+    for row in duplicated_rows:
+        row['reference'] = conf.reference
+        row['query'] = conf.query
+        new_data.append(row)
+        if row['asin'] in asins:
+            asins.remove(row['asin'])
+    for card in cards:
+        new_data.append({
+            'reference': conf.reference,
+            'query': conf.query,
+            'asin': card['asin'],
+            'title': card['product_title'],
+            'description': card['product_descr'],
+        })
+        if card['asin'] in asins:
+            asins.remove(card['asin'])
+    if new_data:
+        try:
+            results_collection.insert_many(new_data, ordered=False)
+        except BulkWriteError:
+            pass
+    return list(asins)
+
+
 @router.post('/result/add')
-async def load_result(item: ProductTargetingItemResult):
+async def load_pt_result(item: ProductTargetingResult):
     data = {
         'reference': item.reference,
         'query': item.query,
