@@ -58,7 +58,7 @@ async def get_pt_result(task_id: str):
         raise HTTPException(HTTP_400_BAD_REQUEST)
     header_id, body_id = task_id.split('--')
     task = tasks_manager.get_task(body_id)
-    if not task or task['status'] == tasks_manager.TaskStatusEnum.stopped or task['script'] != '100asins':
+    if not task or task['status'] == tasks_manager.TaskStatusEnum.stopped or task['script'] != 'pt':
         raise HTTPException(HTTP_404_NOT_FOUND)
     return int(task['status'] >= tasks_manager.TaskStatusEnum.finished)
 
