@@ -46,7 +46,7 @@ router = APIRouter(prefix='/product-targeting')
 async def start_pt(config: ProductTargetingTask):
     data = tasks_manager.add_task(
         'pt',
-        {'alias': config.alias or config.query + '#PT-Query'},
+        {'alias': config.alias or config.reference + '#PT-Query'},
         [{'query': config.query, 'limit': config.limit, 'reference': config.reference}],
     )
     return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
