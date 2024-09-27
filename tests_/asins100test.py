@@ -7,6 +7,7 @@ def find100asins_process(client: TestClient):
         'alias': 'Test task (lipton tea)',
         'label': 'lipton',
         'type': 'tea',
+        'limit': 200,
     })
     assert response.status_code == 200, "Invalid status code received"
     ids = response.text
