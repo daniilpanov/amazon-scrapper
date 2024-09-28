@@ -1,0 +1,5 @@
+[submodule "ShopifyScraperExtension"]
+	path = extensions/shopify-courses-scrap-extension
+	url = git@github.com:daniilpanov/shopify-courses-scraper.git
+[submodule "extensions/shopify-courses-scrap-extension"]
+	branch = 1-remove-domparser-from-code
