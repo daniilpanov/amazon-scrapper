@@ -1,12 +1,4 @@
-class CollectProducts {
-    asin;
-    domain;
-
-    constructor(asin, domain = 'amazon.com') {
-        this.asin = asin;
-        this.domain = domain;
-    }
-
+class CollectProductInfo {
     getElementByIds(ids) {
         let r;
         for (const el_id of ids) {

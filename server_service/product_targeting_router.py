@@ -1,7 +1,6 @@
 import datetime
 
 import pytz
-from bson import ObjectId
 from fastapi import APIRouter
 from pydantic import BaseModel
 from pymongo.errors import PyMongoError, BulkWriteError, DuplicateKeyError
@@ -13,38 +12,18 @@ from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOU
 import db_mongo
 import tasks_manager
 
-
-# 1
-class ProductTargetingASINTask(BaseModel):
-    alias: str | None = None
-    reference_asin: str
+results_collection = db_mongo.db('amazon_data')['product_targeting']
+asins_collection = db_mongo.db('amazon_data')['product_card']
 
 
-class ProductTargetingASINResult(BaseModel):
-    alias: str | None = None
-    reference_asin: str
-    query: str
-
-
-# 2
-class ProductTargetingQueryTask(BaseModel):
+class ProductTargetingTask(BaseModel):
     alias: str | None = None
     query: str | None = None
     reference: str
-    limit: int = 1000
+    limit: int = 500
 
 
-# 3
-class ProductTargetingItemTask(BaseModel):
-    alias: str | None = None
-    query: str | None = None
-    reference: str
-    asin: str
-    root_task_id: str
-
-
-class ProductTargetingItemResult(BaseModel):
-    root_task_id: str
+class ProductTargetingResult(BaseModel):
     query: str
     reference: str
     asin: str
@@ -52,86 +31,80 @@ class ProductTargetingItemResult(BaseModel):
     description: str | None = None
 
 
+class FilterAsinsRequest(BaseModel):
+    asins: list[str]
+    reference: str
+    query: str
+
+
 router = APIRouter(prefix='/product-targeting')
 
 
 # GET QUERY AND REFERENCE (1)
-@router.post('/start/asin')
-async def start_product_target(config: ProductTargetingASINTask):
-    data = tasks_manager.add_task('PT-Ref', {
-        'alias': config.alias,
-    }, [{'reference_asin': config.reference_asin}])
-    return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
-
-
-@router.get('/result/asin/{task_id}')
-async def get_pt_asin_result(task_id: str):
-    if '--' not in task_id:
-        raise HTTPException(HTTP_400_BAD_REQUEST)
-    header_id, body_id = task_id.split('--')
-    task = tasks_manager.get_task(body_id)
-    if not task or task['status'] == tasks_manager.TaskStatusEnum.stopped or task['script'] != 'PT-Ref':
-        raise HTTPException(HTTP_404_NOT_FOUND)
-    if task['status'] < tasks_manager.TaskStatusEnum.finished:
-        return Response(status_code=HTTP_204_NO_CONTENT)
-    if task['status'] == tasks_manager.TaskStatusEnum.critical_error:
-        return {'errors': task['errors']}
-    return task['result']
-
-
-@router.post('/result/set/asin/{task_id}')
-async def set_pt_asin_result(task_id: str, result: ProductTargetingASINResult):
-    task_id = ObjectId(task_id)
-    try:
-        data = {'result': {'reference': result.reference_asin, 'query': result.query}}
-        res = tasks_manager.TasksBodies.update_one({'_id': task_id}, {'$set': data}).modified_count
-    except PyMongoError as e:
-        print(e)
-        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    tasks_manager.finish_task(task_id, True)
-    tasks_manager.release_task(task_id)
-    return Response(str(res))
-
-
 # START 100ASINS (2)
-@router.post('/start/query')
-async def start_product_target(config: ProductTargetingQueryTask):
+@router.post('/start')
+async def start_pt(config: ProductTargetingTask):
     data = tasks_manager.add_task(
-        '100asins',
-        {'alias': config.alias or config.query + '#PT-Query'},
-        [{'label': config.query, 'type': '', 'limit': config.limit, 'reference': config.reference}],
-        stage=1,
+        'pt',
+        {'alias': config.alias or config.reference + '#PT-Query'},
+        [{'query': config.query, 'limit': config.limit, 'reference': config.reference}],
     )
     return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
 
 
-@router.get('/result/query/{task_id}')
-async def get_pt_query_result(task_id: str):
+@router.get('/result/{task_id}')
+async def get_pt_result(task_id: str):
     if '--' not in task_id:
         raise HTTPException(HTTP_400_BAD_REQUEST)
     header_id, body_id = task_id.split('--')
     task = tasks_manager.get_task(body_id)
-    if not task or task['status'] == tasks_manager.TaskStatusEnum.stopped or task['script'] != '100asins':
+    if not task or task['status'] == tasks_manager.TaskStatusEnum.stopped or task['script'] != 'pt':
         raise HTTPException(HTTP_404_NOT_FOUND)
     return int(task['status'] >= tasks_manager.TaskStatusEnum.finished)
 
 
-# GET ASIN INFO (3)
-@router.post('/start/item')
-async def start_product_item_target(config: ProductTargetingItemTask):
-    data = tasks_manager.add_task('PT-Item', {
-        'alias': config.alias,
-    }, [{
-        'root_task_id': config.root_task_id,
-        'query': config.query or config.reference,
-        'reference': config.reference,
-        'asin': config.asin,
-    }])
-    return Response(str(data[0]) + '--' + str(data[1][0]), status_code=HTTP_200_OK)
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 
-@router.post('/result/set/item/{task_id}')
-async def load_result(task_id: str, item: ProductTargetingItemResult):
+@router.post('/filter-asins')
+async def get_pt_result(conf: FilterAsinsRequest):
+    asins = conf.asins
+    cards = []
+    duplicated_rows = []
+    new_data = []
+    for asins_chunk in chunks(asins, 25):
+        finding_condition = {'asin': {'$in': asins_chunk}}
+        duplicated_rows.extend(results_collection.find(finding_condition))
+        cards.extend(asins_collection.find(finding_condition))
+    asins = set(asins)
+    for row in duplicated_rows:
+        row['reference'] = conf.reference
+        row['query'] = conf.query
+        new_data.append(row)
+        if row['asin'] in asins:
+            asins.remove(row['asin'])
+    for card in cards:
+        new_data.append({
+            'reference': conf.reference,
+            'query': conf.query,
+            'asin': card['asin'],
+            'title': card['product_title'],
+            'description': card['product_descr'],
+        })
+        if card['asin'] in asins:
+            asins.remove(card['asin'])
+    if new_data:
+        try:
+            results_collection.insert_many(new_data, ordered=False)
+        except BulkWriteError:
+            pass
+    return list(asins)
+
+
+@router.post('/result/add')
+async def load_pt_result(item: ProductTargetingResult):
     data = {
         'reference': item.reference,
         'query': item.query,
@@ -153,13 +126,4 @@ async def load_result(task_id: str, item: ProductTargetingItemResult):
             confirm=True,
         )
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    tasks_manager.finish_task(task_id)
-    tasks_manager.release_task(task_id)
-    root_task_id = ObjectId(item.root_task_id)
-    tasks_manager.TasksBodies.update_one({'_id': root_task_id}, {'$inc': {'data.asins_count': -1}})
-    task = tasks_manager.get_task(root_task_id)
-    if task and task.get('asins_count', 0) <= 0:
-        tasks_manager.finish_task(root_task_id, confirm=True)
-        tasks_manager.release_task(root_task_id)
     return Response(str(db_res))
-
