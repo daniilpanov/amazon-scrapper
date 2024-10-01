@@ -153,6 +153,28 @@ async function run(task, sender, sendResponse) {
                 },
             });
             await new Promise(resolve => setTimeout(resolve, 500));
+            // correct URL
+            const tab = await chrome.tabs.get(needle_tab.id);
+            let tabs_parts = tab.url.split('/');
+            for (const i in tabs_parts) {
+                if (/B0[0-9A-Z]{8}/.test(tabs_parts[i])) {
+                    tabs_parts[i] = asin;
+                }
+            }
+            await chrome.tabs.update(tab.id, {url: tabs_parts.join('/')});
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            // get reviews
+            await chrome.scripting.executeScript({
+                target: {tabId: needle_tab.id},
+                func: () => {
+                    let see_rev = document.getElementById('acrCustomerReviewLink');
+                    see_rev.scrollIntoView();
+                    see_rev.click();
+                    see_rev = document.querySelector('[data-hook=see-all-reviews-link-foot]');
+                    see_rev.scrollIntoView();
+                    see_rev.click();
+                },
+            });
             try {
                 await chrome.scripting.executeScript({
                     target: {tabId: needle_tab.id},
