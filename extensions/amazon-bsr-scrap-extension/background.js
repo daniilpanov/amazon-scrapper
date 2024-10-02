@@ -32,8 +32,18 @@ async function run(task, sender, sendResponse) {
         }
     }
     if (!needle_tab) {
+        if (task.bsr.startsWith('http://')) {
+            task.bsr = task.bsr.slice(7);
+        } else if (task.bsr.startsWith('https://')) {
+            task.bsr = task.bsr.slice(8);
+        }
+        if (task.bsr.startsWith(task.domain)) {
+            task.bsr = task.bsr.slice(task.domain.length + 1);
+        } else if (task.bsr.startsWith('www.' + task.domain)) {
+            task.bsr = task.bsr.slice(task.domain.length + 5);
+        }
         needle_tab = await chrome.tabs.create({
-            url: 'https://www.amazon.com/' + task.bsr,
+            url: 'https://www.' + task.domain + '/' + task.bsr,
             active: false,
             windowId: task.windowId,
         });
