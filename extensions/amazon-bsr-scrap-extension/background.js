@@ -94,6 +94,7 @@ async function run(task, sender, sendResponse) {
                     return {data: {bsr_url: task.bsr, asins_links: asins_links}};
                 },
             });
+            console.log(result);
             if (result && result[0]?.result?.data?.asins_links?.length) {
                 break;
             }
