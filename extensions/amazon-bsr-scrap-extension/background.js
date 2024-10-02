@@ -84,7 +84,7 @@ async function run(task, sender, sendResponse) {
                     return {data: {bsr_url: task.bsr, asins_links: asins_links}};
                 },
             });
-            if (result) {
+            if (result && result[0]?.result?.data?.asins_links?.length) {
                 break;
             }
             await new Promise(r => setTimeout(r, 100));
