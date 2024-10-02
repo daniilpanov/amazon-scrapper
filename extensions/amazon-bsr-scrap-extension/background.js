@@ -43,7 +43,7 @@ async function run(task, sender, sendResponse) {
 
     const date = new Date();
     try {
-        let result, data, errors, need_import = created;
+        let result = null, data, errors, need_import = created;
         if (!created) {
             need_import = await chrome.scripting.executeScript({
                 target: {tabId: needle_tab.id},
@@ -62,27 +62,33 @@ async function run(task, sender, sendResponse) {
         }
         console.log('bsr imported');
         // BSR result
-        result = await chrome.scripting.executeScript({
-            target: {tabId: needle_tab.id},
-            args: [task],
-            func: async (task) => {
-                window.finish_collecting = false;
-                console.log('hello! :)');
-                const bsr_collector = new CollectBSR(task.limit, task.count, task.target, task.unique_brands, task.domain);
-                console.log('BSR Collector created!');
-                if (!task?.bsr) {
-                    console.log('Fail!');
-                    return {errors: ['Can not get BSR URL! Please enter full URL']};
-                }
-                let asins_links = {};
-                console.log('Collect asins');
-                for (const asin of await bsr_collector.getASINsLInks(task.bsr)) {
-                    asins_links[asin] = `https://${task.domain}/dp/${asin}`;
-                }
-                window.finish_collecting = true;
-                return {data: {bsr_url: task.bsr, asins_links: asins_links}};
-            },
-        });
+        for (let i = 0; i < 100; ++i) {
+            result = await chrome.scripting.executeScript({
+                target: {tabId: needle_tab.id},
+                args: [task],
+                func: async (task) => {
+                    window.finish_collecting = false;
+                    console.log('hello! :)');
+                    const bsr_collector = new CollectBSR(task.limit, task.count, task.target, task.unique_brands, task.domain);
+                    console.log('BSR Collector created!');
+                    if (!task?.bsr) {
+                        console.log('Fail!');
+                        return {errors: ['Can not get BSR URL! Please enter full URL']};
+                    }
+                    let asins_links = {};
+                    console.log('Collect asins');
+                    for (const asin of await bsr_collector.getASINsLInks(task.bsr)) {
+                        asins_links[asin] = `https://${task.domain}/dp/${asin}`;
+                    }
+                    window.finish_collecting = true;
+                    return {data: {bsr_url: task.bsr, asins_links: asins_links}};
+                },
+            });
+            if (result) {
+                break;
+            }
+            await new Promise(r => setTimeout(r, 100));
+        }
         console.log('result!', result);
         data = result[0].result?.data;
         data.with_continue = Boolean(task.stage > 0);
