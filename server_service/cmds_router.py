@@ -84,7 +84,7 @@ class BSRTreeResultItem(BaseModel):
     asin: str
     bsr_link: str
     title: str
-    score: int | None = None
+    score: float | None = None
     number_in_BSR: int
 
 
