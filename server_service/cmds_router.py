@@ -120,7 +120,7 @@ async def finish_bsr_cmd(bsr: BSRResult):
 
 @router.post('/alias/bsrtree/finish')
 async def finish_bsrtree_cmd(bsr: BSRTreeResult):
-    tasks_manager.finish_task(bsr.task_id, True, result=bsr.model_dump())
+    tasks_manager.finish_task(bsr.task_id, True, result=bsr.model_dump(include=['items'])['items'])
     tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
 
