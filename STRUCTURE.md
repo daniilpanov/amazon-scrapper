@@ -1,5 +1,6 @@
 ### Services:
  - CRUD service `(now is a part server_service: FIX)`
+ - Tasks service `(TODO)`
  - Starter service `(rename)`
  - Captcha service `+`
  - Importer service `(rename)`
