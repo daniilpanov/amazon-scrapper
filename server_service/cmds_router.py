@@ -125,10 +125,10 @@ async def finish_bsrtree_cmd(bsr: BSRTreeResult):
     tasks_manager.finish_task(bsr.task_id, True)
     bsr_map = defaultdict(list)
     for item in result:
-        bsr_map[item['bsr_link']] = item
-    for bsr_url, item in bsr_map.items():
-        bsr_url = '/'.join(bsr_url.split('/', maxsplit=3)[3:])
         del item['bsr_link']
+        bsr_map[item['bsr_link']] = item
+    for bsr_url, items in bsr_map.items():
+        bsr_url = '/'.join(bsr_url.split('/', maxsplit=3)[3:])
         db('ai_highlights')['departments'].update_one({'URL': bsr_url, 'items': {'$exists': False}}, {'$set': {'items': items}})
     tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
