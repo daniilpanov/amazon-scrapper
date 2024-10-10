@@ -45,6 +45,11 @@ const baseConfig = {
         extensionKeywords: 'product targeting',
         limit: 10,
     },
+    'bsrtree': {
+        scriptType: 'bsrmarket',
+        extensionKeywords: 'bsr tree',
+        limit: 2,
+    }
 };
 
 scriptTypesSelect.addEventListener('change', function () {

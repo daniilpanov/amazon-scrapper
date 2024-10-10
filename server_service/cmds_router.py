@@ -80,6 +80,19 @@ class BSRResult(BaseModel):
     asins_links: dict[str, str]
 
 
+class BSRTreeResultItem(BaseModel):
+    asin: str
+    bsr_link: str
+    title: str
+    score: int | None = None
+    number_in_BSR: int
+
+
+class BSRTreeResult(BaseModel):
+    task_id: str
+    items: list[BSRTreeResultItem]
+
+
 @router.post('/alias/bsr/collect')
 async def collect_bsr_cmd(config: BSRCollectingConfig):
     data = {'bsr': config.bsr}
@@ -96,12 +109,19 @@ async def collect_bsr_cmd(config: BSRCollectingConfig):
 
 
 @router.post('/alias/bsr/finish')
-async def set_reviews_result(bsr: BSRResult):
+async def finish_bsr_cmd(bsr: BSRResult):
     if bsr.with_continue:
         tasks_manager.set_task_stage(bsr.task_id, 2, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
     else:
         tasks_manager.finish_task(bsr.task_id, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
         tasks_manager.release_task(bsr.task_id)
+    return Response(status_code=HTTP_201_CREATED)
+
+
+@router.post('/alias/bsrtree/finish')
+async def finish_bsrtree_cmd(bsr: BSRTreeResult):
+    tasks_manager.finish_task(bsr.task_id, True, result=bsr.model_dump())
+    tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
 
 
