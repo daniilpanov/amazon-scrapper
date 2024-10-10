@@ -123,7 +123,7 @@ async def finish_bsr_cmd(bsr: BSRResult):
 async def finish_bsrtree_cmd(bsr: BSRTreeResult):
     result = bsr.model_dump(include=['items'])['items']
     tasks_manager.finish_task(bsr.task_id, True)
-    db('ai_highlights')['departments'].update_one({'URL': bsr_url, 'items': {'$exists': False}}, {'$set': {'items': result}})
+    db('ai_highlights')['departments'].update_one({'URL': bsr.bsr_link, 'items': {'$exists': False}}, {'$set': {'items': result}})
     tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
 
