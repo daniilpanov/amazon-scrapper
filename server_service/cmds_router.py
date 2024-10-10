@@ -86,6 +86,7 @@ class BSRTreeResultItem(BaseModel):
     title: str
     score: float | None = None
     number_in_BSR: int
+    image: str | None = None
 
 
 class BSRTreeResult(BaseModel):
@@ -120,7 +121,15 @@ async def finish_bsr_cmd(bsr: BSRResult):
 
 @router.post('/alias/bsrtree/finish')
 async def finish_bsrtree_cmd(bsr: BSRTreeResult):
-    tasks_manager.finish_task(bsr.task_id, True, result=bsr.model_dump(include=['items'])['items'])
+    result = bsr.model_dump(include=['items'])['items']
+    tasks_manager.finish_task(bsr.task_id, True)
+    bsr_map = defaultdict(list)
+    for item in result:
+        bsr_map[item['bsr_link']] = item
+    for bsr_url, item in bsr_map.items():
+        bsr_url = '/'.join(bsr_url.split('/', maxsplit=3)[3:])
+        del item['bsr_link']
+        db('ai_highlights')['departments'].update_one({'URL': bsr_url, 'items': {'$exists': False}, {'$set': {'items': items})
     tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
 
