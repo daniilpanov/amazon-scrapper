@@ -80,7 +80,7 @@ async function update() {
 update();
 
 async function getServerData(url) {
-    const response = await fetch(url).then((res) => res.json());
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) }).then((res) => res.json());
     if (!response) throw new Error('Fetching error');
     if (!response.length) return false;
     return response;
