@@ -214,9 +214,12 @@ def get_header(header_id, with_many_bodies=False):
         return None
 
 
-def get_all_tasks(_filters=None, exclude=None):
+def get_all_tasks(_filters=None, exclude=None, limit=None):
     try:
-        res = list(TasksListLockView.find(_filters or {}, exclude or {}))
+        query = TasksListLockView.find(_filters or {}, exclude or {})
+        if limit:
+            query.limit(limit)
+        res = list(query)
         for task in res:
             if task['_id'] in acquired:
                 acquired.remove(task['_id'])

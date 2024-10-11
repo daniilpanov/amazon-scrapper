@@ -116,6 +116,6 @@ async def get_available_tasks_req(script: str | None = None, stage: int = -1):
     _filters = ({'script': script} if script else {}) | {'status': {'$lt': tasks_manager.TaskStatusEnum.stopped},
                                                          'taskLock': {'$exists': False}} | (
                    {'stage': stage} if stage > -1 else {})
-    res = list(tasks_manager.get_all_tasks(_filters))
+    res = list(tasks_manager.get_all_tasks(_filters, limit=20))
     return orjson_response(res)
 
