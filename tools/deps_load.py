@@ -1,14 +1,12 @@
-import pandas as pd
-
+from db_mongo import db
 import tasks_manager
 
-df = pd.read_csv('ai_highlights.departments.csv', index_col=None)
+data = db('ai_highlights')['departments'].find({'URL': {'$exists': True}, 'items': {'$exists': False}})
 tasks = []
-df = df.reset_index()
-for index, row in df.iterrows():
-    print(row['URL'])
-    if not row['URL'] or row['URL'] == 'nan' or not isinstance(row['URL'], str):
+for row in data:
+    if not row.get('URL') or row['URL'] == 'nan' or not isinstance(row['URL'], str):
         continue
+    print(row['URL'])
     tasks.append({'bsr': row['URL']})
 print('OK')
 tasks_manager.add_task('bsrmarket', {}, tasks)
