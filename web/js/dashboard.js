@@ -72,11 +72,12 @@ async function update() {
     } catch (error) {
         console.log(error);
         // pageContent.innerHTML = '<h1>Data fetching error. Check console</h1>';
+    } finally {
+        setTimeout(update, 10000);
     }
 }
 
 update();
-setInterval(update, 10000);
 
 async function getServerData(url) {
     const response = await fetch(url).then((res) => res.json());
