@@ -64,7 +64,7 @@ def run(host='0.0.0.0', port=8832):
     import uvicorn
 
     # uvicorn.run(app, host=host, port=port, ssl_keyfile=prefix + 'certificate.key', ssl_certfile=prefix + 'certificate.crt')
-    uvicorn.run("server_service:app", host=host, port=port)
+    uvicorn.run("server_service:app", host=host, port=port, workers=4)
 
 
 if __name__ == '__main__':
