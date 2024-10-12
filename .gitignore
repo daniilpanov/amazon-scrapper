@@ -10,3 +10,4 @@ downloaded_files/*
 out/*
 *.log
 */*.log
+*.json
