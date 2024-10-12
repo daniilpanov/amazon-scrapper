@@ -7,14 +7,14 @@ def run_exec(executable: str, *args, **kwargs):
     try:
         module = importlib.import_module(executable)
         return module.run(*args, **kwargs)
-    except (ImportError, AttributeError):
-        pass
+    except (ImportError, AttributeError) as e:
+        print(e)
     # try to load module and call method from string (split by '.': now last part is method, other are path to module)
     try:
         exec_parts = executable.split('.')
         return getattr(importlib.import_module('.'.join(exec_parts[:-1])), exec_parts[-1])(*args, **kwargs)
-    except ImportError:
-        print('Fail: executable', executable, 'not found!')
+    except ImportError as e:
+        print('Fail: executable', executable, '; error:', e)
         raise
 
 
