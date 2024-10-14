@@ -4,7 +4,7 @@ import tasks_manager
 data = db('ai_highlights')['departments'].find({'URL': {'$exists': True}, 'items': {'$exists': False}})
 tasks = []
 for row in data:
-    if not row.get('URL') or row['URL'] == 'nan' or not isinstance(row['URL'], str):
+    if not row.get('URL') or row['URL'].lower() == 'nan' or not isinstance(row['URL'], str):
         continue
     print(row['URL'])
     tasks.append({'bsr': row['URL']})
