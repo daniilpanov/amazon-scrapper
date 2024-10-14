@@ -92,8 +92,6 @@ async function collect100ASINs(query, limit, window_id) {
             target: {tabId: tab.id},
             args: [asinList, limit],
             func: (asinList, limit) => {
-                window.finish_collecting = false;
-
                 function scrap(document) {
                     const productCards = document.querySelectorAll('div[data-asin]');
                     for (const card of productCards) {
@@ -110,13 +108,17 @@ async function collect100ASINs(query, limit, window_id) {
                 }
 
                 return new Promise((resolve) => {
+                    const appElement = document.querySelector('.s-result-item');
+                    if (appElement) {
+                        return resolve(scrap(document));
+                    }
+
                     const observer = new MutationObserver((mutationsList, observer) => {
                         for (let mutation of mutationsList) {
                             if (mutation.type === 'childList' || mutation.type === 'subtree') {
                                 const appElement = document.querySelector('.s-result-item');
                                 if (appElement) {
                                     observer.disconnect();
-                                    window.finish_collecting = true;
                                     return resolve(scrap(document));
                                 }
                             }
@@ -127,13 +129,6 @@ async function collect100ASINs(query, limit, window_id) {
                         childList: true,
                         subtree: true,
                     });
-
-                    const appElement = document.querySelector('.s-result-item');
-                    if (appElement) {
-                        observer.disconnect();
-                        window.finish_collecting = true;
-                        return resolve(scrap(document));
-                    }
                 });
             }
         });
@@ -307,3 +302,27 @@ async function run(task, sender, sendResponse) {
 
 chrome.runtime.onMessageExternal.addListener(run);
 chrome.runtime.onMessage.addListener(run);
+
+
+// Control panel
+chrome.tabs.query({
+    url: 'chrome-extension://' + chrome.runtime.id + '/control_panel.html',
+    currentWindow: true,
+}, (tabs) => {
+    if (!tabs || !tabs.length) {
+        chrome.tabs.create({
+            url: 'control_panel.html',
+        }, (tab) => {
+            chrome.tabs.update(tab.id, {autoDiscardable: false});
+        });
+    }
+});
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    for (let i in request) {
+        if (i === 'fetch') {
+            fetch(request[i][0], request[i][1]).then((response) => {
+                sendResponse(response);
+            });
+        }
+    }
+});
