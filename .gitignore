@@ -4,6 +4,8 @@ __pycache__
 tmp__
 venv
 *.env
+*.env.local
+*.env.dev
 *.csv
 states/*
 downloaded_files/*
