@@ -28,7 +28,7 @@ function report(msg, task_id, stop, confirm = true) {
     });
 }
 
-async function makeQueryByASIN(asin, window_id) {
+async function makeQueryByASIN(asin, window_id): Promise<string | null> {
     const tab = await chrome.tabs.create({
         url: 'https://www.amazon.com/dp/' + asin + '?th=1',
         active: false,
@@ -50,7 +50,12 @@ async function makeQueryByASIN(asin, window_id) {
             func: () => {
                 const products_collector = new CollectProductInfo();
                 try {
-                    return products_collector.getBreadcrumbs();
+                    const breadcrumbs = products_collector.getBreadcrumbs();
+                    if (!breadcrumbs.length < 2) {
+                        return null;
+                    }
+                    const current = breadcrumbs[breadcrumbs.length - 2];
+                    return current.querySelector('a')?.href || null;
                 } catch (e) {
                     return {'error': e.message};
                 }
@@ -256,9 +261,12 @@ async function run(task, sender, sendResponse) {
     }
     sendResponse('OK');
     // Getting query
-    if (!task.query) {
+    let url;
+    if (task.query) {
+        url = '';
+    } else {
         try {
-            task.query = await makeQueryByASIN(task.reference, task.windowId);
+            url = task.query = await makeQueryByASIN(task.reference, task.windowId);
         } catch (e) {
             report(e.message, task.task_id, true);
             return;

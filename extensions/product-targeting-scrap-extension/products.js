@@ -10,9 +10,14 @@ class CollectProductInfo {
         return null;
     }
 
-    getBreadcrumbs() {
+    getBreadcrumbsCurrentElement() {
         return document.getElementById('wayfinding-breadcrumbs_feature_div')
             ?.querySelector('li:last-child')?.textContent.trim() || null;
+    }
+
+    getBreadcrumbs() {
+        return document.getElementById('wayfinding-breadcrumbs_feature_div')
+            ?.querySelectorAll('li:not(.a-breadcrumb-divider)') || [];
     }
 
     getProductCard() {
