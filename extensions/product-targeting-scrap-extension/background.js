@@ -28,7 +28,7 @@ function report(msg, task_id, stop, confirm = true) {
     });
 }
 
-async function makeQueryByASIN(asin, window_id): Promise<string | null> {
+async function getProductBSR(asin, window_id): Promise<string | null> {
     const tab = await chrome.tabs.create({
         url: 'https://www.amazon.com/dp/' + asin + '?th=1',
         active: false,
@@ -80,7 +80,7 @@ async function makeQueryByASIN(asin, window_id): Promise<string | null> {
     return result;
 }
 
-async function collect100ASINs(query, limit, window_id) {
+async function parseSearchResult(query, limit, window_id) {
     limit = limit || 100;
     let asinList = [];
     let counter = 1;
@@ -148,6 +148,151 @@ async function collect100ASINs(query, limit, window_id) {
     asinList = new Set(asinList);
     console.log(Array.from(asinList));
     return Array.from(asinList);
+}
+
+async function parseBSR(url, task) {
+    const tab = await chrome.tabs.create({
+        url: url,
+        active: true,
+        windowId: task.windowId,
+    });
+
+    try {
+        let result, data = [], errors, current_page, pages_count;
+        do {
+            // BSR lib
+            try {
+                await chrome.scripting.executeScript({
+                    target: {tabId: tab.id},
+                    files: ['./bsr.js'],
+                });
+            } catch (e) {
+            }
+            console.log('bsr imported');
+            // BSR result
+            result = await chrome.scripting.executeScript({
+                target: {tabId: tab.id},
+                args: [],
+                func: async () => {
+                    return await getASINsLinks();
+                },
+            });
+            await chrome.scripting.executeScript({
+                target: {tabId: tab.id},
+                func: () => {
+                    goToNextPage();
+                },
+            });
+            console.log('result!', result);
+            result = result[0]?.result;
+
+            data = [...data, ...(result?.result || [])];
+            pages_count = result?.pages_count || 1;
+            current_page = result?.current_page || 1;
+            errors = result?.errors;
+
+            // handle errors
+            if (errors) {
+                fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        confirm: true,
+                        errors: [
+                            '[pt]',
+                            errors,
+                        ],
+                        stop: true,
+                    }),
+                });
+                break;
+            }
+
+            if (pages_count <= current_page) {
+                break;
+            }
+
+            await new Promise(r => setTimeout(r, 1500));
+        } while (pages_count > current_page);
+        // load data
+        if (data.length) {
+            fetch('http://195.201.194.213:8832/cmd/alias/bsrtree/finish/', {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'POST',
+                body: JSON.stringify({task_id: task.task_id, bsr_link: task.bsr, items: data}),
+            }).then(async response => {
+                if (response.status > 299) {
+                    fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                            confirm: true,
+                            errors: [
+                                '[pt] Error: loading result',
+                                response.statusText,
+                                await response.text(),
+                                data,
+                            ],
+                            stop: true,
+                        }),
+                    });
+                }
+            }).catch(reason => {
+                fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        confirm: true,
+                        errors: [
+                            '[pt] Error: loading result',
+                            reason,
+                            data,
+                        ],
+                        stop: true,
+                    }),
+                });
+            });
+        } else {
+            fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'PATCH',
+                body: JSON.stringify({
+                    confirm: true,
+                    errors: [
+                        '[pt] Error: empty content!',
+                    ],
+                    stop: true,
+                }),
+            });
+        }
+    } catch (e) {
+        console.log(e);
+        fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            method: 'PATCH',
+            body: JSON.stringify({
+                confirm: true,
+                errors: [
+                    '[pt] Error: ' + e.message,
+                ],
+                stop: true,
+            }),
+        });
+    } finally {
+        await chrome.tabs.remove(tab.id);
+    }
 }
 
 async function getNewAsins(asins_list, reference, query) {
@@ -261,37 +406,35 @@ async function run(task, sender, sendResponse) {
     }
     sendResponse('OK');
     // Getting query
-    let url;
+    let asins = [];
     if (task.query) {
-        url = '';
+        try {
+            asins = await parseSearchResult(task.query, task.limit, task.windowId);
+        } catch (e) {
+            report(e.message, task.task_id, true);
+            return;
+        }
     } else {
         try {
-            url = task.query = await makeQueryByASIN(task.reference, task.windowId);
+            const url = await getProductBSR(task.reference, task.windowId);
+            asins = await parseBSR(url, task);
         } catch (e) {
             report(e.message, task.task_id, true);
             return;
         }
     }
-    // Collecting all asins
-    let all_asins;
-    try {
-        all_asins = await collect100ASINs(task.query, task.limit, task.windowId);
-    } catch (e) {
-        report(e.message, task.task_id, true);
-        return;
-    }
     // Getting new asins
     let new_asins;
     try {
-        const res = await getNewAsins(all_asins, task.reference, task.query);
+        const res = await getNewAsins(asins, task.reference, task.query);
         if (res.status !== 200) {
-            new_asins = all_asins;
+            new_asins = asins;
         } else {
-            new_asins = await res.json()
+            new_asins = await res.json();
         }
     } catch (e) {
         report(e.message, task.task_id, false, false);
-        new_asins = all_asins;
+        new_asins = asins;
     }
 
     console.log(new_asins);
@@ -323,14 +466,5 @@ chrome.tabs.query({
         }, (tab) => {
             chrome.tabs.update(tab.id, {autoDiscardable: false});
         });
-    }
-});
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    for (let i in request) {
-        if (i === 'fetch') {
-            fetch(request[i][0], request[i][1]).then((response) => {
-                sendResponse(response);
-            });
-        }
     }
 });
