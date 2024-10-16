@@ -40,9 +40,9 @@ async def import_items(request: Request, collection: str, document: UploadFile =
             except AttributeError:
                 continue
             df[col] = df[col].replace({'true': True, 'false': False, 'null': None, 'NaN': np.nan})
-            temp = pd.to_datetime(df[col], errors='coerce')
+            temp = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
             if temp.notna().any():
-                df[col] = temp
+                df[col] = temp.replace([pd.NaT], [None])
     try:
         db_mongo.db('Keywords')[collection].insert_many(list(df.T.to_dict().values()), ordered=False)
     except BulkWriteError:
