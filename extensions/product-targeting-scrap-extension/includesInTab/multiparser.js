@@ -70,7 +70,6 @@ class MultiParser {
                     continue;
                 }
                 if (item === false) {
-                    console.log('OKOKOK!!!');
                     break;
                 }
                 else if (typeof item === 'object') {
