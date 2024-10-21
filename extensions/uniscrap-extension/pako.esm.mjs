@@ -899,7 +899,7 @@ const build_bl_tree = (s) => {
 
     /* Build the bit length tree: */
     build_tree(s, s.bl_desc);
-    /* opt_len now includes the length of the tree representations, except
+    /* opt_len now includesInTab the length of the tree representations, except
    * the lengths of the bit lengths codes and the 5+5+4 bits for the counts.
    */
 

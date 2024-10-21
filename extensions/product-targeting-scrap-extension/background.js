@@ -1,15 +1,3 @@
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    for (let i in request) {
-        if (i === 'fetch') {
-            fetch(request[i][0], request[i][1]).then((response) => {
-                sendResponse(response);
-            });
-        } else if (i === 'log') {
-            console.log(request[i]);
-        }
-    }
-});
-
 function report(msg, task_id, stop, confirm = true) {
     console.log(msg);
     console.error(msg);
