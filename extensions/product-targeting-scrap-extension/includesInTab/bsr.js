@@ -12,7 +12,7 @@ class BSRMultiParser extends MultiParser {
         }
         try {
             const data = JSON.parse(element.getAttribute('data-client-recs-list'));
-            const res = {};
+            const res = [];
             for (const item of data) {
                 res.push({ asin: item.id, rank: Number.parseInt(item.metadataMap['render.zg.rank']) });
             }
