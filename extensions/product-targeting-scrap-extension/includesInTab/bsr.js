@@ -23,14 +23,24 @@ class BSRMultiParser extends MultiParser {
     }
 
     collectASINsCards() {
-
     }
 
     findElements(findOnlyASINs = false) {
         this.findASINsList();
-        if (!findOnlyASINs) {
+        if (findOnlyASINs) {
+            this.elements = this.ASINsList;
+        } else {
             super.findElements();
             this.collectASINsCards();
         }
+    }
+
+    nextPage() {
+        const newPage = document.querySelector('.a-pagination .a-last:not(.a-disabled) > a');
+        if (newPage) {
+            newPage.click();
+            return true;
+        }
+        return false;
     }
 }
