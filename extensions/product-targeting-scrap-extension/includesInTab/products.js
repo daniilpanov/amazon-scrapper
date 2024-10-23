@@ -1,10 +1,16 @@
 class ProductsParser extends Parser {
+    domparser = new DOMParser();
     currentBreadcrumbElement = null;
     breadcrumbsElements = [];
+    ASIN = null;
+    title = null;
+    marketplaceId = null;
+    mediaConfig = null;
+    relatedVideos = null;
 
     constructor(funcs, doc, asin) {
         super(funcs, doc);
-        this.result = { asin };
+        this.ASIN = asin;
     }
 
 
@@ -23,21 +29,34 @@ class ProductsParser extends Parser {
     }
 
     getBreadcrumbs() {
-        return [...this.getBreadcrumbsElements()].map(el => el.textContent.trim());
+        return { breadcrumbs: [...this.getBreadcrumbsElements()].map(el => el.textContent.trim()) };
     }
 
     getCurrentBreadcrumb() {
-        return this.getBreadcrumbsCurrentElement()?.textContent.trim() || null;
+        return { currentBreadcrumb: this.getBreadcrumbsCurrentElement()?.textContent.trim() || null };
+    }
+
+    getASIN() {
+        return { asin: this.ASIN };
     }
 
     getTitle() {
-        return this.getElementByIds(['productTitle', 'title', 'titleSection', 'title_feature_div'])
-            ?.textContent || false;
+        return { title: this.title || (
+            this.title = this.getElementByIds([
+                'productTitle',
+                'title',
+                'titleSection',
+                'title_feature_div'
+            ])?.textContent || false
+        )};
     }
 
     getMarketplaceId() {
-        return this.root.querySelector('[data-marketplace]')
-            ?.getAttribute('data-marketplace') || null;
+        return { marketplaceId: (this.marketplaceId || (
+            this.marketplaceId = this.root.querySelector(
+                '[data-marketplace]'
+            )?.getAttribute('data-marketplace') || null
+        )) };
     }
 
     requestRelatedVideos() {
@@ -46,22 +65,14 @@ class ProductsParser extends Parser {
                 "page": "DetailPage",
                 "placement": "ImageBlock",
                 "device": "Desktop",
-                "marketplaceID": "ATVPDKIKX0DER",
+                "marketplaceID": this.getMarketplaceId(),
                 "locale": "en_US",
                 "product": {
-                    "contentID": "B09K4XHTWZ",
+                    "contentID": this.getASIN(),
                     "contentIDType": "ASIN",
-                    "parentContentID": "B0D8ZKXFTY",
-                    "parentContentIDType": "ASIN"
+                    "parentContentID": this.getFullMediaConfig()?.parentAsin,
+                    "parentContentIDType": "ASIN",
                 },
-                "video": {
-                    "contentID": "0b0359ec02234bcc89d28c9d8b055a0e",
-                    "contentIDType": "VIDEO_ID",
-                    "videoURL": "https://m.media-amazon.com/images/S/vse-vms-transcoding-artifact-us-east-1-prod/94687f90-b760-4f05-9041-c5dcc91c85cc/default.jobtemplate.hls.m3u8",
-                    "imageURL": "https://m.media-amazon.com/images/I/41oblCYT3ZL.SX522_.jpg",
-                    "rankingStrategy": "DEFAULT"
-                },
-                "requestId": "KGK0H9NA8HRKB9N9K41R",
                 "weblabContext": [
                     {
                         "name": "",
@@ -70,7 +81,7 @@ class ProductsParser extends Parser {
                     }
                 ],
                 "metadata": {
-                    "ProductTitle": "Hand Rails for Outdoor Steps,3 Step Stair Handrail &amp; Indoor Stair Railing Kit，Black Railings for Outdoor Steps and Hand Rails for Seniors for Porch Railing &amp; Deck Hand Rail(1-3 Step)"
+                    "ProductTitle": this.getTitle(),
                 }
             },
             "configuration": {
@@ -107,9 +118,31 @@ class ProductsParser extends Parser {
                 }
             }
         };
+
+        return fetch('https://www.amazon.com/vap/ew/subcomponent/relatedvideos', {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+            method: 'POST',
+        });
+    }
+
+    async getRelatedVideos() {
+        if (this.relatedVideos) {
+            return { relatedVideos: this.relatedVideos };
+        }
+        const result = await this.requestRelatedVideos();
+        const parsedResHTML = this.domparser.parseFromString(result, 'text/html');
+        const links = [...(parsedResHTML.querySelectorAll('[data-video-url]') || [])]
+            .map(el => el.getAttribute('data-video-url'));
+        return { relatedVideos: (this.relatedVideos = links) };
     }
 
     getFullMediaConfig() {
+        if (this.mediaConfig) {
+            return this.mediaConfig;
+        }
         const allScripts = this.root.getElementsByTagName('script');
         let needleScript = null;
         for (const script of allScripts) {
@@ -140,7 +173,7 @@ class ProductsParser extends Parser {
             .replaceAll(',}', '}')
             .replaceAll(',]', ']');
         try {
-            return { mediaConfig: JSON.parse(needleContent) };
+            return { mediaConfig: (this.mediaConfig = JSON.parse(needleContent)) };
         } catch (e) {
             return { mediaConfig: null };
         }

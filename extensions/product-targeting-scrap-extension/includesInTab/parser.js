@@ -63,6 +63,32 @@ class Parser {
         console.error(e);
     }
 
+    async applyAsyncFunctions() {
+        this.result = {};
+        let item;
+        for (let func of this.functions) {
+            try {
+                if (func.bind) {
+                    func = func.bind(this);
+                }
+                item = func(this.root, this.result);
+                if (func.constructor.name === 'AsyncFunction') {
+                    item = await item;
+                }
+            } catch (e) {
+                this.errorHandler(e);
+                continue;
+            }
+            if (item === false) {
+                return null;
+            }
+            else if (typeof item === 'object') {
+                this.result = {...this.result, ...item};
+            }
+        }
+        return this.result;
+    }
+
     applyFunctions() {
         this.result = {};
         let item;
