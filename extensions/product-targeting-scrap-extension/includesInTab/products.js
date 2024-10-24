@@ -225,11 +225,25 @@ class ProductsParser extends Parser {
     }
 
     getReviewsRating() {
-
+        const ratingEl = this.root.querySelector('#averageCustomerReviews > span:first-child');
+        if (!ratingEl) {
+            return { rating: null };
+        }
+        const rating = Number.parseFloat(ratingEl.textContent.trim().split(' ')[0])
+        if (Number.isNaN(rating)) {
+            return { rating: null };
+        }
+        return { rating };
     }
 
     getReviewsCount() {
-
+        const countEl = this.root.querySelector('#averageCustomerReviews > span:last-child');
+        if (!countEl) {
+            return { reviewsCount: null };
+        }
+        return { reviewsCount:
+                (countEl.textContent?.trim().split(' ')[0]?.replaceAll(',', '') || null)
+        };
     }
 
     getOptions() {
