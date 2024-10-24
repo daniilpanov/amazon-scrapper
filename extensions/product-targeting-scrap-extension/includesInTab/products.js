@@ -7,6 +7,7 @@ class ProductsParser extends Parser {
     marketplaceId = null;
     mediaConfig = null;
     relatedVideos = null;
+    aspects = null;
 
     constructor(funcs, doc, asin) {
         super(funcs, doc);
@@ -248,7 +249,39 @@ class ProductsParser extends Parser {
     }
 
     getAspects() {
-        // TODO
+        const root_div = this.root.querySelector('[data-csa-c-slot-id="cr-product-insights-cards-popover"]');
+        if (!root_div) {
+            return { aspects: null };
+        }
+        const aspects_names_els = this.root.getElementById('aspect-button-group-0')
+            ?.querySelectorAll('[id*=aspect-button]');
+        const res = [];
+        let positive, negative, raw_stat;
+        for (let i = 0; i < Math.min(root_div.children.length, aspects_names_els.length); ++i) {
+            raw_stat = root_div.children[i].querySelectorAll('div span');
+            positive = raw_stat[1].innerText.replaceAll(',', '').split(' ');
+            for (const item of positive) {
+                if (Number.isNaN(Number(item))) {
+                    continue;
+                }
+                positive = Number(item);
+            }
+            if (Number.isNaN(Number(positive))) {
+                continue;
+            }
+            negative = raw_stat[2].innerText.replaceAll(',', '').split(' ');
+            for (const item of negative) {
+                if (Number.isNaN(Number(item))) {
+                    continue;
+                }
+                negative = Number(item);
+            }
+            if (Number.isNaN(Number(negative))) {
+                continue;
+            }
+            res.push({ Aspect: aspects_names_els[i].innerText.trim(), positive: positive, negative: negative });
+        }
+        return { aspects: (res.length ? res : null) };
     }
 
     getReviewsImages() {
