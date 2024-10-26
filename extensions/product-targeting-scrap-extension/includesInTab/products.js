@@ -225,6 +225,7 @@ class ProductsParser extends Parser {
     }
 
     getReviewsRating() {
+<<<<<<< ours
         const ratingEl = this.root.querySelector('#averageCustomerReviews > span:first-child');
         if (!ratingEl) {
             return { rating: null };
@@ -234,9 +235,15 @@ class ProductsParser extends Parser {
             return { rating: null };
         }
         return { rating };
+||||||| ancestor
+
+=======
+        const ratingEl = this.root.querySelector('#averageCustomerReviews > span:first-child');
+>>>>>>> theirs
     }
 
     getReviewsCount() {
+<<<<<<< ours
         const countEl = this.root.querySelector('#averageCustomerReviews > span:last-child');
         if (!countEl) {
             return { reviewsCount: null };
@@ -244,10 +251,17 @@ class ProductsParser extends Parser {
         return { reviewsCount:
                 (countEl.textContent?.trim().split(' ')[0]?.replaceAll(',', '') || null)
         };
+||||||| ancestor
+
+=======
+        const reviewsCountEl = this.root.querySelector('#averageCustomerReviews > span:last-child');
+>>>>>>> theirs
     }
 
     getOptions() {
-        // TODO
+        const twisterOptions = this.root.getElementById('twister_feature_div');
+        const twisterContainers = twisterOptions.querySelectorAll('#twister > div');
+
     }
 
     getDetails() {
