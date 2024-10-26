@@ -328,4 +328,3 @@ class ProductsParser extends Parser {
         return res;
     }
 }
->>>>>>> theirs
