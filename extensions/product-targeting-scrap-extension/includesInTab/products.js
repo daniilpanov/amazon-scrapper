@@ -3,6 +3,7 @@ class ProductsParser extends Parser {
     currentBreadcrumbElement = null;
     breadcrumbsElements = [];
     ASIN = null;
+    rootASIN = null;
     title = null;
     marketplaceId = null;
     mediaConfig = null;
@@ -142,7 +143,7 @@ class ProductsParser extends Parser {
 
     getFullMediaConfig() {
         if (this.mediaConfig) {
-            return this.mediaConfig;
+            return { mediaConfig: this.mediaConfig };
         }
         const allScripts = this.root.getElementsByTagName('script');
         let needleScript = null;
@@ -247,8 +248,6 @@ class ProductsParser extends Parser {
     }
 
     getOptions() {
-        const twisterOptions = this.root.getElementById('twister_feature_div');
-        const twisterContainers = twisterOptions.querySelectorAll('#twister > div');
 
     }
 

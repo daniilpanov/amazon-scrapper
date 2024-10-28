@@ -1,4 +1,4 @@
-class Process {
+class Scenario {
     tabId = null;
     dependencies = [];
     functions = [];
