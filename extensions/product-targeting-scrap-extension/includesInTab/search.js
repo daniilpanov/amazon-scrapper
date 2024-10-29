@@ -1,6 +1,6 @@
 class SearchMultiParser extends MultiParser {
     elementsQuerySelector = 'div[data-asin]';
-    waitElementQuerySelector = '.s-result-item';
+    waitElementQuerySelector = 'div[data-asin]';
     // cache
     imageElement = null;
     reviewsBlockElement = null;

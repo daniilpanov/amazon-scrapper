@@ -13,17 +13,18 @@ export class ScenarioController {
     async buildBSR(url) {
         const scenario = new Scenario(this.dependencies.bsr);
         await scenario.createTab(url);
-        let result;
+        let asins = [], result;
         do {
             await scenario.loadDependencies();
             scenario.appendFunction(async () => {
-                const bsrParser = new BSRMultiParser();
+                const bsrParser = new BSRMultiParser({});
                 await bsrParser.waitLoading();
                 return { asins: bsrParser.findASINsList(), nextPage: bsrParser.clickNextPage() };
             });
 
             result = await scenario.applyFunctionsSync();
-            await new Promise(r => setTimeout(500, r));
+            asins = [...asins, ...result.asins];
+            await new Promise(r => setTimeout(r, 500));
         } while (result.nextPage);
         return result;
     }
