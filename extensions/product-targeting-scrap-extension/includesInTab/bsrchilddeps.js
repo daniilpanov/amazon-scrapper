@@ -1,6 +1,6 @@
 class BSRChildDepsParser extends MultiParser {
     elementsQuerySelector = 'div[role=group] > div[role=treeitem]';
-    bsrMP = null;
+    MP = null;
 
     getCategoryName(el) {
         return { bsrLink: el.href || el.getAttribute('href') || null };
