@@ -112,14 +112,12 @@ export class ScenarioController {
             });
 
             result = await reviewsScenario.applyFunctionsSync();
-            await new Promise(r => setTimeout(500, r));
+            await new Promise(r => setTimeout(r, 500));
         } while (result.nextPage);
         await reviewsScenario.loadDependencies();
         reviewsScenario.appendFunction(async () => {
             const reviewsParser = new ReviewsMultiParser();
-            reviewsParser.appendFunctions([
-
-            ]);
+            reviewsParser.appendFunctions([]);
             return reviewsParser.clickNextPage();
         });
 
