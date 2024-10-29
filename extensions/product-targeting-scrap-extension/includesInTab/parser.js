@@ -4,7 +4,7 @@ class Parser {
     waitElementQuerySelector;
     result = {};
 
-    constructor(funcs, doc) {
+    constructor({ funcs, doc }) {
         this.functions = funcs || [];
         this.root = doc || this.root;
     }
