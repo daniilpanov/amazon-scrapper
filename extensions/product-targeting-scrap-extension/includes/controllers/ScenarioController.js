@@ -90,8 +90,8 @@ export class ScenarioController {
                 return productParser.clickAllReviews();
             });
             await productScenario.applyFunctionsSync();
-            await new Promise(r => setTimeout(500, r));
-            tabId = productScenario.tabId
+            await new Promise(r => setTimeout(r, 500));
+            tabId = productScenario.tabId;
         }
         const reviewsScenario = new Scenario(this.dependencies.reviews);
         reviewsScenario.tabId = tabId;
