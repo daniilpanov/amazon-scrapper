@@ -1,7 +1,12 @@
-class Scenario {
+export class Scenario {
     tabId = null;
     dependencies = [];
     functions = [];
+
+    constructor(deps) {
+        this.dependencies = deps || [];
+    }
+
 
     addDependency(file) {
         this.dependencies.push(file);

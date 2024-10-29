@@ -349,20 +349,4 @@ class ProductsParser extends Parser {
     clickAllReviews() {
         // TODO
     }
-
-    getProductCard() {
-        let res = {
-            title: null,
-            description: null,
-        };
-
-        // Title & description
-        res.title = this.getElementByIds(['titleSection', 'title', 'productTitle'])?.textContent.trim();
-        if (!res.title) {
-            throw new Error('Invalid page');
-        }
-        res.description = this.root.querySelector(['#feature-bullets, #productFactsDesktop_feature_div div[aria-expanded]'])?.textContent.trim();
-
-        return res;
-    }
 }

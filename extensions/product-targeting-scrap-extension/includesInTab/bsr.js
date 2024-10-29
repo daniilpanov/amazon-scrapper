@@ -1,25 +1,21 @@
 class BSRMultiParser extends MultiParser {
     elementsQuerySelector = 'div.a-cardui[id*="asin-index"]';
+    waitElementQuerySelector = 'div.a-cardui';
     ASINsList = [];
 
     findASINsList() {
-        if (this.ASINsList && this.ASINsList.length) {
-            return this.ASINsList;
-        }
         const element = document.querySelector('[data-client-recs-list]');
         if (!element) {
-            return [];
+            return this.ASINsList;
         }
         try {
             const data = JSON.parse(element.getAttribute('data-client-recs-list'));
-            const res = [];
             for (const item of data) {
-                res.push({ asin: item.id, rank: Number.parseInt(item.metadataMap['render.zg.rank']) });
+                this.ASINsList.push({ asin: item.id, rank: Number.parseInt(item.metadataMap['render.zg.rank']) });
             }
-            return (this.ASINsList = res);
         } catch (e) {
-            return [];
         }
+        return this.ASINsList;
     }
 
     collectASINsCards() {
@@ -35,7 +31,8 @@ class BSRMultiParser extends MultiParser {
         }
     }
 
-    nextPage() {
+    clickNextPage() {
+        super.clickNextPage();
         const newPage = document.querySelector('.a-pagination .a-last:not(.a-disabled) > a');
         if (newPage) {
             newPage.click();

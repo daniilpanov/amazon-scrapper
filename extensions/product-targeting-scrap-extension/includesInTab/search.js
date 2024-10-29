@@ -125,4 +125,14 @@ class SearchMultiParser extends MultiParser {
             return { imageSrc: (parsedSrclinks.length ? parsedSrclinks[parsedSrclinks.length - 1] : null) };
         }
     }
+
+    clickNextPage() {
+        super.clickNextPage();
+        const el = document.querySelector('.s-pagination-item:last-child');
+        if (el.tagName === 'SPAN') {
+            return false;
+        }
+        el.click();
+        return true;
+    }
 }
