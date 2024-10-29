@@ -32,25 +32,27 @@ export class ScenarioController {
     async buildSearch(search) {
         const scenario = new Scenario(this.dependencies.search);
         await scenario.createTab('https://www.amazon.com/s?k=' + search.replaceAll(' ', '+').replaceAll(',', '%2C'));
-        let result;
-        do {
-            await scenario.loadDependencies();
-            scenario.appendFunction(async () => {
-                const searchParser = new SearchMultiParser();
+        scenario.appendFunction(async () => {
+            const searchParser = new SearchMultiParser({});
+            searchParser.appendFunctions([
+                searchParser.getASIN, searchParser.getTitle,
+                searchParser.getPrice, searchParser.getImageLinks,
+                searchParser.getReviewsCount, searchParser.getReviewsRating,
+            ]);
+            let res, cards = [];
+            do {
                 await searchParser.waitLoading();
+                await new Promise(r => setTimeout(r, 250));
                 searchParser.findElements();
-                searchParser.appendFunctions([
-                    searchParser.getASIN, searchParser.getTitle,
-                    searchParser.getPrice, searchParser.getImageLinks,
-                    searchParser.getReviewsCount, searchParser.getReviewsRating,
-                ]);
-                return searchParser.applyFunctions();
-            });
+                res = { cards: searchParser.applyFunctions(), nextPage: searchParser.clickNextPage() };
+                cards = [...cards, ...res.cards];
+                await new Promise(r => setTimeout(r, 250));
+            } while (res.nextPage);
 
-            result = await scenario.applyFunctionsSync();
-            await new Promise(r => setTimeout(500, r));
-        } while (result.nextPage);
-        return result;
+            return cards;
+        });
+
+        return await scenario.applyFunctionsSync();
     }
 
     async buildProduct(ASIN) {
