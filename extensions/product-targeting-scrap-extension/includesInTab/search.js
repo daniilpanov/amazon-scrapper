@@ -35,6 +35,14 @@ class SearchMultiParser extends MultiParser {
         this.reviewsBlockElement = null;
     }
 
+    getASIN(el) {
+        const asin = el.getAttribute('data-asin')?.trim();
+        if (!asin) {
+            return false;
+        }
+        return { asin };
+    }
+
     getTitle(el, index, preResult) {
         const titleEl = el.querySelector('[data-cy="title-recipe"]');
         if (!titleEl) {
