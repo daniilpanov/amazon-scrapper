@@ -43,7 +43,7 @@ export class ScenarioController {
             do {
                 await searchParser.waitLoading();
                 await new Promise(r => setTimeout(r, 250));
-                searchParser.findElements();
+                await searchParser.findElements();
                 res = { cards: searchParser.applyFunctions(), nextPage: searchParser.clickNextPage() };
                 cards = [...cards, ...res.cards];
                 await new Promise(r => setTimeout(r, 250));

@@ -1,16 +1,32 @@
 class SearchMultiParser extends MultiParser {
     elementsQuerySelector = 'div[data-asin]';
     waitElementQuerySelector = 'div[data-asin]';
+
+    domparser = new DOMParser();
     // cache
     imageElement = null;
     reviewsBlockElement = null;
 
-    getASIN(el) {
-        const asin = el.getAttribute('data-asin')?.trim();
-        if (!asin) {
-            return false;
+    async findElements() {
+        this.elements = [];
+        try {
+            for (let i = 1; i <= 100; ++i) {
+                const answr = await fetch(location.href, {
+                    "headers": {
+                        "content-type": "application/json",
+                    },
+                    "body": "{\"page-content-type\":\"btf\",\"customer-action\":\"pagination\"}",
+                    "method": "POST",
+                });
+                this.elements = [...this.elements, ...(await answr.text()).split('&&&')
+                    .filter(item => item.includes('data-asin'))
+                    .map(item => JSON.parse(item))
+                    .filter(item => item[2].asin)
+                    .map(item => this.domparser.parseFromString(item[2].html, 'text/html'))];
+            }
+        } catch (e) {
+            console.error(e);
         }
-        return { asin };
     }
 
     newIteration() {
