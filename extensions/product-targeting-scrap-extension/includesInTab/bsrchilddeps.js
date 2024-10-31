@@ -11,6 +11,6 @@ class BSRChildDepsParser extends MultiParser {
     }
 
     getASINsList() {
-        return (this.MP || (this.MP = new BSRMultiParser())).findASINsList()
+        return (this.MP || (this.MP = new BSRMultiParser())).findASINsList();
     }
 }

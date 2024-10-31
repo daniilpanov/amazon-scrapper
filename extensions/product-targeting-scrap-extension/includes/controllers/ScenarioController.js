@@ -3,6 +3,7 @@ import { Scenario } from '../models/Scenario';
 export class ScenarioController {
     dependencies = {
         bsr: ['parser', 'multiparser', 'bsr'],
+        bsrchildren: ['parser', 'multiparser', 'bsr', 'bsrchilddeps'],
         search: ['parser', 'multiparser', 'search'],
         product: ['parser', 'product'],
         reviews: ['parser', 'multiparser', 'reviews'],
