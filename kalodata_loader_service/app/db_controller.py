@@ -4,18 +4,12 @@ from pymongo.errors import BulkWriteError, PyMongoError
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-from models import *
+from .models import *
 
 
 class DBController:
-    self_inst = None
     db_inst: MongoClient
     db_key = 'kalodata'
-
-    def __new__(cls, *args, **kwargs):
-        if cls.self_inst:
-            return cls.self_inst
-        return cls(*args, **kwargs)
 
     def __init__(self, db_conf: dict):
         url = db_conf.get('url_prefix', '') + '://'

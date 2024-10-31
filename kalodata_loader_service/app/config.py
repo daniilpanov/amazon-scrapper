@@ -7,4 +7,4 @@ db_config = {
     'url_prefix': 'mongodb+srv',
 }
 
-API_KEY_HASH = sha256('b90502dc-97bf-11ef-972e-00090ffe0001')
+API_KEY_HASH = sha256('b90502dc-97bf-11ef-972e-00090ffe0001'.encode('utf-8'))
