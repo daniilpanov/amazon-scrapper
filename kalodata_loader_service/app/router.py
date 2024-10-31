@@ -1,8 +1,9 @@
 from hashlib import sha256
 
+import orjson
 from fastapi import FastAPI, HTTPException
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, JSONResponse
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_201_CREATED, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT
 
 from .db_controller import *
@@ -15,14 +16,14 @@ app = FastAPI()
 @app.middleware('http')
 async def check_auth(request: Request, call_next):
     auth_string = request.headers.get('Authorization')
-    if not auth_string or sha256(auth_string.encode('utf-8')) != API_KEY_HASH:
-        raise HTTPException(HTTP_403_FORBIDDEN)
+    if not auth_string or sha256(auth_string.encode('utf-8')).hexdigest() != API_KEY_HASH.hexdigest():
+        return Response(status_code=HTTP_403_FORBIDDEN)
     return await call_next(request)
 
 
 def return_result(res):
     if res:
-        return Response({'_id': str(res)}, HTTP_201_CREATED)
+        return JSONResponse({'_id': str(res)}, HTTP_201_CREATED)
     elif res is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
     raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)

@@ -24,5 +24,5 @@ class Creator(BaseModel):
     biography: str
     contacts_links: list[str]
     core_metrics: CreatorCoreMetrics
-    shops_ids: list[int]
-    products_ids: list[int]
+    shops_ids: list[str]
+    products_ids: list[str]

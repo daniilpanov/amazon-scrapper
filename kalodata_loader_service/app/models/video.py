@@ -24,5 +24,5 @@ class Video(BaseModel):
     publish_date: str
     link: str
     core_metrics: VideoCoreMetrics
-    creator_id: int
+    creator_id: str
     product_name: str
