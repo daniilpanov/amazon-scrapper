@@ -1,0 +1,1 @@
+python -m uvicorn --reload --host localhost --port 8091 kalodata_loader_service:app

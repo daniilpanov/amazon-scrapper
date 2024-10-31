@@ -1,21 +1,15 @@
 import certifi
-from pymongo.errors import BulkWriteError, PyMongoError
+from pymongo.errors import PyMongoError, DuplicateKeyError
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-from models import *
+from .models import *
 
 
 class DBController:
-    self_inst = None
     db_inst: MongoClient
     db_key = 'kalodata'
-
-    def __new__(cls, *args, **kwargs):
-        if cls.self_inst:
-            return cls.self_inst
-        return cls(*args, **kwargs)
 
     def __init__(self, db_conf: dict):
         url = db_conf.get('url_prefix', '') + '://'
@@ -37,7 +31,7 @@ class DBController:
     def add_shop(self, shp: Shop):
         try:
             return self.db_inst[self.db_key]['shops'].insert_one(shp.model_dump()).inserted_id
-        except BulkWriteError:
+        except DuplicateKeyError:
             return None
         except PyMongoError:
             return False
@@ -46,12 +40,13 @@ class DBController:
         try:
             creators_ids = prod.creators_ids
             res = self.db_inst[self.db_key]['products'].insert_one(prod.model_dump(exclude={'creators_ids'}))
-            self.db_inst[self.db_key]['_products_creators_link'].insert_many(tuple({
-                'creator_id': creator_id,
-                'product_id': prod.internal_id,
-            } for creator_id in creators_ids))
+            if creators_ids:
+                self.db_inst[self.db_key]['_products_creators_link'].insert_many(tuple({
+                    'creator_id': creator_id,
+                    'product_id': prod.internal_id,
+                } for creator_id in creators_ids))
             return res.inserted_id
-        except BulkWriteError:
+        except DuplicateKeyError:
             return None
         except PyMongoError:
             return False
@@ -70,7 +65,7 @@ class DBController:
                 'shop_id': shop_id,
             } for shop_id in shops_ids))
             return res.inserted_id
-        except BulkWriteError:
+        except DuplicateKeyError:
             return None
         except PyMongoError:
             return False
@@ -78,7 +73,7 @@ class DBController:
     def add_video(self, vid: Video):
         try:
             return self.db_inst[self.db_key]['video_ad'].insert_one(vid.model_dump()).inserted_id
-        except BulkWriteError:
+        except DuplicateKeyError:
             return None
         except PyMongoError:
             return False

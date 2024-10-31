@@ -26,4 +26,4 @@ class Shop(BaseModel):
     name: str
     type: str
     core_metrics: ShopCoreMetrics
-    self_operated_accounts: list[SellerOperatedAccount]
+    self_operated_accounts: list[SellerOperatedAccount] | None = None

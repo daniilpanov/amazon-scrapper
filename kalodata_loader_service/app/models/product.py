@@ -17,11 +17,11 @@ class ProductCoreMetrics(BaseModel):
 
 class Product(BaseModel):
     internal_id: str
-    shop_id: int
+    shop_id: str
     name: str
     category: str
     lowest_price_30d: float
     price_range: list[float]
     commission_rate: float
     core_metrics: ProductCoreMetrics
-    creators_ids: list[int]
+    creators_ids: list[str] | None = None
