@@ -23,5 +23,6 @@ class Product(BaseModel):
     lowest_price_30d: float
     price_range: list[float]
     commission_rate: float
-    core_metrics: ProductCoreMetrics
+    # core_metrics: ProductCoreMetrics
+    core_metrics: dict[str, float]
     creators_ids: list[str] | None = None

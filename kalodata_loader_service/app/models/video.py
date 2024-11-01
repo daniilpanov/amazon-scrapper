@@ -23,6 +23,7 @@ class Video(BaseModel):
     music_info: str
     publish_date: str
     link: str
-    core_metrics: VideoCoreMetrics
+    # core_metrics: VideoCoreMetrics
+    core_metrics: dict[str, float]
     creator_id: str
     product_name: str
