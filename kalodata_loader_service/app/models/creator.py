@@ -23,6 +23,7 @@ class Creator(BaseModel):
     last_30_days_products: int
     biography: str
     contacts_links: list[str]
-    core_metrics: CreatorCoreMetrics
+    # core_metrics: CreatorCoreMetrics
+    core_metrics: dict[str, float]
     shops_ids: list[str]
     products_ids: list[str]

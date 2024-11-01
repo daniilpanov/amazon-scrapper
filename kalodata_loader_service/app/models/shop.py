@@ -25,5 +25,6 @@ class Shop(BaseModel):
     internal_id: str
     name: str
     type: str
-    core_metrics: ShopCoreMetrics
+    # core_metrics: ShopCoreMetrics
+    core_metrics: dict[str, float]
     self_operated_accounts: list[SellerOperatedAccount] | None = None
