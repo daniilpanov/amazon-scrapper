@@ -14,7 +14,7 @@ s.headers.update(
 )
 
 r = s.post(
-    "https://www.kalodata.com/user/queryPrоofile",
+    "https://www.kalodata.com/user/queryProfile",
     headers={"referer": "https://www.kalodata.com/me"},
 )
 
