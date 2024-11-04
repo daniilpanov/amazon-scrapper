@@ -29,9 +29,6 @@ async function update() {
 
                     for (const key in element.aliases) {
                         ++tasksGroups;
-                        const aliasElement = document.createElement('div');
-                        aliasElement.classList.add('alias');
-                        aliasElement.innerHTML += `<div class="alias-header">${key}</div>`;
                         let tasksCount = 0;
                         let errorsCount = 0;
                         let completedCount = 0;
@@ -43,6 +40,12 @@ async function update() {
                                 default: break;
                             }
                         }
+                        if (!tasksCount) {
+                            continue;
+                        }
+                        const aliasElement = document.createElement('div');
+                        aliasElement.classList.add('alias');
+                        aliasElement.innerHTML += `<div class="alias-header">${key}</div>`;
                         if (tasksCount === completedCount) {
                             ++completedFully;
                         }
