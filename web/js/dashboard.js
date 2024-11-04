@@ -28,10 +28,6 @@ async function update() {
                     const aliases = [];
 
                     for (const key in element.aliases) {
-                        ++tasksGroups;
-                        const aliasElement = document.createElement('div');
-                        aliasElement.classList.add('alias');
-                        aliasElement.innerHTML += `<div class="alias-header">${key}</div>`;
                         let tasksCount = 0;
                         let errorsCount = 0;
                         let completedCount = 0;
