@@ -37,8 +37,6 @@ class TempMail {
         this.email = '';
         this.login = '';
         this.domain = '';
-
-        this.genEmail();
     }
 
     async genEmail() {

@@ -1,3 +1,19 @@
+function randomnum(min, max) {
+    return Math.floor(Math.random() * (max - min) + min);
+}
+
+async function getJsonData(req) {
+    req = await req;
+    if (req.status > 299) {
+        throw new LimitReached();
+    }
+    let data = await req.json();
+    if (!data || !data.success) {
+        throw new LimitReached();
+    }
+    return data.data;
+}
+
 function convertNum(num) {
     num = num.trim();
     let numberRange = num.split('-');
@@ -15,12 +31,12 @@ function convertNum(num) {
     // Config
     let k = 1;
     let symbolsMap = {
-        'K': 1000,
-        'M': 1000000,
-        'B': 1000000000,
+        'k': 1000,
+        'm': 1000000,
+        'b': 1000000000,
     };
     for (let sym in symbolsMap) {
-        if (num.slice(num.length - 1).toLowerCase() === sym.toLowerCase()) {
+        if (num.slice(num.length - 1).toLowerCase() === sym) {
             k = symbolsMap[sym];
             num = num.slice(0, num.length - 1);
             break;
@@ -64,15 +80,19 @@ class LimitReached extends Error {
 class EmailChecker {
     constructor(scene, captchaType = 'cloudflare', response = 'token') {
         this.tempMailInst = new TempMail();
-        this.email = this.tempMailInst.email;
         this.scene = scene;
         this.captchaType = captchaType;
         this.response = response;
         this.code = null;
     }
 
-    getCode() {
-        let msgs = this.tempMailInst.fetchEmails('noreply@email.kalodata.com');
+    async genEmail() {
+        await this.tempMailInst.genEmail();
+        this.email = this.tempMailInst.email;
+    }
+
+    async getCode() {
+        let msgs = await this.tempMailInst.fetchEmails('noreply@email.kalodata.com');
         for (let msg of (msgs || [])) {
             let bodyParts = msg.fetchData().body.split(' ');
             for (let part of bodyParts) {
@@ -113,109 +133,81 @@ class Request {
 
     constructor(req = null) {
         if (req) {
-            this.session = req.session;
             this.startDate = req.startDate;
             this.endDate = req.endDate;
         } else {
-            this.session = new XMLHttpRequest();
-            this.session.setRequestHeader('Content-Type', 'application/json');
-            for (let key in Request.defaultHeaders) {
-                this.session.setRequestHeader(key, Request.defaultHeaders[key]);
-            }
+            this.startDate = null;
+            this.endDate = null;
         }
         this.currentPage = '';
     }
 
-    req(method, url, options = {}) {
-        let headers = { 'referer': Request.baseUrl + this.currentPage };
-        if (options.headers) {
-            headers = { ...headers, ...options.headers };
+    req(method, url, body) {
+        let conf = {
+            method: method || 'POST',
+        };
+        if (body) {
+            conf.headers = {
+                'Content-Type': 'application/json',
+            };
+            conf.body = JSON.stringify(body || {});
         }
-        this.session.open(method, Request.baseUrl + url, true);
-        for (let key in headers) {
-            this.session.setRequestHeader(key, headers[key]);
-        }
-        this.session.send(JSON.stringify(options.body || {}));
-    }
-
-    getTextData(req) {
-        if (req.status > 299) {
-            throw new LimitReached();
-        }
-        return req.responseText;
-    }
-
-    getJsonData(req) {
-        if (req.status > 299) {
-            throw new LimitReached();
-        }
-        let data = JSON.parse(req.responseText);
-        if (!data || !data.success) {
-            throw new LimitReached();
-        }
-        return data.data;
+        return fetch(Request.baseUrl + (url || ''), conf);
     }
 }
 
 class Kalodata extends Request {
-    init() {
-        this.session.open('GET', Request.baseUrl, true);
-        this.session.setRequestHeader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8');
-        this.session.setRequestHeader('Sec-Fetch-Dest', 'document');
-        this.session.setRequestHeader('Sec-Fetch-Mode', 'navigate');
-        this.session.setRequestHeader('Sec-Fetch-Site', 'none');
-        this.session.setRequestHeader('Sec-Fetch-User', '?1');
-        this.session.setRequestHeader('Upgrade-Insecure-Requests', '1');
-        this.session.send();
-    }
-
     queryProfile() {
-        this.req('POST', 'user/queryProfile');
+        return this.req('POST', 'user/queryProfile');
     }
 
     getFirstDay() {
-        this.req('POST', 'api/firstDay0', { body: { country: 'US' } });
+        return this.req('POST', 'api/firstDay0', { body: { country: 'US' } });
     }
 
     getAllLastDays() {
-        this.req('GET', 'api/allLastDay');
+        return this.req('GET', 'api/allLastDay');
     }
 
-    getConfigurations(configKeys) {
+    getConfigurations(...configKeys) {
         let data = configKeys.map(key => ({ key }));
-        this.req('POST', 'api/configurations', { body: data });
+        return this.req('POST', 'api/configurations', data);
+    }
+
+    getCategoriesTree() {
+        return this.getConfigurations('global.category.tree');
     }
 
     homepageDialogQueryList() {
-        this.req('POST', 'homepage/dialog/queryList');
+        return this.req('POST', 'homepage/dialog/queryList');
     }
 
     userQueryMembership() {
-        this.req('POST', 'user/queryMembership', { body: { country: 'US' } });
+        return this.req('POST', 'user/queryMembership', { body: { country: 'US' } });
     }
 
     getCountryContacts() {
-        this.req('POST', 'v1/countryV1/contacts', { params: { type: 'pc' }, headers: { origin: null, 'content-type': null } });
+        return this.req('POST', 'v1/countryV1/contacts', { params: { type: 'pc' }, headers: { origin: null, 'content-type': null } });
     }
 
     getUserFeatures(lst) {
-        this.req('POST', 'user/features', { body: { country: 'US', list: lst } });
+        return this.req('POST', 'user/features', { body: { country: 'US', list: lst } });
     }
 
     livestreamQueryUnwatch() {
-        this.req('POST', 'livestream/queryUnWatch', { headers: { 'content-type': null } });
+        return this.req('POST', 'livestream/queryUnWatch', { headers: { 'content-type': null } });
     }
 
     logout() {
-        this.req('POST', 'user/logout', { headers: { 'content-type': null } });
+        return this.req('POST', 'user/logout', { headers: { 'content-type': null } });
     }
 
     sendEmailMessage(emailChecker) {
-        this.req('POST', 'email/emailSendMessage', { body: { response: emailChecker.response, scene: emailChecker.scene, email: emailChecker.email, captchaType: emailChecker.captchaType } });
+        return this.req('POST', 'email/emailSendMessage', { response: emailChecker.response, scene: emailChecker.scene, email: emailChecker.email, captchaType: emailChecker.captchaType });
     }
 
     verifyEmailMessage(emailChecker) {
-        this.req('POST', 'email/check' + emailChecker.scene.charAt(0).toUpperCase() + emailChecker.scene.slice(1) + 'Verification', { body: { email: emailChecker.email, loginMethod: 'EMAIL', emailCode: emailChecker.code, scene: emailChecker.scene } });
+        return this.req('POST', 'email/check' + emailChecker.scene.charAt(0).toUpperCase() + emailChecker.scene.slice(1) + 'Verification', { body: { email: emailChecker.email, loginMethod: 'EMAIL', emailCode: emailChecker.code, scene: emailChecker.scene } });
     }
 
     singupOrLogin(emailChecker, sceneKey = null) {
@@ -227,80 +219,97 @@ class Kalodata extends Request {
             "emailCode": emailChecker.code,
             "loginMethod": "EMAIL",
         });
-        this.req('POST', 'user/' + emailChecker.scene, { body: { [keyScene]: emailChecker.scene, "tcCode": "", "email": emailChecker.email, "emailCode": emailChecker.code, "loginMethod": "EMAIL" } });
+        return this.req('POST', 'user/' + emailChecker.scene, { body: { [keyScene]: emailChecker.scene, "tcCode": "", "email": emailChecker.email, "emailCode": emailChecker.code, "loginMethod": "EMAIL" } });
     }
 
     searchUserTCCode(emailChecker) {
-        this.req('POST', 'user/searchUserTCCode', { body: { email: emailChecker.email } });
+        return this.req('POST', 'user/searchUserTCCode', { body: { email: emailChecker.email } });
     }
 
     homepageBannersQueryList() {
-        this.req('POST', 'homepage/banner/queryList', { headers: { 'content-type': null } });
+        return this.req('POST', 'homepage/banner/queryList', { headers: { 'content-type': null } });
     }
 
     homepageSolutionQueryList() {
-        this.req('POST', 'homepage/solution/queryList', { headers: { 'content-type': null } });
+        return this.req('POST', 'homepage/solution/queryList', { headers: { 'content-type': null } });
     }
 
     modifyProfile(data) {
-        this.session.open('POST', Request.baseUrl + 'user/modifyProfile', true);
-        this.session.setRequestHeader('Content-Type', 'application/json');
-        this.session.send(JSON.stringify(data));
+        return this.req('POST', 'user/modifyProfile', data)
     }
 
     modifyProfileInitially(data) {
+        const names = [
+            'Oliver',
+            'Stephen',
+            'Joe',
+            'Joy',
+            'Vanessa',
+            'Candys',
+            'Nick',
+            'Bob',
+            'Amanda',
+            'Agata',
+        ];
+        const last_names = [
+            'Stone',
+            'Smith',
+            'Jevirson',
+            'Black',
+            'White',
+        ];
         let defaults = {
             'businessOnTiktok': 'No',
             'identity': 'None of the above',
             'companySize': '1-5',
-            'firstName': getFirstName(),
-            'lastName': (Math.random() < 0.5 ? getLastName() : ''),
+            'firstName': names[randomnum(0, names.length)],
+            'lastName': (Math.random() < 0.5 ? last_names[randomnum(0, last_names.length)] : ''),
         };
-        this.modifyProfile({ ...defaults, ...data });
+        return this.modifyProfile({ ...defaults, ...data });
     }
 
     modifyProfileSource(source = 'Others') {
-        this.modifyProfile({ source });
+        return this.modifyProfile({ source });
     }
 
     modifyProfilePassword(passwd = 'OsdKey0909') {
-        this.modifyProfile({ passwd });
+        return this.modifyProfile({ password });
     }
 
     overviewRankQueryProductsTops(pageNum, pageSize = 10) {
-        this.req('POST', 'overview/rank/queryProductTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryProductTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
     }
 
     overviewRankQueryCreatorsTops(pageNum, pageSize = 10) {
-        this.req('POST', 'overview/rank/queryCreatorTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryCreatorTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
     }
 
     overviewRankQueryShopsTops(pageNum, pageSize = 10) {
-        this.req('POST', 'overview/rank/queryShopTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryShopTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
     }
 
     overviewRankQueryVideoTops(pageNum, pageSize = 10) {
-        this.req('POST', 'overview/rank/queryVideoTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryVideoTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
     }
 
     overviewRankQueryLiveTops(pageNum, pageSize = 10) {
-        this.req('POST', 'overview/rank/queryLiveTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryLiveTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
     }
 
     creatorEnrich(ids, cateIds = null) {
-        this.req('POST', 'creator/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
+        return this.req('POST', 'creator/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
     }
 
     shopEnrich(ids, cateIds = null) {
-        this.req('POST', 'shop/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
+        return this.req('POST', 'shop/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
     }
 
     videoEnrich(ids, cateIds = null) {
-        this.req('POST', 'video/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
+        return this.req('POST', 'video/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
     }
 
     livestreamEnrich(ids, cateIds = null) {
-        this.req('POST', 'livestream/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
+        return this.req('POST', 'livestream/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
     }
 }
 
