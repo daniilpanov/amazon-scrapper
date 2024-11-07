@@ -162,7 +162,7 @@ class Kalodata extends Request {
     }
 
     getFirstDay() {
-        return this.req('POST', 'api/firstDay0', { body: { country: 'US' } });
+        return this.req('POST', 'api/firstDay0', { country: 'US' });
     }
 
     getAllLastDays() {
@@ -183,7 +183,7 @@ class Kalodata extends Request {
     }
 
     userQueryMembership() {
-        return this.req('POST', 'user/queryMembership', { body: { country: 'US' } });
+        return this.req('POST', 'user/queryMembership', { country: 'US' });
     }
 
     getCountryContacts() {
@@ -191,7 +191,7 @@ class Kalodata extends Request {
     }
 
     getUserFeatures(lst) {
-        return this.req('POST', 'user/features', { body: { country: 'US', list: lst } });
+        return this.req('POST', 'user/features', { country: 'US', list: lst });
     }
 
     livestreamQueryUnwatch() {
@@ -207,7 +207,7 @@ class Kalodata extends Request {
     }
 
     verifyEmailMessage(emailChecker) {
-        return this.req('POST', 'email/check' + emailChecker.scene.charAt(0).toUpperCase() + emailChecker.scene.slice(1) + 'Verification', { body: { email: emailChecker.email, loginMethod: 'EMAIL', emailCode: emailChecker.code, scene: emailChecker.scene } });
+        return this.req('POST', 'email/check' + emailChecker.scene.charAt(0).toUpperCase() + emailChecker.scene.slice(1) + 'Verification', { email: emailChecker.email, loginMethod: 'EMAIL', emailCode: emailChecker.code, scene: emailChecker.scene });
     }
 
     singupOrLogin(emailChecker, sceneKey = null) {
@@ -219,19 +219,19 @@ class Kalodata extends Request {
             "emailCode": emailChecker.code,
             "loginMethod": "EMAIL",
         });
-        return this.req('POST', 'user/' + emailChecker.scene, { body: { [keyScene]: emailChecker.scene, "tcCode": "", "email": emailChecker.email, "emailCode": emailChecker.code, "loginMethod": "EMAIL" } });
+        return this.req('POST', 'user/' + emailChecker.scene, { [keyScene]: emailChecker.scene, "tcCode": "", "email": emailChecker.email, "emailCode": emailChecker.code, "loginMethod": "EMAIL" });
     }
 
     searchUserTCCode(emailChecker) {
-        return this.req('POST', 'user/searchUserTCCode', { body: { email: emailChecker.email } });
+        return this.req('POST', 'user/searchUserTCCode', { email: emailChecker.email });
     }
 
     homepageBannersQueryList() {
-        return this.req('POST', 'homepage/banner/queryList', { headers: { 'content-type': null } });
+        return this.req('POST', 'homepage/banner/queryList');
     }
 
     homepageSolutionQueryList() {
-        return this.req('POST', 'homepage/solution/queryList', { headers: { 'content-type': null } });
+        return this.req('POST', 'homepage/solution/queryList');
     }
 
     modifyProfile(data) {
@@ -277,39 +277,39 @@ class Kalodata extends Request {
     }
 
     overviewRankQueryProductsTops(pageNum, pageSize = 10) {
-        return this.req('POST', 'overview/rank/queryProductTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryProductTops', { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize });
     }
 
     overviewRankQueryCreatorsTops(pageNum, pageSize = 10) {
-        return this.req('POST', 'overview/rank/queryCreatorTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryCreatorTops', { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize });
     }
 
     overviewRankQueryShopsTops(pageNum, pageSize = 10) {
-        return this.req('POST', 'overview/rank/queryShopTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryShopTops', { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize });
     }
 
     overviewRankQueryVideoTops(pageNum, pageSize = 10) {
-        return this.req('POST', 'overview/rank/queryVideoTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryVideoTops', { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize });
     }
 
     overviewRankQueryLiveTops(pageNum, pageSize = 10) {
-        return this.req('POST', 'overview/rank/queryLiveTops', { body: { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize } });
+        return this.req('POST', 'overview/rank/queryLiveTops', { startDate: this.startDate, endDate: this.endDate, pageNo: pageNum, pageSize });
     }
 
     creatorEnrich(ids, cateIds = null) {
-        return this.req('POST', 'creator/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
+        return this.req('POST', 'creator/enrich', { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] });
     }
 
     shopEnrich(ids, cateIds = null) {
-        return this.req('POST', 'shop/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
+        return this.req('POST', 'shop/enrich', { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] });
     }
 
     videoEnrich(ids, cateIds = null) {
-        return this.req('POST', 'video/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
+        return this.req('POST', 'video/enrich', { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] });
     }
 
     livestreamEnrich(ids, cateIds = null) {
-        return this.req('POST', 'livestream/enrich', { body: { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] } });
+        return this.req('POST', 'livestream/enrich', { ids, country: 'US', startDate: this.startDate, endDate: this.endDate, cateIds: cateIds || [] });
     }
 }
 
@@ -356,34 +356,34 @@ class Creator extends Request {
     }
 
     searchShopList() {
-        return this.getJsonData(this.req('POST', 'creator/detail/searchShopList', { body: { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate } }));
+        return this.getJsonData(this.req('POST', 'creator/detail/searchShopList', { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate }));
     }
 
     countCooperativeShops(page = 1, psize = 10) {
-        this.countCoopShops = this.getJsonData(this.req('POST', 'creator/detail/searchCooperativeShops/count', { body: { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, pageNo: page, pageSize: psize, sort: [{ field: 'revenue', type: 'DESC' }] } }));
+        this.countCoopShops = this.getJsonData(this.req('POST', 'creator/detail/searchCooperativeShops/count', { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, pageNo: page, pageSize: psize, sort: [{ field: 'revenue', type: 'DESC' }] }));
     }
 
     searchCooperativeShops(page = 1, psize = 10) {
-        return this.getJsonData(this.req('POST', 'creator/detail/searchCooperativeShops', { body: { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, pageNo: page, pageSize: psize, sort: [{ field: 'revenue', type: 'DESC' }] } }));
+        return this.getJsonData(this.req('POST', 'creator/detail/searchCooperativeShops', { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, pageNo: page, pageSize: psize, sort: [{ field: 'revenue', type: 'DESC' }] }));
     }
 
     searchProducts(page = 1, psize = 10) {
-        return this.getJsonData(this.req('POST', 'creator/detail/searchProducts', { body: { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, pageNo: page, pageSize: psize, sort: [{ field: 'revenue', type: 'DESC' }] } }));
+        return this.getJsonData(this.req('POST', 'creator/detail/searchProducts', { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, pageNo: page, pageSize: psize, sort: [{ field: 'revenue', type: 'DESC' }] }));
     }
 
     getHistory() {
-        return this.getJsonData(this.req('POST', 'creator/detail/history/total', { body: { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, cateIds: [], sellerId: '' } }));
+        return this.getJsonData(this.req('POST', 'creator/detail/history/total', { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, cateIds: [], sellerId: '' }));
     }
 
     getMetrics() {
-        let res = this.getJsonData(this.req('POST', 'creator/detail/total', { body: { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, cateIds: [], sellerId: '' } }));
+        let res = this.getJsonData(this.req('POST', 'creator/detail/total', { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, cateIds: [], sellerId: '' }));
         for (let key in res) {
             this.metrics[key] = convertNum(res[key])[1];
         }
     }
 
     getDetails() {
-        let details = this.getJsonData(this.req('POST', 'creator/detail', { body: { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, cateIds: [], sellerId: '' } })) || {};
+        let details = this.getJsonData(this.req('POST', 'creator/detail', { id: this.id, startDate: this.startDate, endDate: this.endDate, authority: true, cateIds: [], sellerId: '' })) || {};
         this.contacts = Object.fromEntries(Object.entries(details.creatorContent || {}).map(([key, val]) => [key, val || null]));
         this.collectDate = details.collect_day;
         this.creatorType = details.creator_type;
@@ -422,18 +422,18 @@ class Product extends Request {
     }
 
     getMetrics() {
-        let res = this.getJsonData(this.req('POST', 'product/detail/total', { body: { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate } }));
+        let res = this.getJsonData(this.req('POST', 'product/detail/total', { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate }));
         for (let key in res) {
             this.metrics[key] = convertNum(res[key])[1];
         }
     }
 
     getHistory() {
-        this.history = this.getJsonData(this.req('POST', 'product/detail/history', { body: { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate } }));
+        this.history = this.getJsonData(this.req('POST', 'product/detail/history', { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate }));
     }
 
     getDetails() {
-        let details = this.getJsonData(this.req('POST', 'product/detail', { body: { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate } }));
+        let details = this.getJsonData(this.req('POST', 'product/detail', { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate }));
         this.sellerId = details.seller_id || null;
         this.title = details.product_title || null;
         this.prices = {
@@ -453,7 +453,7 @@ class Product extends Request {
     }
 
     getConversionRatio() {
-        let res = this.getJsonData(this.req('POST', 'product/detail/creator/g', { body: { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate } }));
+        let res = this.getJsonData(this.req('POST', 'product/detail/creator/g', { authority: true, id: this.id, startDate: this.startDate, endDate: this.endDate }));
         this.conversionRatio = res.conversion_ratio;
     }
 }
