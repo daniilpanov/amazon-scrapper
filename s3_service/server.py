@@ -1,3 +1,5 @@
+import os.path
+
 import uvicorn
 from fastapi import FastAPI
 from starlette.requests import Request
@@ -53,4 +55,7 @@ async def get_file(request: Request, call_next):
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=PORT)
+    if os.path.isdir('../cert'):
+        uvicorn.run(app, host='0.0.0.0', port=PORT, ssl_keyfile='../cert/key.pem', ssl_certfile='../cert/cert.pem')
+    else:
+        uvicorn.run(app, host='0.0.0.0', port=PORT)
