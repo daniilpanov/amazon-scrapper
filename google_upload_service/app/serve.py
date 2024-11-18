@@ -96,9 +96,12 @@ def do_task(task):
 
 def run():
     while True:
-        tasks = requests.get('http://localhost:8832/tasks/get_available/gdrive').json()
-        for task in tasks:
-            do_task(task)
+        try:
+            tasks = requests.get('http://localhost:8832/tasks/get_available/gdrive').json()
+            for task in tasks:
+                do_task(task)
+        except (ConnectionError, requests.ConnectionError, TimeoutError, requests.Timeout) as e:
+            print('Connection error:', e)
         time.sleep(5)
 
 
