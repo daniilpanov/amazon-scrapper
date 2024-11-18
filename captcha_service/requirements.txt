@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-python-contrib-opencv
+opencv-contrib-python
 opencv-python
 numpy
 pickle
