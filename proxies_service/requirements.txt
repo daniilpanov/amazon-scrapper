@@ -6,3 +6,4 @@ uvicorn==0.29.0
 requests
 pymongo
 certifi
+fake-useragent

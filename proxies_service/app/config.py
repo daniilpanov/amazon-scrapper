@@ -1,5 +1,9 @@
 import os
 
+import fake_useragent
+
+ua = fake_useragent.UserAgent(browsers=['chrome'], min_version=119.0, platforms=['pc'])
+
 PROXY_AUTH_TOKEN = os.environ.get('PROXY_AUTH_TOKEN')
 
 MONGO_DB_HOST = os.environ.get('MONGO_DB_HOST', 'localhost')
