@@ -1,5 +1,4 @@
 import io
-from hashlib import sha256
 
 import fastapi
 import pandas as pd
@@ -11,6 +10,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 import db_mongo
+from config import *
 
 app = fastapi.FastAPI()
 app.add_middleware(
@@ -20,8 +20,6 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
-api_key = '2dBtEL2DRjO0AAQqaKLWEAN4xr4XTaqwSRyUXepJRDYEiseSs7JzfGTVLc3b0poS'
-api_key_hashed = sha256(api_key.encode('utf-8')).hexdigest()
 
 
 @app.post('/import/{collection}')
@@ -29,7 +27,7 @@ async def import_items(request: Request, collection: str, document: UploadFile =
     if collection == 'report':
         collection = 'keyword_tracker'
     auth_token = request.headers.get('Authorization')
-    if not auth_token or sha256(auth_token.encode('utf-8')).hexdigest() != api_key_hashed or auth_token != api_key:
+    if not auth_token or sha256(auth_token.encode('utf-8')).hexdigest() != API_KEY_HASHED or auth_token != API_KEY:
         raise HTTPException(status_code=403, detail='Invalid API KEY')
 
     df = pd.read_csv(io.BytesIO(await document.read()), header=0, index_col=None, delimiter=';')

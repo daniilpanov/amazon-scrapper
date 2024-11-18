@@ -7,13 +7,26 @@ services:
         restart: always
         networks:
             - net
-    capsolver:
+        volumes:
+            - ./bsr_starter_service:/app:rw
+    dataimporter:
         build:
-            context: ./captcha_service
-            target: capsolver
+            context: ./dataimporter_service
+            target: dataimporter
             dockerfile: Dockerfile
         restart: always
         networks:
             - net
+        volumes:
+            - ./dataimporter_service:/app:rw
+        env_file: dataimporter.env
+#    capsolver:
+#        build:
+#            context: ./captcha_service
+#            target: capsolver
+#            dockerfile: Dockerfile
+#        restart: always
+#        networks:
+#            - net
 networks:
     net:
