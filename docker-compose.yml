@@ -1,0 +1,13 @@
+services:
+    bsrstarter:
+        build:
+            context: ./bsr_starter_service
+            target: bsrstarter
+            dockerfile: Dockerfile
+       #ports:
+       #    - "9000:9000"
+        restart: always
+        networks:
+            - net
+networks:
+    net:
