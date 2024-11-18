@@ -20,6 +20,8 @@ services:
         volumes:
             - ./dataimporter_service:/app:rw
         env_file: dataimporter.env
+        ports:
+            - "8831:8831"
 #    capsolver:
 #        build:
 #            context: ./captcha_service
