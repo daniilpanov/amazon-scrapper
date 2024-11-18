@@ -3,7 +3,7 @@ from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
 app = FastAPI()
-app.mount('/', StaticFiles(directory='html'), name='static')
+app.mount('/', StaticFiles(directory='./html'), name='html')
 
 
 @app.get('/cp', response_class=FileResponse)
