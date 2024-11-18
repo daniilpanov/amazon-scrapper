@@ -4,8 +4,6 @@ from pydantic import BaseModel
 from pymongo.errors import PyMongoError
 from starlette.responses import Response
 from starlette.status import HTTP_201_CREATED
-
-import google_drive_helper
 import tasks_manager
 from db_mongo import db
 
