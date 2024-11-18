@@ -3,7 +3,7 @@ uvicorn[standard]
 opencv-contrib-python
 opencv-python
 numpy
-pickle
+pickle5
 urllib3
 imutils
 tensorflow
