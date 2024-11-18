@@ -4,7 +4,7 @@ services:
             context: ./bsr_starter_service
             target: bsrstarter
             dockerfile: Dockerfile
-        restart: always
+        restart: unless-stopped
         networks:
             - net
         volumes:
@@ -14,7 +14,7 @@ services:
             context: ./dataimporter_service
             target: dataimporter
             dockerfile: Dockerfile
-        restart: always
+        restart: unless-stopped
         networks:
             - net
         volumes:
@@ -27,7 +27,7 @@ services:
             context: ./proxies_service
             target: proxies_manager
             dockerfile: Dockerfile
-        restart: always
+        restart: unless-stopped
         networks:
             - net
         volumes:
@@ -40,7 +40,7 @@ services:
             context: ./s3_service
             target: s3
             dockerfile: Dockerfile
-        restart: always
+        restart: unless-stopped
         networks:
             - net
         volumes:
@@ -48,6 +48,17 @@ services:
         env_file: s3.env
         ports:
             - "8836:8836"
+    google_upload:
+        build:
+            context: ./google_upload_service
+            target: google_upload
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./google_upload_service:/app:rw
+        env_file: google_upload.env
 #    capsolver:
 #        build:
 #            context: ./captcha_service
