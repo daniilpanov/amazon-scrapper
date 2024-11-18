@@ -2,7 +2,7 @@ import os.path
 from urllib.request import urlopen
 
 from tensorflow.keras.models import load_model
-from captcha_service.captcha_solver.helpers import resize_to_fit
+from helpers import resize_to_fit
 import numpy as np
 import cv2
 import pickle

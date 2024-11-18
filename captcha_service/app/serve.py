@@ -7,16 +7,16 @@ from pydantic import BaseModel
 from starlette.responses import Response
 from starlette.status import HTTP_200_OK, HTTP_500_INTERNAL_SERVER_ERROR
 
-from .captcha_solver.solve_captcha_with_model import CaptchaSolver
+from solve_captcha_with_model import CaptchaSolver
 
 capsolver = None
-if os.path.isdir('captcha_solver'):
+if os.path.isdir('app'):
     try:
-        capsolver = CaptchaSolver('captcha_solver')
+        capsolver = CaptchaSolver('app')
     except:
         pass
 if not capsolver:
-    capsolver = CaptchaSolver(os.path.join('captcha_service', 'captcha_solver'))
+    capsolver = CaptchaSolver(os.path.join('captcha_service', 'app'))
 app = fastapi.FastAPI()
 app.add_middleware(
     CORSMiddleware,

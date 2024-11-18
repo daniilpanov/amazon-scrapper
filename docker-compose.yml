@@ -4,8 +4,14 @@ services:
             context: ./bsr_starter_service
             target: bsrstarter
             dockerfile: Dockerfile
-       #ports:
-       #    - "9000:9000"
+        restart: always
+        networks:
+            - net
+    capsolver:
+        build:
+            context: ./captcha_service
+            target: capsolver
+            dockerfile: Dockerfile
         restart: always
         networks:
             - net

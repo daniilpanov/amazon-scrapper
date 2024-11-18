@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+tensorflow
+opencv-python
+numpy
+pickle
+urllib3
+imutils
