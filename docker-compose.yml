@@ -30,3 +30,4 @@ services:
 #            - net
 networks:
     net:
+        driver: bridge
