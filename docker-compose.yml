@@ -59,6 +59,32 @@ services:
         volumes:
             - ./google_upload_service:/app:rw
         env_file: google_upload.env
+    server:
+        build:
+            context: ./server_service
+            target: server
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./server_service:/app:rw
+        #env_file: server.env
+        ports:
+            - "8832:8832"
+    web:
+        build:
+            context: ./web
+            target: web
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./web:/app:rw
+        #env_file: web.env
+        ports:
+            - "8838:8838"
 #    capsolver:
 #        build:
 #            context: ./captcha_service
