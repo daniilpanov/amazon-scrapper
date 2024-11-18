@@ -6,4 +6,4 @@ COPY ./ ./
 
 RUN pip3 install -r requirements.txt
 EXPOSE 8832
-ENTRYPOINT ["python3", "app/serve.py"]
+ENTRYPOINT ["gunicorn", "--workers", "2", "--preload", "--worker-class=uvicorn.workers.UvicornWorker", "app:app"]
