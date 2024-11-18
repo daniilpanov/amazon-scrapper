@@ -2,7 +2,6 @@ import itertools
 import random
 import time
 from fastapi import HTTPException
-from threading import Thread
 
 import fastapi
 import requests
@@ -10,7 +9,7 @@ from starlette.responses import Response
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
 
 import db_mongo
-import settings
+import config
 
 
 class AmazonProxy:
@@ -25,7 +24,7 @@ class AmazonProxy:
     cookies: dict[str, str] = None
     deprecated: bool = False
     headers: dict[str, str] = {
-        'Authorization': 'Token ' + settings.PROXY_AUTH_TOKEN,
+        'Authorization': 'Token ' + config.PROXY_AUTH_TOKEN,
     }
     user_id: int | None = None
 
@@ -34,7 +33,7 @@ class AmazonProxy:
         self.port = port
         self.username = username
         self.password = password
-        self.ua = settings.ua.random
+        self.ua = config.ua.random
 
     def __hash__(self):
         return hash(self.addr)
@@ -162,11 +161,3 @@ async def deprecate_cookie(addr: str):
         i += 1
     if not found:
         raise HTTPException(HTTP_404_NOT_FOUND)
-
-
-if __name__ == '__main__':
-    import uvicorn
-
-    upd_thr = Thread(target=updating, daemon=True)
-    upd_thr.start()
-    uvicorn.run(app, host='0.0.0.0', port=8833)

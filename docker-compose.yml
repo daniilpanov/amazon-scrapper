@@ -22,6 +22,19 @@ services:
         env_file: dataimporter.env
         ports:
             - "8831:8831"
+    proxies:
+        build:
+            context: ./proxies_service
+            target: proxies_manager
+            dockerfile: Dockerfile
+        restart: always
+        networks:
+            - net
+        volumes:
+            - ./proxies_service:/app:rw
+        env_file: proxies_manager.env
+        ports:
+            - "8833:8833"
 #    capsolver:
 #        build:
 #            context: ./captcha_service
