@@ -35,6 +35,19 @@ services:
         env_file: proxies_manager.env
         ports:
             - "8833:8833"
+    s3:
+        build:
+            context: ./s3_service
+            target: s3
+            dockerfile: Dockerfile
+        restart: always
+        networks:
+            - net
+        volumes:
+            - ./s3_service:/app:rw
+        env_file: s3.env
+        ports:
+            - "8836:8836"
 #    capsolver:
 #        build:
 #            context: ./captcha_service
