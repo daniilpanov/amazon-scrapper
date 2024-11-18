@@ -4,6 +4,6 @@ WORKDIR '/app'
 
 COPY ./ ./
 
-RUN pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
 
-ENTRYPOINT ["python", "app/serve.py"]
+ENTRYPOINT ["python3", "app/serve.py"]
