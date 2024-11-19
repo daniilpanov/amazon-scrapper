@@ -57,7 +57,7 @@ for router in os.listdir(prefix):
     modules.append(router)
     module = None
     try:
-        module = importlib.import_module('.' + router, prefix)
+        module = importlib.import_module('.' + router, prefix[:-1])
     except (ImportError, TypeError) as e:
         logger.warning(e)
         try:
