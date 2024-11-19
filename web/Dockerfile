@@ -6,5 +6,5 @@ COPY ./ ./
 
 RUN pip3 install -r requirements.txt
 EXPOSE 8838
-ENTRYPOINT ["fastapi", "run", "app:app"]
+ENTRYPOINT ["uvicorn", "app:app"]
 CMD ["--host", "0.0.0.0", "--port", "8838"]
