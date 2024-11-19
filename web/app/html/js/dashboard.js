@@ -1,5 +1,5 @@
 ///
-const endpoint = 'http://195.201.194.213:8832/tasks/get_groups';
+const endpoint = '/tasks/get_groups';
 ///
 const pageContent = document.getElementById('main_row');
 
