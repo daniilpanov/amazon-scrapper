@@ -8,4 +8,4 @@ app.mount('/', StaticFiles(directory='./app/html'), name='html')
 
 @app.get('/cp', response_class=FileResponse)
 async def cp_show():
-    return 'index.html'
+    return './app/html/index.html'
