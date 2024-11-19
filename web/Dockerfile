@@ -6,4 +6,5 @@ COPY ./ ./
 
 RUN pip3 install -r requirements.txt
 EXPOSE 8838
-ENTRYPOINT ["python3", "app/serve.py"]
+ENTRYPOINT ["fastapi", "run", "app:app"]
+CMD ["--host", "0.0.0.0", "--port", "8838"]
