@@ -19,7 +19,7 @@ services:
             - net
         volumes:
             - ./dataimporter_service:/src:rw
-        env_file: dataimporter.env
+        env_file: .env
         ports:
             - "8831:8831"
     proxies:
@@ -32,7 +32,7 @@ services:
             - net
         volumes:
             - ./proxies_service:/src:rw
-        env_file: proxies_manager.env
+        env_file: .env
         ports:
             - "8833:8833"
     s3:
@@ -45,7 +45,7 @@ services:
             - net
         volumes:
             - ./s3_service:/src:rw
-        env_file: s3.env
+        env_file: .env
         ports:
             - "8836:8836"
     google_upload:
@@ -58,7 +58,7 @@ services:
             - net
         volumes:
             - ./google_upload_service:/src:rw
-        env_file: google_upload.env
+        env_file: .env
     server:
         build:
             context: ./server_service
@@ -69,7 +69,7 @@ services:
             - net
         volumes:
             - ./server_service:/src:rw
-        env_file: server.env
+        env_file: .env
         ports:
             - "8832:8832"
     web:
