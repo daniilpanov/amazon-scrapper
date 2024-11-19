@@ -3,7 +3,6 @@ starlette==0.36.3
 fastapi==0.110.0
 uvicorn==0.29.0
 orjson
-bson
 pymongo
 bs4
 pytz
