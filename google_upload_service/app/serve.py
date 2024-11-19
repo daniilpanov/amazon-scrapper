@@ -101,7 +101,8 @@ def run():
             for task in tasks:
                 do_task(task)
         except (ConnectionError, requests.ConnectionError, TimeoutError, requests.Timeout) as e:
-            print('Connection error:', e)
+            # print('Connection error:', e)
+            pass
         time.sleep(5)
 
 

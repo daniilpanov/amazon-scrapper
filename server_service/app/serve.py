@@ -61,6 +61,7 @@ for router in os.listdir(prefix):
     if module:
         try:
             app.include_router(module.router)
+            print(router, '--', module.router)
         except AttributeError:
             print('Skip router', router)
 
