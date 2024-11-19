@@ -1,3 +1,6 @@
+more-itertools
+fake-useragent
+colorama
 anyio==4.3.0
 starlette==0.36.3
 fastapi==0.110.0
