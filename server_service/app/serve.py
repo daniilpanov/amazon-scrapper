@@ -45,14 +45,24 @@ for router in os.listdir(prefix):
         continue
     router = router[:-3]
     modules.append(router)
+    module = None
     try:
         module = importlib.import_module('.' + router, prefix)
-    except (ImportError, TypeError):
-        module = importlib.import_module(router)
-    try:
-        app.include_router(module.router)
-    except AttributeError:
-        print('Skip router', router)
+    except (ImportError, TypeError) as e:
+        print(e)
+        try:
+            module = importlib.import_module('.' + router)
+        except (ImportError, TypeError) as e:
+            print(e)
+            try:
+                module = importlib.import_module(router)
+            except (ImportError, TypeError) as e:
+                print(e)
+    if module:
+        try:
+            app.include_router(module.router)
+        except AttributeError:
+            print('Skip router', router)
 
 
 @app.get('/ping')
