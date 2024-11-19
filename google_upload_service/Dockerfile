@@ -2,7 +2,7 @@ FROM python:3.11-slim AS google_upload
 
 WORKDIR '/src'
 
-COPY ./ ./
+COPY ./requirements.txt ./requirements.txt
 
 RUN pip3 install -r requirements.txt
 
