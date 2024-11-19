@@ -1,6 +1,6 @@
 FROM python:3.10-slim AS capsolver
 
-WORKDIR '/app'
+WORKDIR '/src'
 
 COPY ./ ./
 

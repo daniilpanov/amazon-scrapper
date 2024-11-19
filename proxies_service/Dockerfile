@@ -1,6 +1,6 @@
 FROM python:3.11-slim AS proxies_manager
 
-WORKDIR '/app'
+WORKDIR '/src'
 
 COPY ./ ./
 

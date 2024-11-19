@@ -8,7 +8,7 @@ services:
         networks:
             - net
         volumes:
-            - ./bsr_starter_service:/app:rw
+            - ./bsr_starter_service:/src:rw
     dataimporter:
         build:
             context: ./dataimporter_service
@@ -18,7 +18,7 @@ services:
         networks:
             - net
         volumes:
-            - ./dataimporter_service:/app:rw
+            - ./dataimporter_service:/src:rw
         env_file: dataimporter.env
         ports:
             - "8831:8831"
@@ -31,7 +31,7 @@ services:
         networks:
             - net
         volumes:
-            - ./proxies_service:/app:rw
+            - ./proxies_service:/src:rw
         env_file: proxies_manager.env
         ports:
             - "8833:8833"
@@ -44,7 +44,7 @@ services:
         networks:
             - net
         volumes:
-            - ./s3_service:/app:rw
+            - ./s3_service:/src:rw
         env_file: s3.env
         ports:
             - "8836:8836"
@@ -57,7 +57,7 @@ services:
         networks:
             - net
         volumes:
-            - ./google_upload_service:/app:rw
+            - ./google_upload_service:/src:rw
         env_file: google_upload.env
     server:
         build:
@@ -68,7 +68,7 @@ services:
         networks:
             - net
         volumes:
-            - ./server_service:/app:rw
+            - ./server_service:/src:rw
         env_file: server.env
         ports:
             - "8832:8832"
@@ -81,7 +81,7 @@ services:
         networks:
             - net
         volumes:
-            - ./web:/app:rw
+            - ./web:/src:rw
         ports:
             - "8838:8838"
 #    capsolver:
@@ -89,9 +89,11 @@ services:
 #            context: ./captcha_service
 #            target: capsolver
 #            dockerfile: Dockerfile
-#        restart: always
+#        restart: unless-stopped
 #        networks:
 #            - net
+#        volumes:
+#            - ./web:/src:rw
 networks:
     net:
         driver: bridge

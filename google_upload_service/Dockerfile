@@ -1,6 +1,6 @@
 FROM python:3.11-slim AS google_upload
 
-WORKDIR '/app'
+WORKDIR '/src'
 
 COPY ./ ./
 
