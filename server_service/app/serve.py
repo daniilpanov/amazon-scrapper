@@ -8,6 +8,16 @@ from fastapi.responses import ORJSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
+import logging
+
+# Create a logger object
+logger = logging.getLogger(__name__)
+# Set the logging level to INFO
+logger.setLevel(logging.INFO)
+# Create a handler that logs to the Docker logs
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
 
 app = fastapi.FastAPI()
 app.add_middleware(
