@@ -54,10 +54,9 @@ for router in os.listdir(prefix):
     if not router.endswith('router.py'):
         continue
     router = router[:-3]
-    modules.append(router)
     module = None
     try:
-        module = importlib.import_module('.' + router, prefix[:-1])
+        module = importlib.import_module(router, '.' + prefix[:-1])
     except (ImportError, TypeError) as e:
         logger.warning(e)
         try:
@@ -72,6 +71,7 @@ for router in os.listdir(prefix):
         try:
             app.include_router(module.router)
             logger.info(router + '--' + str(module.router))
+            modules.append(router)
         except AttributeError:
             logger.warning('Skip router', router)
 
