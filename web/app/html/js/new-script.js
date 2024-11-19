@@ -1,4 +1,4 @@
-const base_url = '';
+const base_url = window.location.protocol + '//' + window.location.hostname + ':8832';
 
 $(document).ready(() => {
     $('form[action="/cmd/alias/products/collect"]').submit((e) => {

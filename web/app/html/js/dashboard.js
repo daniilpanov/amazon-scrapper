@@ -1,5 +1,5 @@
 ///
-const endpoint = '/tasks/get_groups';
+const endpoint = window.location.protocol + '//' + window.location.hostname +  ':8832/tasks/get_groups';
 ///
 const pageContent = document.getElementById('main_row');
 

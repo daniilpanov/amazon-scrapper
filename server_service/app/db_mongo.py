@@ -23,9 +23,14 @@ def set_config(**kwargs):
         config[i] = kwargs[i]
 
 
-def init(username, password):
+def init(username=None, password=None):
     global config
     from pymongo.server_api import ServerApi
+
+    if not username:
+        username = config.get('username')
+    if not password:
+        password = config.get('password')
 
     url = f"{config['url_prefix']}://{username}:{password}@{config['url']}"
     if 'proxy' in config and config['proxy']:
