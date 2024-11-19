@@ -1,4 +1,3 @@
-import importlib
 import os
 
 import fastapi
@@ -13,7 +12,7 @@ import logging
 # Create a logger object
 logger = logging.getLogger(__name__)
 # Set the logging level to INFO
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 # Create a handler that logs to the Docker logs
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -54,26 +53,16 @@ for router in os.listdir(prefix):
     if not router.endswith('router.py'):
         continue
     router = router[:-3]
-    module = None
     try:
-        module = importlib.import_module(router, '.' + prefix[:-1])
-    except (ImportError, TypeError) as e:
-        logger.warning(e)
-        try:
-            module = importlib.import_module('.' + router)
-        except (ImportError, TypeError) as e:
-            logger.warning(e)
-            try:
-                module = importlib.import_module(router)
-            except (ImportError, TypeError) as e:
-                logger.warning(e)
-    if module:
+        module = __import__(router, globals(), locals(), [], 1)
         try:
             app.include_router(module.router)
-            logger.info(router + '--' + str(module.router))
+            logger.info('Module loaded: ' + router)
             modules.append(router)
         except AttributeError:
             logger.warning('Skip router', router)
+    except (ImportError, TypeError) as e:
+        logger.warning(e)
 
 
 @app.get('/ping')

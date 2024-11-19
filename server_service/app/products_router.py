@@ -4,15 +4,15 @@ import typing
 import pytz
 from fastapi import APIRouter, HTTPException
 
-from helpers import orjson_response
+from .helpers import orjson_response
 from pydantic import BaseModel, field_validator
 from pymongo.errors import PyMongoError, BulkWriteError
 from starlette.responses import Response
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT, HTTP_201_CREATED, HTTP_404_NOT_FOUND, \
     HTTP_400_BAD_REQUEST
 
-import tasks_manager
-from db_mongo import db
+from . import tasks_manager
+from .db_mongo import db
 
 router = APIRouter(prefix='/products')
 AMADATA = db('amazon_data')

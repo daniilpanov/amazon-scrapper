@@ -4,7 +4,7 @@ from pymongo.database import Database
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient
 
-import settings
+from . import settings
 
 client: MongoClient | None = None
 

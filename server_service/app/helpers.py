@@ -12,7 +12,7 @@ from starlette.responses import Response
 from urllib3.exceptions import NewConnectionError, MaxRetryError
 from requests.exceptions import ConnectionError
 
-import settings
+from . import settings
 
 DEBUG = True
 

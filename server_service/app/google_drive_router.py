@@ -3,7 +3,7 @@ from fastapi.responses import ORJSONResponse
 from starlette.responses import Response
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
 
-import google_drive_helper
+from . import google_drive_helper
 
 router = APIRouter(prefix='/drive')
 

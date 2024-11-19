@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from pymongo.errors import PyMongoError
 from starlette.responses import Response
 from starlette.status import HTTP_201_CREATED
-import tasks_manager
-from db_mongo import db
+from . import tasks_manager
+from .db_mongo import db
 
 router = APIRouter(prefix='/sellercentral')
 

@@ -7,7 +7,7 @@ from starlette.responses import Response
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT, \
     HTTP_500_INTERNAL_SERVER_ERROR
 
-import tasks_manager
+from . import tasks_manager
 
 router = APIRouter(prefix='/helium')
 

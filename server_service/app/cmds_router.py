@@ -14,10 +14,10 @@ from starlette.responses import Response
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_201_CREATED, \
     HTTP_503_SERVICE_UNAVAILABLE
 
-import helpers
-import tasks_manager
-from db_mongo import db
-from helpers import get_all_asins_from_text
+from . import helpers
+from . import tasks_manager
+from .db_mongo import db
+from .helpers import get_all_asins_from_text
 from . import products_router
 
 router = APIRouter(prefix='/cmd')

@@ -6,7 +6,7 @@ import pytz
 from bson import ObjectId
 from pymongo.errors import OperationFailure, PyMongoError, DuplicateKeyError, WriteError
 
-import db_mongo
+from . import db_mongo
 
 
 acquired: set[ObjectId] = set()

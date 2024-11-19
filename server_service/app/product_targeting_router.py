@@ -8,8 +8,8 @@ from starlette.exceptions import HTTPException
 from starlette.responses import Response
 from starlette.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
-import db_mongo
-import tasks_manager
+from . import db_mongo
+from . import tasks_manager
 
 results_collection = db_mongo.db('amazon_data')['product_targeting']
 asins_collection = db_mongo.db('amazon_data')['product_card']
