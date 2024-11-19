@@ -82,7 +82,6 @@ services:
             - net
         volumes:
             - ./web:/app:rw
-        #env_file: web.env
         ports:
             - "8838:8838"
 #    capsolver:
