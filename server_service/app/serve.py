@@ -35,8 +35,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 modules = []
 
-if os.path.isdir('server_service'):
-    prefix = 'server_service/'
+if os.path.isdir('app'):
+    prefix = 'app/'
 else:
     prefix = './'
 
@@ -58,14 +58,3 @@ for router in os.listdir(prefix):
 @app.get('/ping')
 async def ping():
     return {'count': len(modules), 'modules': modules}
-
-
-def run(host='0.0.0.0', port=8832):
-    import uvicorn
-
-    # uvicorn.run(app, host=host, port=port, ssl_keyfile=prefix + 'certificate.key', ssl_certfile=prefix + 'certificate.crt')
-    uvicorn.run("server_service:app", host=host, port=port, workers=4)
-
-
-if __name__ == '__main__':
-    run()
