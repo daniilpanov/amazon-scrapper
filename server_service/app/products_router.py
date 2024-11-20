@@ -159,7 +159,7 @@ async def set_product_result(asin: str, card: ProductsResultItem):
     }
     try:
         AMADATA['product_card'].replace_one(
-            {'asin': asin},
+            {'asin': {'$in': [asin, card.asin]}},
             data,
             upsert=True,
         )
