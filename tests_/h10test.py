@@ -1,10 +1,9 @@
+import requests
 import time
 
-from fastapi.testclient import TestClient
 
-
-def h10process(client: TestClient):
-    response = client.post('/helium/get', json={
+def h10process():
+    response = requests.post('/helium/get', json={
         'alias': 'Test task (B0D1CBVWYK, B001PMHUSW)',
         'asins': ['B0D1CBVWYK', 'B001PMHUSW'],
     })
@@ -15,7 +14,7 @@ def h10process(client: TestClient):
     result = None
 
     for _ in range(30):
-        res = client.get('/helium/result/' + ids)
+        res = requests.get('/helium/result/' + ids)
         if res.status_code == 200:
             result = res.json()
             break
