@@ -11,11 +11,20 @@ class ProductsParser extends Parser {
     aspects = null;
     requestID = null;
 
-    constructor({ funcs, doc, asin }) {
+    allFunctions = [
+        this.getBreadcrumbs, this.getCurrentBreadcrumb,
+        this.getASIN, this.getTitle, this.getMainImage,
+        this.getDescription, this.getMarketplaceId,
+        this.getAspects, this.getPrice, this.getRelatedProducts,
+        this.getFullMediaConfig, this.getRelatedVideos,
+        this.getOptions, this.getCurrentOptions,
+        this.getReviewsRating, this.getReviewsCount,
+    ];
+
+    constructor({ funcs, doc, asin } = {}) {
         super({ funcs, doc });
         this.ASIN = asin;
     }
-
 
     getBreadcrumbsCurrentElement() {
         return this.currentBreadcrumbElement || (
@@ -41,7 +50,10 @@ class ProductsParser extends Parser {
 
     getASIN() {
         const { mediaConfig } = this.getFullMediaConfig();
-        return { asin: this.ASIN || mediaConfig.currentAsin || null, rootAsin: (this.rootASIN || (this.rootASIN = mediaConfig.parentAsin || null)) };
+        return {
+            asin: this.ASIN || mediaConfig.currentAsin || null,
+            rootAsin: (this.rootASIN || (this.rootASIN = mediaConfig.parentAsin || null)),
+        };
     }
 
     getTitle() {
@@ -58,13 +70,24 @@ class ProductsParser extends Parser {
     }
 
     getMarketplaceId() {
-        return {
-            marketplaceId: (this.marketplaceId || (
-                this.marketplaceId = this.root.querySelector(
-                    '[data-marketplace]',
-                )?.getAttribute('data-marketplace') || null
-            )),
-        };
+        let marketplaceId = (this.marketplaceId || (
+            this.marketplaceId = this.root.querySelector(
+                '[data-marketplace]',
+            )?.getAttribute('data-marketplace')
+        ));
+        if (marketplaceId) {
+            return { marketplaceId };
+        }
+        const scripts = this.root.getElementsByTagName('script');
+        for (const script of scripts) {
+            const txt = script.textContent.trim().toLowerCase();
+            const marketplaceIdSearchRes = txt.matchAll(/(["']?marketplaceid['"]? *\: *(?=(['"]([a-z0-9]+)['"])))/g);
+            for (const searchRes of marketplaceIdSearchRes) {
+                if (searchRes.length === 4) {
+                    return { marketplaceId: searchRes[3].toUpperCase() };
+                }
+            }
+        }
     }
 
     getMainImage() {
@@ -291,8 +314,42 @@ class ProductsParser extends Parser {
         return { reviewsCount };
     }
 
-    getOptions() {
+    getRelatedProducts() {
+        const { mediaConfig } = this.getFullMediaConfig();
+        const { asinVariationValues } = mediaConfig;
+        let relatedProducts = {};
+        for (const ASIN in asinVariationValues) {
+            delete asinVariationValues[ASIN].ASIN;
+            relatedProducts[ASIN] = asinVariationValues[ASIN];
+        }
+        // format: {..., <ASIN>: {..., <opt_name>: <opt_val>, ...}, ...}
+        return { relatedProducts };
+    }
 
+    getOptions() {
+        const { mediaConfig } = this.getFullMediaConfig();
+        const { dimensions } = mediaConfig;
+        const { dimensionValuesData } = mediaConfig;
+        let options = {};
+        for (const optIdx in dimensions) {
+            options[dimensions[optIdx]] = {};
+            for (const optValIds in dimensionValuesData) {
+                options[dimensions[optIdx]][optValIds] = dimensionValuesData[optValIds];
+            }
+        }
+        // format: {..., <name>: {..., <id>: <value>, ...}, ...}
+        return { options };
+    }
+
+    getCurrentOptions() {
+        const { mediaConfig } = this.getFullMediaConfig();
+        const { selected_variations } = mediaConfig;
+        let currentOptions = {};
+        for (const optionName in selected_variations) {
+            currentOptions[optionName] = selected_variations[optionName];
+        }
+        // format: {..., <name>: <value>, ...}
+        return { currentOptions };
     }
 
     getDetails() {
