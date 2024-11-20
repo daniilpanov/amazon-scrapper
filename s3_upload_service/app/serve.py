@@ -1,10 +1,9 @@
-import io
 import time
 
 import requests
 
-from . import s3helper
-from . import controller
+import s3helper
+import controller
 
 
 def load_video(path, filename, prefix):
