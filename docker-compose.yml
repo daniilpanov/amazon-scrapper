@@ -59,6 +59,17 @@ services:
         volumes:
             - ./google_upload_service:/src:rw
         env_file: .env
+    s3_upload:
+        build:
+            context: ./s3_upload_service
+            target: s3_upload
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./s3_upload_service:/src:rw
+        env_file: .env
     server:
         build:
             context: ./server_service

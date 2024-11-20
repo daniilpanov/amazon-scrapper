@@ -5,7 +5,7 @@ from io import BytesIO
 import boto3
 from botocore.exceptions import ClientError
 
-from .config import *
+from config import *
 
 session = boto3.Session(
     aws_access_key_id=ACCESS_KEY,
