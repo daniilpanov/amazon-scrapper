@@ -3,7 +3,7 @@ import os
 import fastapi
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import ORJSONResponse, Response
+from fastapi.responses import ORJSONResponse, RedirectResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
@@ -72,4 +72,4 @@ async def ping():
 
 @app.get('/cp')
 async def redirect_cp(req: Request):
-    return Response(status_code=301, headers={'Redirect': req.url.scheme + '://' + req.url.hostname + ':8838'})
+    return RedirectResponse(url=req.url.scheme + '://' + req.url.hostname + ':8838')
