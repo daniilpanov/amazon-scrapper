@@ -54,16 +54,24 @@ class AspectsResultItem(BaseModel):
 
 
 class ProductsResultItem(BaseModel):
+    rootAsin: str | None = None
+    marketplaceId: str | None = None
     asin: str
-    product_url: str
-    product_title: str
-    product_descr: str | None = None
+    title: str | None = None
+    breadcrumbs: list[str] | None = None
+    currentBreadcrumb: str | None = None
+    description: str | None = None
     picture_url: str | None = None
-    features: dict[str, str] = {}
-    top_5_phrases: list[str] = []
-    canonical_prefix: str | None = None
-    product_price: int | float | None = None
-    media_data: dict | list | None = None
+    price: int | float | None = None
+    rating: int | float | None = None
+    reviewsCount: int | None = None
+    options: dict | None = None
+    currentOptions: dict[str, str] | None = None
+    relatedProducts: dict | None = None
+    relatedVideos: dict | None = None
+    mediaConfig: dict | list | None = None
+    collectMedia: bool = False
+    aspects: list[AspectsResultItem] | None = None
 
 
 class ReviewsResultItem(BaseModel):
@@ -139,34 +147,51 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 
 @router.post('/set_result/card/{asin}')
 async def set_product_result(asin: str, card: ProductsResultItem):
+    data = {
+        'asin': card.asin,
+        'root_asin': card.rootAsin,
+        'product_url': 'https://www.amazon.com/dp/' + card.asin,
+        'product_title': card.title,
+        'product_descr': card.description,
+        'product_price': card.price,
+        **card.model_dump(exclude={'asin', 'rootAsin', 'title', 'description', 'price', 'aspects', 'collectMedia'}),
+        'parse_datetime': datetime.datetime.now(pytz.UTC)
+    }
     try:
         AMADATA['product_card'].replace_one(
             {'asin': asin},
-            card.model_dump() | {'parse_datetime': datetime.datetime.now(pytz.UTC)},
+            data,
             upsert=True,
         )
     except PyMongoError as e:
-        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    return Response(status_code=HTTP_204_NO_CONTENT)
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
-
-@router.post('/set_result/aspects/{asin}')
-async def set_aspects_result(asin: str, aspects: list[AspectsResultItem]):
+    replace_aspects = []
+    data = []
+    for aspect in card.aspects:
+        replace_aspects.append(aspect.Aspect)
+        data.append(aspect.compare_with_asin(card.asin))
     try:
-        replace_aspects = []
-        data = []
-        for aspect in aspects:
-            replace_aspects.append(aspect.Aspect)
-            data.append(aspect.compare_with_asin(asin))
-        print(replace_aspects)
-        print(data)
         AMADATA['aspects'].delete_many({'ASIN': asin, 'Aspect': {'$in': replace_aspects}})
         AMADATA['aspects'].insert_many(data, ordered=False)
     except BulkWriteError:
         pass
     except PyMongoError as e:
-        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
-    return Response(status_code=HTTP_201_CREATED)
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+
+    if card.collectMedia and card.relatedVideos:
+        try:
+            tasks_manager.add_task('s3load', {
+                'alias': asin + '(' + card.asin + ')' + '#media',
+            }, [{
+                'videoUrl': url,
+                'mimetype': 'mp4',
+                'prefix': 'products/videos/',
+                'filename': card.asin + '-' + str(i) + '.mp4'
+            } for i, url in enumerate(card.relatedVideos)])
+        except PyMongoError as e:
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+    return Response(status_code=HTTP_204_NO_CONTENT)
 
 
 @router.post('/target/collect/{asin}')
