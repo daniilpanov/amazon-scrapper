@@ -72,4 +72,4 @@ async def ping():
 
 @app.get('/cp')
 async def redirect_cp(req: Request):
-    return Response(headers={'Redirect': req.url.scheme + '://' + req.url.hostname + ':8838'})
+    return Response(status_code=301, headers={'Redirect': req.url.scheme + '://' + req.url.hostname + ':8838'})
