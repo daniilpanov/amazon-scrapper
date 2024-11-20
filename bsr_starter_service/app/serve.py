@@ -8,7 +8,7 @@ def run():
     while True:
         time.sleep(5)  # low payload
         try:
-            ready_bsrs = requests.get('http://localhost:8832/tasks/get_available/bsr?stage=2')
+            ready_bsrs = requests.get('http://server:8832/tasks/get_available/bsr?stage=2')
         except (ConnectionError, ConnectionRefusedError, ConnectionResetError, requests.exceptions.RequestException):
             continue
         if ready_bsrs.status_code != 200:
@@ -16,13 +16,13 @@ def run():
         bsr_tasks = ready_bsrs.json()
         for task in bsr_tasks:
             res = requests.post(
-                'http://localhost:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
+                'http://server:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
             if res.status_code == 409:
                 continue
             asins = list(task['result']['asins_links'].keys())
             if task['data'].get('category'):
                 requests.post(
-                    'http://localhost:8832/cmd/category/set',
+                    'http://server:8832/cmd/category/set',
                     headers={
                         'Content-Type': 'application/json',
                     },
@@ -50,14 +50,14 @@ def run():
                 else:
                     data['asins'].append({'asin': asin})
             requests.post(
-                'http://localhost:8832/products/collect',
+                'http://server:8832/products/collect',
                 headers={
                     'Content-Type': 'application/json',
                 },
                 json=data,
             )
-            requests.patch('http://localhost:8832/tasks/finish/' + task['_id'])
-            requests.post('http://localhost:8832/tasks/release/' + task['_id'])
+            requests.patch('http://server:8832/tasks/finish/' + task['_id'])
+            requests.post('http://server:8832/tasks/release/' + task['_id'])
 
 
 if __name__ == '__main__':

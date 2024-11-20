@@ -12,7 +12,7 @@ def load_video(path, filename, prefix):
 
 def do_task(task):
     requests.post(
-        'http://localhost:8832/tasks/acquire/s3load/' + task['header_id'] + '/' + task['_id'])
+        'http://server:8832/tasks/acquire/s3load/' + task['header_id'] + '/' + task['_id'])
     data = task['data']
     try:
         # if video uploads from YouTube
@@ -21,7 +21,7 @@ def do_task(task):
                 [data['videoUrl']],
                 lambda path: load_video(path, data['filename'], data['prefix']),
             )
-            requests.patch('http://localhost:8832/tasks/finish/' + task['_id'], json={
+            requests.patch('http://server:8832/tasks/finish/' + task['_id'], json={
                 'confirm': True,
             })
         elif data['media_type'] == 'm3u':
@@ -29,7 +29,7 @@ def do_task(task):
                 controller.mp.parse_res_m3u(controller.mp.parse_root_m3u(data['videoUrl'])),
                 lambda path: load_video(path, data['filename'], data['prefix']),
             )
-            requests.patch('http://localhost:8832/tasks/finish/' + task['_id'], json={
+            requests.patch('http://server:8832/tasks/finish/' + task['_id'], json={
                 'confirm': True,
             })
         else:
@@ -38,7 +38,7 @@ def do_task(task):
                 lambda path: load_video(path, data['filename'], data['prefix']),
             )
     except Exception as e:
-        requests.patch('http://localhost:8832/tasks/report/' + task['_id'], json={
+        requests.patch('http://server:8832/tasks/report/' + task['_id'], json={
             'confirm': False,
             'stop': False,
             'errors': [f'[{data["filename"]}]:[filter] ' + str(e)],
@@ -47,10 +47,14 @@ def do_task(task):
 
 def run():
     while True:
-        tasks = requests.get('http://localhost:8832/tasks/get_available/s3load').json()
-        for task in tasks:
-            do_task(task)
-        time.sleep(5)
+        try:
+            tasks = requests.get('http://server:8832/tasks/get_available/s3load').json()
+            for task in tasks:
+                do_task(task)
+        except Exception as e:
+            print(e)
+        finally:
+            time.sleep(5)
 
 
 if __name__ == '__main__':
