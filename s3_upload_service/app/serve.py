@@ -5,6 +5,17 @@ import requests
 import s3helper
 import controller
 
+import logging
+
+# Create a logger object
+logger = logging.getLogger(__name__)
+# Set the logging level to INFO
+logger.setLevel(logging.DEBUG)
+# Create a handler that logs to the Docker logs
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
+
 
 def load_video(path, filename, prefix):
     s3helper.upload_file(path, filename, prefix)
@@ -52,7 +63,7 @@ def run():
             for task in tasks:
                 do_task(task)
         except Exception as e:
-            print(e)
+            logger.warning(e)
         finally:
             time.sleep(5)
 
