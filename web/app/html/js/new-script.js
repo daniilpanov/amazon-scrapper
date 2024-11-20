@@ -16,7 +16,7 @@ $(document).ready(() => {
         }).then(res => {
             if (res.status > 299) {
                 res.text().then(txt => {
-                    alert('Fail! ' + res.statusText + ' : ' + );
+                    alert('Fail! ' + res.statusText + ' : ' + txt);
                 });
             } else {
                 alert('Task sent successful!');
@@ -38,7 +38,7 @@ $(document).ready(() => {
         }).then(res => {
             if (res.status > 299) {
                 res.text().then(txt => {
-                    alert('Fail! ' + res.statusText + ' : ' + );
+                    alert('Fail! ' + res.statusText + ' : ' + txt);
                 });
             } else {
                 alert('Task sent successful!');
