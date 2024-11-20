@@ -13,6 +13,14 @@ $(document).ready(() => {
             headers: {
                 'Content-Type': 'application/json',
             },
+        }).then(res => {
+            if (res.status > 299) {
+                res.text().then(txt => {
+                    alert('Fail! ' + res.statusText + ' : ' + );
+                });
+            } else {
+                alert('Task sent successful!');
+            }
         });
     });
     $('form[action="/cmd/alias/get_all"]').submit((e) => {
@@ -27,6 +35,14 @@ $(document).ready(() => {
             headers: {
                 'Content-Type': 'application/json',
             },
+        }).then(res => {
+            if (res.status > 299) {
+                res.text().then(txt => {
+                    alert('Fail! ' + res.statusText + ' : ' + );
+                });
+            } else {
+                alert('Task sent successful!');
+            }
         });
     });
 });
