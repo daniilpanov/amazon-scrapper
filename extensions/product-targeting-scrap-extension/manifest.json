@@ -4,7 +4,6 @@
   "version": "1.0",
   "manifest_version": 3,
   "icons": {},
-  "action": {},
   "host_permissions": [
     "http://*/*",
     "https://*/*"
@@ -22,5 +21,8 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+  "action": {
+    "default_popup": "./html/popup.html"
   }
 }
