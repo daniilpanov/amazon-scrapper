@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS google_upload
+FROM python:3.11 AS s3_upload
 
 WORKDIR '/src'
 

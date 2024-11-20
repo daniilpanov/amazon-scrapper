@@ -185,9 +185,9 @@ async def set_product_result(asin: str, card: ProductsResultItem):
                 'alias': asin + '(' + card.asin + ')' + '#media',
             }, [{
                 'videoUrl': url,
-                'mimetype': 'mp4',
                 'prefix': 'products/videos/',
-                'filename': card.asin + '-' + str(i) + '.mp4'
+                'filename': card.asin + '-' + str(i) + '.mp4',
+                'media_type': 'm3u',
             } for i, url in enumerate(card.relatedVideos)])
         except PyMongoError as e:
             raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
