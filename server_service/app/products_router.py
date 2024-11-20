@@ -67,7 +67,7 @@ class ProductsResultItem(BaseModel):
     reviewsCount: int | None = None
     options: dict | None = None
     currentOptions: dict[str, str] | None = None
-    relatedProducts: dict | None = None
+    relatedProducts: list[str] | None = None
     relatedVideos: dict | None = None
     mediaConfig: dict | list | None = None
     collectMedia: bool = False
