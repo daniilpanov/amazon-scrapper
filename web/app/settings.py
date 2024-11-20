@@ -1,7 +1,5 @@
 import os
 
-import fake_useragent
-
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'product')
 
 DEFAULT_SERVICE_FILE = os.environ.get('DEFAULT_SERVICE_FILE')
@@ -17,9 +15,3 @@ MONGO_DB_PASS = os.environ.get('MONGO_DB_PASS')
 MONGO_DB_HOST = os.environ.get('MONGO_DB_HOST')
 MONGO_DB_HOST_SCHEMA = os.environ.get('MONGO_DB_HOST_SCHEMA')
 MONGO_DB_PROXY = os.environ.get('MONGO_DB_PROXY')
-
-WEB_PROXY = os.environ.get('WEB_PROXY')
-PROXY_AUTH_TOKEN = os.environ.get('PROXY_AUTH_TOKEN')
-
-# UserAgent Maker
-ua = fake_useragent.UserAgent(browsers=['chrome'], min_version=119.0, platforms=['pc'])

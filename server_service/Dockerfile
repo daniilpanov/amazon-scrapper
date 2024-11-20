@@ -4,7 +4,7 @@ WORKDIR '/src'
 
 COPY ./requirements.txt ./requirements.txt
 
-RUN pip3 install -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 RUN pip3 install gunicorn
 EXPOSE 8832
 ENTRYPOINT ["gunicorn", "app:app"]
