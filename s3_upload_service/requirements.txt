@@ -2,3 +2,5 @@ requests
 ffmpeg-python
 pytube
 boto3
+pymongo
+certifi
