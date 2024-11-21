@@ -68,7 +68,7 @@ class ProductsResultItem(BaseModel):
     options: dict | None = None
     currentOptions: dict[str, str] | None = None
     relatedProducts: dict | None = None
-    relatedVideos: dict | None = None
+    relatedVideos: list[str] | None = None
     mediaConfig: dict | list | None = None
     collectMedia: bool = False
     aspects: list[AspectsResultItem] | None = None
@@ -159,7 +159,7 @@ async def set_product_result(asin: str, card: ProductsResultItem):
     }
     try:
         AMADATA['product_card'].replace_one(
-            {'asin': asin},
+            {'asin': {'$in': [asin, card.asin]}},
             data,
             upsert=True,
         )
