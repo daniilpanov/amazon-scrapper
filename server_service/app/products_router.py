@@ -185,8 +185,11 @@ async def set_product_result(asin: str, card: ProductsResultItem):
                 'alias': asin + '(' + card.asin + ')' + '#media',
             }, [{
                 'videoUrl': url,
+                'asin': card.asin,
+                'variant': i + 1,
                 'prefix': 'products/videos/',
-                'filename': card.asin + '-' + str(i) + '.mp4',
+                'filename': card.asin + '_' + url.rsplit('/', maxsplit=2)[1] + '.mp4',
+                'mimetype': 'video/mp4',
                 'media_type': 'm3u',
             } for i, url in enumerate(card.relatedVideos)])
         except PyMongoError as e:
