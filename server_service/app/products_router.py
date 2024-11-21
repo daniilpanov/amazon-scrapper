@@ -223,7 +223,7 @@ async def set_product_result(asin: str, card: ProductsResultItem):
 
     replace_aspects = []
     data = []
-    for aspect in card.aspects:
+    for aspect in (card.aspects or []):
         replace_aspects.append(aspect.Aspect)
         data.append(aspect.compare_with_asin(card.asin))
     try:
