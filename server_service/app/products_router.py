@@ -223,16 +223,17 @@ async def set_product_result(asin: str, card: ProductsResultItem):
 
     replace_aspects = []
     data = []
-    for aspect in (card.aspects or []):
-        replace_aspects.append(aspect.Aspect)
-        data.append(aspect.compare_with_asin(card.asin))
-    try:
-        AMADATA['aspects'].delete_many({'ASIN': asin, 'Aspect': {'$in': replace_aspects}})
-        AMADATA['aspects'].insert_many(data, ordered=False)
-    except BulkWriteError:
-        pass
-    except PyMongoError as e:
-        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+    if card.aspects:
+        for aspect in card.aspects:
+            replace_aspects.append(aspect.Aspect)
+            data.append(aspect.compare_with_asin(card.asin))
+        try:
+            AMADATA['aspects'].delete_many({'ASIN': asin, 'Aspect': {'$in': replace_aspects}})
+            AMADATA['aspects'].insert_many(data, ordered=False)
+        except BulkWriteError:
+            pass
+        except PyMongoError as e:
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
     if card.collectMedia and card.relatedVideos:
         try:
