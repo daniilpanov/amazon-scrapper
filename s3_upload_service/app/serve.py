@@ -32,26 +32,23 @@ def do_task(task):
                 [data['videoUrl']],
                 lambda path: load_video(path, data['filename'], data['prefix']),
             )
-            requests.patch('http://server:8832/tasks/finish/' + task['_id'], json={
-                'confirm': True,
-            })
         elif data['media_type'] == 'm3u':
             controller.process_usual(
                 controller.mp.parse_res_m3u(controller.mp.parse_root_m3u(data['videoUrl'])),
                 lambda path: load_video(path, data['filename'], data['prefix']),
             )
-            requests.patch('http://server:8832/tasks/finish/' + task['_id'], json={
-                'confirm': True,
-            })
         else:
             controller.process_usual(
                 [data['videoUrl']],
                 lambda path: load_video(path, data['filename'], data['prefix']),
             )
+        requests.patch('http://server:8832/tasks/finish/' + task['_id'], json={
+            'confirm': True,
+        })
     except Exception as e:
         requests.patch('http://server:8832/tasks/report/' + task['_id'], json={
-            'confirm': False,
-            'stop': False,
+            'confirm': True,
+            'stop': True,
             'errors': [f'[{data["filename"]}]:[filter] ' + str(e)],
         })
 
