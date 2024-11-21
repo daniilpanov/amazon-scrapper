@@ -190,15 +190,16 @@ async def set_product_result(asin: str, card: ProductsResultItem):
                 'variant': variant,
                 'link': main_uri + '._SX65.' + ext,
             })
-        try:
-            AMAREPS['catalog_images'].insert_many(
-                sizing_pictures,
-                ordered=False,
-            )
-        except BulkWriteError:
-            pass
-        except PyMongoError as e:
-            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        if sizing_pictures:
+            try:
+                AMAREPS['catalog_images'].insert_many(
+                    sizing_pictures,
+                    ordered=False,
+                )
+            except BulkWriteError:
+                pass
+            except PyMongoError as e:
+                raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
     data = {

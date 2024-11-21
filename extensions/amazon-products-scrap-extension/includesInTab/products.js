@@ -96,7 +96,7 @@ class ProductsParser extends Parser {
     }
 
     getImages() {
-        const imageEls = this.root.querySelectorAll('#altImages > ul > li.imageThumbnail') || [];
+        const imageEls = this.root.querySelectorAll('#altImages > ul > li.imageThumbnail img') || [];
         return { pictures_urls: ([...imageEls].map(item => item?.src || null)) };
     }
 
