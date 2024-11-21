@@ -16,6 +16,7 @@ from .db_mongo import db
 
 router = APIRouter(prefix='/products')
 AMADATA = db('amazon_data')
+AMAREPS = db('amazon_reports_dev')
 
 
 def _cast_iso_dt_to_dt_obj(dt: str) -> datetime.datetime:
@@ -62,6 +63,7 @@ class ProductsResultItem(BaseModel):
     currentBreadcrumb: str | None = None
     description: str | None = None
     picture_url: str | None = None
+    pictures_urls: list[str | None] | None = None
     price: int | float | None = None
     rating: int | float | None = None
     reviewsCount: int | None = None
@@ -147,6 +149,58 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 
 @router.post('/set_result/card/{asin}')
 async def set_product_result(asin: str, card: ProductsResultItem):
+    if card.picture_url:
+        main_uri, *_, ext = card.picture_url.rsplit('.', maxsplit=2)
+        card.picture_url = main_uri + '.' + ext
+
+    if card.pictures_urls:
+        sizing_pictures = []
+        urls = card.pictures_urls
+        card.pictures_urls = []
+        decr = 0
+        for i, url in enumerate(urls):
+            if not url:
+                decr += 1
+                continue
+            i -= decr
+            main_uri, *_, ext = url.rsplit('.', maxsplit=2)
+            card.pictures_urls.append(main_uri + '.' + ext)
+            variant = 'MAIN' if not i else ('PT' + ('0' if i < 9 else '') + str(i))
+            sizing_pictures.append({
+                'asin': card.asin,
+                'width': 1080, 'height': 1080,
+                'marketplace_id': card.marketplaceId,
+                'user_id': '99376b43-3a2d-4994-a3cb-e712c1da35d1',
+                'variant': variant,
+                'link': main_uri + '._SM1080.' + ext,
+            })
+            sizing_pictures.append({
+                'asin': card.asin,
+                'width': 550, 'height': 550,
+                'marketplace_id': card.marketplaceId,
+                'user_id': '99376b43-3a2d-4994-a3cb-e712c1da35d1',
+                'variant': variant,
+                'link': main_uri + '._SX550.' + ext,
+            })
+            sizing_pictures.append({
+                'asin': card.asin,
+                'width': 65, 'height': 65,
+                'marketplace_id': card.marketplaceId,
+                'user_id': '99376b43-3a2d-4994-a3cb-e712c1da35d1',
+                'variant': variant,
+                'link': main_uri + '._SX65.' + ext,
+            })
+        try:
+            AMAREPS['catalog_images'].insert_many(
+                sizing_pictures,
+                ordered=False,
+            )
+        except BulkWriteError:
+            pass
+        except PyMongoError as e:
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+
+
     data = {
         'asin': card.asin,
         'root_asin': card.rootAsin,
