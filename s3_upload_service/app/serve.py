@@ -57,7 +57,7 @@ def do_task(task):
             )
         elif data['media_type'] == 'm3u':
             controller.process_usual(
-                controller.mp.parse_res_m3u(controller.mp.parse_root_m3u(mimetype)),
+                controller.mp.parse_res_m3u(controller.mp.parse_root_m3u(video_url)),
                 lambda path: load_video(asin, variant, mimetype, path, filename, prefix),
             )
         else:
