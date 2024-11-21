@@ -28,7 +28,7 @@ def load_video(asin, variant, mimetype, path, filename, prefix):
         try:
             media_collection.insert_one({
                 'asin': asin,
-                'media_url': 'https://https://daniilbucket.s3.us-east-2.amazonaws.com/' + prefix + filename,
+                'media_url': 'https://daniilbucket.s3.us-east-2.amazonaws.com/' + prefix + filename,
                 'mimetype': mimetype,
                 'variant': variant,
             })
