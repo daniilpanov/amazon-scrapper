@@ -13,7 +13,7 @@ class ProductsParser extends Parser {
 
     allFunctions = [
         this.getBreadcrumbs, this.getCurrentBreadcrumb,
-        this.getASIN, this.getTitle, this.getMainImage,
+        this.getASIN, this.getTitle, this.getMainImage, this.getImages,
         this.getDescription, this.getMarketplaceId,
         this.getAspects, this.getPrice, this.getRelatedProducts,
         this.getFullMediaConfig, this.getRelatedVideos,
@@ -93,6 +93,11 @@ class ProductsParser extends Parser {
     getMainImage() {
         const imageEl = this.root.querySelector('#main-image-container ul img');
         return { picture_url: (imageEl?.src || null) };
+    }
+
+    getImages() {
+        const imageEls = this.root.querySelectorAll('#altImages > ul > li.imageThumbnail') || [];
+        return { pictures_urls: ([...imageEls].map(item => item?.src || null)) };
     }
 
     requestRelatedVideos() {
