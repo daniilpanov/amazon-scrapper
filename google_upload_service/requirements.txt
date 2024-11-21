@@ -1,5 +1,5 @@
 requests
-python-ffmpeg
+ffmpeg-python
 pytube
 google-api-core==2.11.1
 google-api-python-client==2.126.0
