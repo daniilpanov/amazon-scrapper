@@ -37,13 +37,19 @@ class CollectProductsForm(BaseModel):
 @router.post('/alias/products/collect')
 async def collect_products_form(config: CollectProductsForm):
     asins = config.asins
+    target = config.target or []
     if isinstance(asins, str):
-        asins = get_all_asins_from_text(asins) + ([config.target] if config.target else [])
+        asins = get_all_asins_from_text(asins)
+    if isinstance(target, str):
+        target = get_all_asins_from_text(target)
+    target = set(target)
+    asins = list(set(asins).intersection(target))
+    target = list(target)
     if config.category_name:
         await category_set_cmd({
             'asins': asins,
             'top5_asins': [],
-            'target': config.target or None,
+            'target': target or None,
             'cat_name': config.category_name,
             'client_name': config.client_name,
         })
