@@ -44,14 +44,14 @@ async def collect_products_form(config: CollectProductsForm):
         target = get_all_asins_from_text(target)
     if config.category_name:
         await category_set_cmd({
-            'asins': asins,
+            'asins': asins + target,
             'top5_asins': [],
             'target': target or None,
             'cat_name': config.category_name,
             'client_name': config.client_name,
         })
     target = set(target)
-    asins = list(set(asins).union(target))
+    asins = list(set(asins))
     res = await products_router.collect_products_task(products_router.AsinsCollectingConfig(**{
         'alias': config.alias,
         'asins': [products_router.AsinsItemCollectConfig(
