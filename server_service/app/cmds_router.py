@@ -42,9 +42,10 @@ async def collect_products_form(config: CollectProductsForm):
         asins = get_all_asins_from_text(asins)
     if isinstance(target, str):
         target = get_all_asins_from_text(target)
+    asins += target
     if config.category_name:
         await category_set_cmd({
-            'asins': asins + target,
+            'asins': asins,
             'top5_asins': [],
             'target': target or None,
             'cat_name': config.category_name,
