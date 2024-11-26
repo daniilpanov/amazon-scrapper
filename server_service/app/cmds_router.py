@@ -36,7 +36,7 @@ class CollectProductsForm(BaseModel):
 
 @router.post('/alias/products/collect')
 async def collect_products_form(config: CollectProductsForm):
-    asins = config.asins
+    asins = config.asins or []
     target = config.target or []
     if isinstance(asins, str):
         asins = get_all_asins_from_text(asins)
