@@ -212,9 +212,9 @@ async function run(task, sender, sendResponse) {
                     );
                     // setup callbacks
                     // send res
-                    collector.per_index_callback = (data) => {
-                        console.log(data);
+                    collector.per_index_callback = data => {
                         if (data && data.length) {
+                            console.log('OK!');
                             chrome.runtime.sendMessage(
                                 {
                                     fetch: [
@@ -230,7 +230,8 @@ async function run(task, sender, sendResponse) {
                                     ],
                                     log: data,
                                 },
-                                (response) => {
+                                response => {
+                                    console.log('OKOKOKOK', response);
                                 },
                             );
                         }
