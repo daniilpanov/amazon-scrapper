@@ -36,22 +36,28 @@ class CollectProductsForm(BaseModel):
 
 @router.post('/alias/products/collect')
 async def collect_products_form(config: CollectProductsForm):
-    asins = config.asins
+    asins = config.asins or []
+    target = config.target or []
     if isinstance(asins, str):
-        asins = get_all_asins_from_text(asins) + ([config.target] if config.target else [])
+        asins = get_all_asins_from_text(asins)
+    if isinstance(target, str):
+        target = get_all_asins_from_text(target)
+    asins += target
     if config.category_name:
         await category_set_cmd({
             'asins': asins,
             'top5_asins': [],
-            'target': config.target or None,
+            'target': target or None,
             'cat_name': config.category_name,
             'client_name': config.client_name,
         })
+    target = set(target)
+    asins = list(set(asins))
     res = await products_router.collect_products_task(products_router.AsinsCollectingConfig(**{
         'alias': config.alias,
         'asins': [products_router.AsinsItemCollectConfig(
             asin=asin,
-            collect_media_config=asin == config.target,  # if asin=target then collect media
+            collect_media_config=asin in target,  # if asin=target then collect media
         ) for asin in asins],
         'collect_aspects': config.collect_aspects,
         'collect_reviews': config.collect_reviews,
@@ -96,14 +102,8 @@ class BSRTreeResult(BaseModel):
 
 @router.post('/alias/bsr/collect')
 async def collect_bsr_cmd(config: BSRCollectingConfig):
-    data = {'bsr': config.bsr}
-    data['domain'] = config.domain
-    data['limit'] = config.limit
-    data['unique_brands'] = config.unique_brands
-    data['target'] = config.target
-    data['count'] = config.count
-    data['category'] = config.category
-    data['client'] = config.client
+    data = {'bsr': config.bsr, 'domain': config.domain, 'limit': config.limit, 'unique_brands': config.unique_brands,
+            'target': config.target, 'count': config.count, 'category': config.category, 'client': config.client}
     return helpers.orjson_response(tasks_manager.add_task('bsr', {
         'alias': config.alias,
     }, [data], stage=int(config.with_continue)))
@@ -121,9 +121,10 @@ async def finish_bsr_cmd(bsr: BSRResult):
 
 @router.post('/alias/bsrtree/finish')
 async def finish_bsrtree_cmd(bsr: BSRTreeResult):
-    result = bsr.model_dump(include=['items'])['items']
+    result = bsr.model_dump(include={'items'})['items']
     tasks_manager.finish_task(bsr.task_id, True)
-    db('ai_highlights')['departments'].update_one({'URL': bsr.bsr_link, 'items': {'$exists': False}}, {'$set': {'items': result}})
+    db('ai_highlights')['departments'].update_one({'URL': bsr.bsr_link, 'items': {'$exists': False}},
+                                                  {'$set': {'items': result}})
     tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
 
@@ -168,14 +169,18 @@ async def category_set_cmd(data=Body()):
     if not isinstance(data, (dict, list, tuple)):
         data = orjson.loads(data)
     asins = data['asins']
-    if type(asins) is str:
+    if isinstance(asins, str):
         asins = get_all_asins_from_text(asins)
-    top5_asins = set(data['top5_asins'])
+    target = data.get('target')
+    if isinstance(target, str):
+        target = get_all_asins_from_text(target)
+    top5_asins = set(data.get('top5_asins', []))
+    client_name = data.get('client_name')
     try:
         db('amazon_data')['all_categories'].insert_many([{
             'Category': data['cat_name'],
             'ASIN': asin,
-            'relation_to_category': data['client_name'] if asin == data.get('target') else None,
+            'relation_to_category': client_name if asin in target else None,
             'relation_to_TOP5': asin in top5_asins,
         } for asin in asins])
         return Response(status_code=HTTP_201_CREATED)
