@@ -19,7 +19,7 @@ chrome.tabs.query({
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (!request.length)
-        return run();
+        return run(request, sender, sendResponse);
 
     for (let i in request) {
         if (i === 'fetch') {
