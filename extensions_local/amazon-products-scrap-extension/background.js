@@ -12,7 +12,7 @@ chrome.tabs.query({
         chrome.tabs.create({
             url: 'html/control_panel.html',
         }, (tab) => {
-            chrome.tabs.update(tab.id, {autoDiscardable: false});
+            chrome.tabs.update(tab.id, { autoDiscardable: false });
         });
     }
 });
@@ -84,9 +84,10 @@ async function run(task, sender, sendResponse) {
         // Product card
         result = await chrome.scripting.executeScript({
             target: { tabId: needle_tab.id },
-            func: () => {
+            args: [asin],
+            func: (asin) => {
                 window.finish_collecting = false;
-                const products_collector = new ProductsParser();
+                const products_collector = new ProductsParser({ asin });
                 try {
                     products_collector.appendFunctions(products_collector.allFunctions);
                     return products_collector.applyAsyncFunctions();

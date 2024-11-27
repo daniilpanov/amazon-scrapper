@@ -51,7 +51,7 @@ class ProductsParser extends Parser {
     getASIN() {
         const { mediaConfig } = this.getFullMediaConfig();
         return {
-            asin: this.ASIN || mediaConfig.currentAsin || null,
+            asin: mediaConfig.currentAsin || this.ASIN || null,
             rootAsin: (this.rootASIN || (this.rootASIN = mediaConfig.parentAsin || null)),
         };
     }
