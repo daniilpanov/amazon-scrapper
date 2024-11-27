@@ -13,3 +13,5 @@ out/*
 *.log
 */*.log
 *.json
+!manifest.json
+!*/manifest.json

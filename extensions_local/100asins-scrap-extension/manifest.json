@@ -1,0 +1,23 @@
+{
+    "name": "Amazon 100 ASINs Scraper",
+    "description": "Amazon 100 ASINs Scraper",
+    "version": "1.0",
+    "manifest_version": 3,
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "host_permissions": [
+        "*://*/*"
+    ],
+    "permissions": [
+        "webNavigation",
+        "tabs",
+        "activeTab",
+        "scripting",
+        "alarms",
+        "declarativeContent",
+        "storage",
+        "management"
+    ]
+}

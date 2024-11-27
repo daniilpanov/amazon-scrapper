@@ -1,0 +1,29 @@
+{
+  "name": "Amazon Sellercentral Scrap",
+  "description": "Amazon Sellercentral Scraper addon works with AmaScrap",
+  "version": "1.0",
+  "manifest_version": 3,
+  "icons": {
+    "16": "./icons/icon-16.png",
+    "32": "./icons/icon-32.png",
+    "48": "./icons/icon-48.png",
+    "128": "./icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "./html/popup.html",
+    "defaul_icon": "./icons/icon-48.png"
+  },
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "permissions": [
+    "webNavigation",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "alarms",
+    "declarativeContent",
+    "storage"
+  ]
+}
