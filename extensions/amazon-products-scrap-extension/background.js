@@ -213,6 +213,7 @@ async function run(task, sender, sendResponse) {
                     // setup callbacks
                     // send res
                     collector.per_index_callback = (data) => {
+                        console.log(data);
                         if (data && data.length) {
                             chrome.runtime.sendMessage(
                                 {
