@@ -18,18 +18,21 @@ chrome.tabs.query({
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (!request.length)
-        return run(request, sender, sendResponse);
-
+    let need_run = true;
     for (let i in request) {
         if (i === 'fetch') {
+            need_run = false;
             fetch(request[i][0], request[i][1]).then((response) => {
                 sendResponse(response);
             });
         } else if (i === 'log') {
+            need_run = false;
             console.log(request[i]);
         }
     }
+
+    if (need_run)
+        run(request, sender, sendResponse);
 });
 
 async function run(task, sender, sendResponse) {
@@ -214,7 +217,6 @@ async function run(task, sender, sendResponse) {
                     // send res
                     collector.per_index_callback = data => {
                         if (data && data.length) {
-                            console.log('OK!');
                             chrome.runtime.sendMessage(
                                 {
                                     fetch: [
@@ -231,7 +233,9 @@ async function run(task, sender, sendResponse) {
                                     log: data,
                                 },
                                 response => {
-                                    console.log('OKOKOKOK', response);
+                                    if (response === 'bad request') {
+                                        console.log('BAD REQUEST!', data);
+                                    }
                                 },
                             );
                         }
