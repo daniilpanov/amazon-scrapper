@@ -19,7 +19,7 @@ chrome.tabs.query({
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (!request.length)
-        return;
+        return run();
 
     for (let i in request) {
         if (i === 'fetch') {
@@ -384,4 +384,4 @@ async function run(task, sender, sendResponse) {
 }
 
 chrome.runtime.onMessageExternal.addListener(run);
-chrome.runtime.onMessage.addListener(run);
+// chrome.runtime.onMessage.addListener(run);
