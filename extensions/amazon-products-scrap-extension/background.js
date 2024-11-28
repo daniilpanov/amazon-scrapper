@@ -32,7 +32,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (need_run)
-        run(request, sender, sendResponse);
+        return run(request, sender, sendResponse);
 });
 
 async function run(task, sender, sendResponse) {
