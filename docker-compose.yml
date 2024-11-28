@@ -105,7 +105,7 @@ services:
 #        networks:
 #            - net
 #        volumes:
-#            - ./web:/src:rw
+#            - ./captcha_service:/src:rw
 networks:
     net:
         driver: bridge

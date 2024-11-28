@@ -1,18 +1,18 @@
 AbortSignal.timeout ??= function timeout(ms) {
     const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), ms);
+    setTimeout(ctrl.abort, ms);
     return ctrl.signal;
 };
 
 chrome.tabs.query({
     url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
     currentWindow: true,
-}, (tabs) => {
+}, tabs => {
     if (!tabs || !tabs.length) {
         chrome.tabs.create({
             url: 'html/control_panel.html',
-        }, (tab) => {
-            chrome.tabs.update(tab.id, {autoDiscardable: false});
+        }, tab => {
+            chrome.tabs.update(tab.id, { autoDiscardable: false });
         });
     }
 });
@@ -31,8 +31,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
     }
 
-    if (need_run)
-        return run(request, sender, sendResponse);
+    if (need_run) return run(request, sender, sendResponse);
 });
 
 async function run(task, sender, sendResponse) {
@@ -87,9 +86,10 @@ async function run(task, sender, sendResponse) {
         // Product card
         result = await chrome.scripting.executeScript({
             target: { tabId: needle_tab.id },
-            func: () => {
+            args: [asin],
+            func: (asin) => {
                 window.finish_collecting = false;
-                const products_collector = new ProductsParser();
+                const products_collector = new ProductsParser({ asin });
                 try {
                     products_collector.appendFunctions(products_collector.allFunctions);
                     return products_collector.applyAsyncFunctions();
@@ -110,7 +110,7 @@ async function run(task, sender, sendResponse) {
                 body: JSON.stringify({
                     confirm: false,
                     errors: [
-                        [date.toISOString() + ' [products.card]' + data.error.message],
+                        date.toISOString() + ' [products.card]' + data.error.message,
                     ],
                     stop: false,
                 }),
@@ -127,35 +127,11 @@ async function run(task, sender, sendResponse) {
                 body: JSON.stringify(data).replaceAll('\n', '\\n'),
             }).then((res) => {
                 if (res.status > 204) {
-                    console.log('card write error:', res.statusText, '\ndata:', JSON.stringify(data.product_card));
-                    console.error('card write error:', res.statusText, '\ndata:', JSON.stringify(data.product_card));
+                    console.log('card write error:', res.statusText, '\ndata:', JSON.stringify(data));
+                    console.error('card write error:', res.statusText, '\ndata:', JSON.stringify(data));
                 }
             });
         }
-        /*if (data.aspects && data.aspects.length) {
-            fetch('http://195.201.194.213:8832/products/set_result/aspects/' + task.asin, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                method: 'POST',
-                body: JSON.stringify(data.aspects),
-            }).then((res) => {
-                if (res.status > 201) {
-                    console.log('aspects write error:', res.statusText, '\ndata:', JSON.stringify(data.aspects));
-                    console.error('aspects write error:', res.statusText, '\ndata:', JSON.stringify(data.aspects));
-                }
-            });
-        }*/
-        // If it is target - run target collecting
-        /*if (task.collect_media_config && task.target) {
-            console.log('collect product media: ' + task.asin);
-            fetch('http://195.201.194.213:8832/products/target/collect/' + task.asin, { method: 'POST' }).then((res) => {
-                if (res.status > 201) {
-                    console.log('product ' + task.asin + ' target collecting start error:', res.statusText);
-                    console.error('product ' + task.asin + ' target collecting start error:', res.statusText);
-                }
-            });
-        }*/
         // Reviews
         if (task.stage) {
             // Goto reviews page
@@ -163,11 +139,11 @@ async function run(task, sender, sendResponse) {
                 target: { tabId: needle_tab.id },
                 func: () => {
                     let see_rev = document.getElementById('acrCustomerReviewLink');
-                    see_rev.scrollIntoView();
-                    see_rev.click();
+                    see_rev?.scrollIntoView();
+                    see_rev?.click();
                     see_rev = document.querySelector('[data-hook=see-all-reviews-link-foot]');
-                    see_rev.scrollIntoView();
-                    see_rev.click();
+                    see_rev?.scrollIntoView();
+                    see_rev?.click();
                 },
             });
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -186,11 +162,11 @@ async function run(task, sender, sendResponse) {
                 target: { tabId: needle_tab.id },
                 func: () => {
                     let see_rev = document.getElementById('acrCustomerReviewLink');
-                    see_rev.scrollIntoView();
-                    see_rev.click();
+                    see_rev?.scrollIntoView();
+                    see_rev?.click();
                     see_rev = document.querySelector('[data-hook=see-all-reviews-link-foot]');
-                    see_rev.scrollIntoView();
-                    see_rev.click();
+                    see_rev?.scrollIntoView();
+                    see_rev?.click();
                 },
             });
             try {
@@ -390,4 +366,3 @@ async function run(task, sender, sendResponse) {
 }
 
 chrome.runtime.onMessageExternal.addListener(run);
-// chrome.runtime.onMessage.addListener(run);
