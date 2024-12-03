@@ -51,18 +51,16 @@ async function run(task, sender, sendResponse) {
         // BSR result
         let result = await chrome.scripting.executeScript({
             target: { tabId: needle_tab.id },
-            args: [task.target, task.count],
-            func: async (target, count) => {
+            args: [task.target],
+            func: async (target) => {
                 const bsr_collector = new BSRChildrenParser();
                 await bsr_collector.waitLoading();
                 bsr_collector.appendFunctions(bsr_collector.getASINsList, bsr_collector.getCurrent);
                 let res = bsr_collector.applyFunctions();
                 if (!res.asins.includes(target)) {
-                    res.asins = [...res.asins.slice(0, count), target];
-                } else {
-                    res.asins = res.asins.slice(0, count);
+                    res.asins = [...res.asins, target];
                 }
-                return res.result;
+                return res;
             },
         });
         result.with_continue = Boolean(task.stage > 0);

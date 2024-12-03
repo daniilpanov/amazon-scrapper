@@ -9,11 +9,11 @@ class BSRChildrenParser extends Parser {
 
     currentBSR = null;
 
-    getCategoryName(el) {
+    _getCategoryName(el) {
         return { bsrName: el.textContent.trim() || null };
     }
 
-    getCategoryLink(el) {
+    _getCategoryLink(el) {
         return { bsrLink: el.href || el.getAttribute('href') || null };
     }
 
@@ -37,8 +37,7 @@ class BSRChildrenParser extends Parser {
 
     _findCurrent(elem) {
         for (const groupElement of (elem.group || [])) {
-            console.log(groupElement, this.currentBSR);
-            if (groupElement.bsrLink === this.currentBSR.bsrLink && groupElement.bsrLink === this.currentBSR.bsrLink) {
+            if (groupElement.bsrLink === this.currentBSR.bsrLink && groupElement.bsrName === this.currentBSR.bsrName) {
                 return elem;
             }
             const res = this._findCurrent(groupElement);
@@ -68,7 +67,7 @@ class BSRChildrenParser extends Parser {
         for (const treeElement of treeGroup) {
             if (treeElement.getAttribute('role') === 'treeitem') {
                 const el = treeElement.children[0];
-                lastObj = { index, ...this.getCategoryName(el), ...this.getCategoryLink(el), level };
+                lastObj = { index, ...this._getCategoryName(el), ...this._getCategoryLink(el), level };
                 if (!lastObj.bsrLink) {
                     lastObj.bsrLink = location.href;
                     this.currentBSR = lastObj;
