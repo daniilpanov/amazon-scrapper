@@ -68,12 +68,9 @@ async def collect_products_form(config: CollectProductsForm):
 
 class BSRCollectingConfig(BaseModel):
     alias: str | None = None
-    domain: str = 'amazon.com'
     category: str | None = None
     client: str | None = None
     bsr: str
-    limit: bool = False
-    unique_brands: bool = False
     count: int = 30
     target: str | None = None
     with_continue: bool = False
@@ -82,8 +79,9 @@ class BSRCollectingConfig(BaseModel):
 class BSRResult(BaseModel):
     task_id: str
     with_continue: bool = False
-    bsr_url: str
-    asins_links: dict[str, str]
+    asins: list[str]
+    currentBSR: dict[str, str | int]
+    tree: list | None = None
 
 
 class BSRTreeResultItem(BaseModel):
@@ -102,8 +100,8 @@ class BSRTreeResult(BaseModel):
 
 @router.post('/alias/bsr/collect')
 async def collect_bsr_cmd(config: BSRCollectingConfig):
-    data = {'bsr': config.bsr, 'domain': config.domain, 'limit': config.limit, 'unique_brands': config.unique_brands,
-            'target': config.target, 'count': config.count, 'category': config.category, 'client': config.client}
+    data = {'bsr': config.bsr, 'target': config.target, 'count': config.count,
+            'category': config.category, 'client': config.client}
     return helpers.orjson_response(tasks_manager.add_task('bsr', {
         'alias': config.alias,
     }, [data], stage=int(config.with_continue)))
@@ -112,9 +110,15 @@ async def collect_bsr_cmd(config: BSRCollectingConfig):
 @router.post('/alias/bsr/finish')
 async def finish_bsr_cmd(bsr: BSRResult):
     if bsr.with_continue:
-        tasks_manager.set_task_stage(bsr.task_id, 2, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
+        tasks_manager.set_task_stage(bsr.task_id, 2, True, result={
+            'bsr': bsr.currentBSR,
+            'asins': bsr.asins,
+        })
     else:
-        tasks_manager.finish_task(bsr.task_id, True, result={'url': bsr.bsr_url, 'asins_links': bsr.asins_links})
+        tasks_manager.finish_task(bsr.task_id, True, result={
+            'bsr': bsr.currentBSR,
+            'asins': bsr.asins,
+        })
         tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
 

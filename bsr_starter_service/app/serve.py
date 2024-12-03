@@ -19,7 +19,7 @@ def run():
                 'http://server:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
             if res.status_code == 409:
                 continue
-            asins = list(task['result']['asins_links'].keys())
+            asins = task['result']['asins']
             if task['data'].get('category'):
                 requests.post(
                     'http://server:8832/cmd/category/set',
@@ -44,17 +44,38 @@ def run():
                 'collect_reviews': True,
                 'domain': task['data'].get('domain', 'amazon.com'),
             }
-            for asin in asins:
+            data2 = {
+                'alias': (task_alias + '#reviews') if task_alias else None,
+                'asins': [],
+                'current_format': False,
+                'collect_aspects': True,
+                'collect_media_config': False,
+                'collect_reviews': False,
+                'domain': task['data'].get('domain', 'amazon.com'),
+            }
+            for asin in asins[:int(task['count'])]:
                 if asin == task['data'].get('target'):
                     data['asins'].append({'asin': asin, 'collect_media_config': True})
                 else:
                     data['asins'].append({'asin': asin})
+            for asin in asins[int(task['count']):]:
+                if asin == task['data'].get('target'):
+                    data2['asins'].append({'asin': asin, 'collect_media_config': True})
+                else:
+                    data2['asins'].append({'asin': asin})
             requests.post(
                 'http://server:8832/products/collect',
                 headers={
                     'Content-Type': 'application/json',
                 },
                 json=data,
+            )
+            requests.post(
+                'http://server:8832/products/collect',
+                headers={
+                    'Content-Type': 'application/json',
+                },
+                json=data2,
             )
             requests.patch('http://server:8832/tasks/finish/' + task['_id'])
             requests.post('http://server:8832/tasks/release/' + task['_id'])
