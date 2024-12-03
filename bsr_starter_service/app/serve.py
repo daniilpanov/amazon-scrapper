@@ -34,6 +34,7 @@ def run():
                         'target': task['data'].get('target'),
                     },
                 )
+            bsr_link = '/'.join(task['result']['currentBSR']['bsrLink'].split('/')[3:-1])
             task_alias = task.get('taskHeader', {}).get('alias')
             data = {
                 'alias': (task_alias + '#reviews') if task_alias else None,
@@ -43,15 +44,17 @@ def run():
                 'collect_media_config': False,
                 'collect_reviews': True,
                 'domain': task['data'].get('domain', 'amazon.com'),
+                'bsr_link': bsr_link,
             }
             data2 = {
-                'alias': (task_alias + '#reviews') if task_alias else None,
+                'alias': (task_alias + '#products') if task_alias else None,
                 'asins': [],
                 'current_format': False,
                 'collect_aspects': True,
                 'collect_media_config': False,
                 'collect_reviews': False,
                 'domain': task['data'].get('domain', 'amazon.com'),
+                'bsr_link': bsr_link,
             }
             for asin in asins[:int(task['count'])]:
                 if asin == task['data'].get('target'):
