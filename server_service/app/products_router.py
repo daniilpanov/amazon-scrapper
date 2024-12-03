@@ -42,7 +42,6 @@ class AsinsCollectingConfig(AmazonTaskConfig):
     current_format: bool = True
     collect_media_config: bool = False
     collect_reviews: bool = True
-    bsrurl: str | None = None
 
 
 class AspectsResultItem(BaseModel):
@@ -101,7 +100,6 @@ async def collect_products_task(config: AsinsCollectingConfig):
         'collect_media_config': config.collect_media_config,
         'target': config.collect_media_config,
         'domain': config.domain,
-        'bsrurl': config.bsrurl,
     }
     data = []
     for item in config.asins:
