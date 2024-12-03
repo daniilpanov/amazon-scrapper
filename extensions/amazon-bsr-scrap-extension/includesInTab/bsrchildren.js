@@ -3,9 +3,11 @@ class BSRChildrenParser extends Parser {
     waitElementQuerySelector = 'div.a-cardui';
     allFunctions = [this.getASINsList, this.getTree, this.getCurrent, this.getParent, this.getChildren];
 
-    tree = {};
+    tree = [];
     flatTree = [];
     ASINsList = [];
+
+    currentBSR = null;
 
     getCategoryName(el) {
         return { bsrName: el.textContent.trim() || null };
@@ -33,26 +35,61 @@ class BSRChildrenParser extends Parser {
         return { asins: this.ASINsList };
     }
 
-    getParent() {
+    _findCurrent(elem) {
+        for (const groupElement of (elem.group || [])) {
+            console.log(groupElement, this.currentBSR);
+            if (groupElement.bsrLink === this.currentBSR.bsrLink && groupElement.bsrLink === this.currentBSR.bsrLink) {
+                return elem;
+            }
+            const res = this._findCurrent(groupElement);
+            if (res) {
+                return res;
+            }
+        }
+        return null;
+    }
 
+    getParent() {
+        let parentBSR = { ...this._findCurrent({ group: this.tree }) };
+        delete parentBSR.group;
+        return { parentBSR };
     }
 
     getCurrent() {
-
+        let currentBSR = { ...this.currentBSR };
+        delete currentBSR.group;
+        return { currentBSR };
     }
 
-    // mode: 1 - tree, -1 - flat, 0 - both
-    getTree(treegroup = null, mode = 0, parent_obj = null, level = 0) {
-        treegroup ??= this.root.querySelector('div[role=tree]');
-        parent_obj ??= this.tree;
+    _getTreeRecursive(treeGroup, group, level) {
+        let lastObj = null;
+        let index = 0;
 
-        for (const treeGroupElement in treegroup) {
-
+        for (const treeElement of treeGroup) {
+            if (treeElement.getAttribute('role') === 'treeitem') {
+                const el = treeElement.children[0];
+                lastObj = { index, ...this.getCategoryName(el), ...this.getCategoryLink(el), level };
+                if (!lastObj.bsrLink) {
+                    lastObj.bsrLink = location.href;
+                    this.currentBSR = lastObj;
+                }
+                group.push(lastObj);
+                this.flatTree.push(lastObj);
+                ++index;
+            } else {
+                lastObj.group = [];
+                this._getTreeRecursive(treeElement.children || [], lastObj.group, level + 1);
+            }
         }
     }
 
-    getChildren() {
+    getTree() {
+        this._getTreeRecursive(this.root.querySelector('div[role=tree]')?.children || [], this.tree, 0);
+        return { tree: this.tree };
+    }
 
+    getChildren() {
+        return { childrenBSR: this.currentBSR.group || [] };
     }
 
     clickNextPage() {

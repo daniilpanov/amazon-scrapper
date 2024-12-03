@@ -42,70 +42,39 @@ async function run(task, sender, sendResponse) {
 
     const date = new Date();
     try {
-        let result = null, data, errors;
         // BSR lib
         await chrome.scripting.executeScript({
             target: { tabId: needle_tab.id },
-            files: ['./includesInTab/parser.js', './includesInTab/multiparser.js', './includesInTab/bsr.js', './includesInTab/bsrchildren.js'],
+            files: ['./includesInTab/parser.js', './includesInTab/bsrchildren.js'],
         });
         console.log('bsr imported');
         // BSR result
-        for (let i = 0; i < 100; ++i) {
-            result = await chrome.scripting.executeScript({
-                target: { tabId: needle_tab.id },
-                args: [task],
-                func: async (task) => {
-                    console.log('hello! :)');
-                    const bsr_collector = new CollectBSR(task.limit, task.count, task.target, task.unique_brands, task.domain);
-
-                    console.log('BSR Collector created!');
-                    if (!task?.bsr) {
-                        console.log('Fail!');
-                        return { errors: ['Can not get BSR URL! Please enter full URL'] };
-                    }
-                    let asins_links = {};
-                    console.log('Collect asins');
-                    for (const asin of await bsr_collector.getASINsLInks(task.bsr)) {
-                        asins_links[asin] = `https://${task.domain}/dp/${asin}`;
-                    }
-                    return { data: { bsr_url: task.bsr, asins_links: asins_links } };
-                },
-            });
-            if (result && Object.keys(result[0]?.result?.data?.asins_links || {}).length) {
-                break;
-            }
-            await new Promise(r => setTimeout(r, 100));
-        }
-        console.log('result!', result);
-        data = result[0].result?.data;
-        data.with_continue = Boolean(task.stage > 0);
-        data.task_id = task.task_id;
-        errors = result[0].result?.errors;
-        console.log(data, errors);
-        // handle errors
-        if (errors) {
-            fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                method: 'PATCH',
-                body: JSON.stringify({
-                    confirm: true,
-                    errors: [
-                        [date.toISOString() + ' [bsr]', errors],
-                    ],
-                    stop: true,
-                }),
-            });
-        }
+        let result = await chrome.scripting.executeScript({
+            target: { tabId: needle_tab.id },
+            args: [task.target, task.count],
+            func: async (target, count) => {
+                const bsr_collector = new BSRChildrenParser();
+                await bsr_collector.waitLoading();
+                bsr_collector.appendFunctions(bsr_collector.getASINsList, bsr_collector.getCurrent);
+                let res = bsr_collector.applyFunctions();
+                if (!res.asins.includes(target)) {
+                    res.asins = [...res.asins.slice(0, count), target];
+                } else {
+                    res.asins = res.asins.slice(0, count);
+                }
+                return res.result;
+            },
+        });
+        result.with_continue = Boolean(task.stage > 0);
+        result.task_id = task.task_id;
         // load data
-        if (Object.keys(data || {}).length) {
+        if (Object.keys(result || {}).length) {
             fetch('http://195.201.194.213:8832/cmd/alias/bsr/finish/', {
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 method: 'POST',
-                body: JSON.stringify(data),
+                body: JSON.stringify(result),
             });
         }
     } catch (e) {
