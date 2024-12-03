@@ -1,3 +1,4 @@
+// RETURNS [<symbol($,%,etc.)/null>, <INT/null>, <+/null>] or range in the same format ([<from>, <to>])
 function parseNumber(numStr) {
     numStr = numStr.trim();
     const numberRange = numStr.split('-');
@@ -22,16 +23,6 @@ function parseNumber(numStr) {
         more = true;
         numStr = numStr.slice(0, numStr.length - 1);
     }
-    if (numStr[numStr.length - 1] === 'K') {
-        k = 1000;
-        numStr = numStr.slice(0, numStr.length - 1);
-    } else if (numStr[numStr.length - 1] === 'M') {
-        k = 1000000;
-        numStr = numStr.slice(0, numStr.length - 1);
-    } else if (numStr[numStr.length - 1] === 'B') {
-        k = 1000000000;
-        numStr = numStr.slice(0, numStr.length - 1);
-    }
     if (!/^\d$/.test(numStr[0])) {
         symbol = numStr[0];
         numStr = numStr.slice(1);
@@ -40,12 +31,12 @@ function parseNumber(numStr) {
         numStr = numStr.slice(0, numStr.length - 1);
     }
     const symbolsMap = {
-        K: 1000,
-        M: 1000000,
-        B: 1000000000,
+        k: 1000,
+        m: 1000000,
+        b: 1000000000,
     };
     for (const sym in symbolsMap) {
-        if (numStr[numStr.length - 1] === sym) {
+        if (numStr[numStr.length - 1].toLowerCase() === sym) {
             k = symbolsMap[sym];
             break;
         }
