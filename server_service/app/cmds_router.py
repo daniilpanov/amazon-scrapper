@@ -79,7 +79,7 @@ class BSRCollectingConfig(BaseModel):
 class BSRResult(BaseModel):
     task_id: str
     with_continue: bool = False
-    asins: list[str]
+    asins: list
     currentBSR: dict[str, str | int]
     tree: list | None = None
 
