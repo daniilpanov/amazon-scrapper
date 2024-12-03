@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function run(task, sender, sendResponse) {
     let acq = await fetch(
         'http://195.201.194.213:8832/tasks/acquire/bsr/' + task.header_id + '/' + task.task_id,
-        {method: 'post'},
+        { method: 'post' },
     );
     if (acq.status !== 200) {
         if (acq.status === 409) {
@@ -23,75 +23,52 @@ async function run(task, sender, sendResponse) {
         return;
     }
     sendResponse('OK');
-    let needle_tab = null, created = false;
-    // check if needle tab is already opened
-    for (const tab of await chrome.tabs.query({windowId: task.windowId})) {
-        if (tab.url === task.bsr) {
-            needle_tab = tab;
-            break;
-        }
+    if (task.bsr.startsWith('http://')) {
+        task.bsr = task.bsr.slice(7);
+    } else if (task.bsr.startsWith('https://')) {
+        task.bsr = task.bsr.slice(8);
     }
-    if (!needle_tab) {
-        if (task.bsr.startsWith('http://')) {
-            task.bsr = task.bsr.slice(7);
-        } else if (task.bsr.startsWith('https://')) {
-            task.bsr = task.bsr.slice(8);
-        }
-        if (task.bsr.startsWith(task.domain)) {
-            task.bsr = task.bsr.slice(task.domain.length + 1);
-        } else if (task.bsr.startsWith('www.' + task.domain)) {
-            task.bsr = task.bsr.slice(task.domain.length + 5);
-        }
-        needle_tab = await chrome.tabs.create({
-            url: 'https://www.' + task.domain + '/' + task.bsr,
-            active: false,
-            windowId: task.windowId,
-        });
-        chrome.tabs.update(needle_tab.id, {autoDiscardable: false});
-        created = true;
+    if (task.bsr.startsWith(task.domain)) {
+        task.bsr = task.bsr.slice(task.domain.length + 1);
+    } else if (task.bsr.startsWith('www.' + task.domain)) {
+        task.bsr = task.bsr.slice(task.domain.length + 5);
     }
+    let needle_tab = await chrome.tabs.create({
+        url: 'https://www.' + task.domain + '/' + task.bsr,
+        active: false,
+        windowId: task.windowId,
+    });
+    chrome.tabs.update(needle_tab.id, { autoDiscardable: false });
 
     const date = new Date();
     try {
-        let result = null, data, errors, need_import = created;
-        if (!created) {
-            need_import = await chrome.scripting.executeScript({
-                target: {tabId: needle_tab.id},
-                func: () => {
-                    return typeof CollectBSR === 'undefined';
-                },
-            });
-            need_import = need_import[0].result || false;
-        }
+        let result = null, data, errors;
         // BSR lib
-        if (need_import) {
-            await chrome.scripting.executeScript({
-                target: {tabId: needle_tab.id},
-                files: ['./bsr.js'],
-            });
-        }
+        await chrome.scripting.executeScript({
+            target: { tabId: needle_tab.id },
+            files: ['./includesInTab/parser.js', './includesInTab/multiparser.js', './includesInTab/bsr.js', './includesInTab/bsrchildren.js'],
+        });
         console.log('bsr imported');
         // BSR result
         for (let i = 0; i < 100; ++i) {
             result = await chrome.scripting.executeScript({
-                target: {tabId: needle_tab.id},
+                target: { tabId: needle_tab.id },
                 args: [task],
                 func: async (task) => {
-                    window.finish_collecting = false;
                     console.log('hello! :)');
                     const bsr_collector = new CollectBSR(task.limit, task.count, task.target, task.unique_brands, task.domain);
+
                     console.log('BSR Collector created!');
                     if (!task?.bsr) {
                         console.log('Fail!');
-                        return {errors: ['Can not get BSR URL! Please enter full URL']};
+                        return { errors: ['Can not get BSR URL! Please enter full URL'] };
                     }
                     let asins_links = {};
                     console.log('Collect asins');
                     for (const asin of await bsr_collector.getASINsLInks(task.bsr)) {
                         asins_links[asin] = `https://${task.domain}/dp/${asin}`;
                     }
-                    window.finish_collecting = true;
-                    return {data: {bsr_url: task.bsr, asins_links: asins_links}};
+                    return { data: { bsr_url: task.bsr, asins_links: asins_links } };
                 },
             });
             if (result && Object.keys(result[0]?.result?.data?.asins_links || {}).length) {
