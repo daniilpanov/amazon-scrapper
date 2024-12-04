@@ -55,7 +55,7 @@ async function run(task, sender, sendResponse) {
         let result = await chrome.scripting.executeScript({
             target: { tabId: needle_tab.id },
             args: [task.target],
-            func: async (target) => {
+            func: async target => {
                 const bsr_collector = new BSRChildrenParser();
                 await bsr_collector.waitLoading();
                 bsr_collector.appendFunctions(bsr_collector.getASINsList, bsr_collector.getCurrent);
@@ -94,7 +94,7 @@ async function run(task, sender, sendResponse) {
             }),
         });
     } finally {
-        await chrome.tabs.remove(needle_tab.id);
+        // await chrome.tabs.remove(needle_tab.id);
     }
 }
 
