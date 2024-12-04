@@ -74,6 +74,7 @@ class BSRCollectingConfig(BaseModel):
     count: int = 30
     target: str | None = None
     with_continue: bool = False
+    domain: str = 'amazon.com'
 
 
 class BSRResult(BaseModel):
@@ -101,7 +102,7 @@ class BSRTreeResult(BaseModel):
 @router.post('/alias/bsr/collect')
 async def collect_bsr_cmd(config: BSRCollectingConfig):
     data = {'bsr': config.bsr, 'target': config.target, 'count': config.count,
-            'category': config.category, 'client': config.client}
+            'category': config.category, 'client': config.client, 'domain': config.domain}
     return helpers.orjson_response(tasks_manager.add_task('bsr', {
         'alias': config.alias,
     }, [data], stage=int(config.with_continue)))
