@@ -54,7 +54,8 @@ async function run(task, sender, sendResponse) {
     }
     sendResponse('OK');
     let needle_tab = null;
-    const asin = task.asin;
+    const asin = task.asin.asin;
+    const numberInBSR = task.asin.rank;
     // check if needle tab is already opened
     for (const tab of await chrome.tabs.query({ windowId: task.windowId })) {
         if (tab.url.startsWith('https://www.amazon.') && tab.url.includes('/dp/' + asin)) {
@@ -119,7 +120,9 @@ async function run(task, sender, sendResponse) {
         // load data
         if (Object.keys(data || {}).length) {
             data.collectMedia = task.collect_media_config && task.target;
-            fetch('http://195.201.194.213:8832/products/set_result/card/' + task.asin, {
+            data.bsr_url = task.bsr_url;
+            data.number_in_BSR = numberInBSR;
+            fetch('http://195.201.194.213:8832/products/set_result/card/' + asin, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -132,30 +135,6 @@ async function run(task, sender, sendResponse) {
                 }
             });
         }
-        /*if (data.aspects && data.aspects.length) {
-            fetch('http://195.201.194.213:8832/products/set_result/aspects/' + task.asin, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                method: 'POST',
-                body: JSON.stringify(data.aspects),
-            }).then((res) => {
-                if (res.status > 201) {
-                    console.log('aspects write error:', res.statusText, '\ndata:', JSON.stringify(data.aspects));
-                    console.error('aspects write error:', res.statusText, '\ndata:', JSON.stringify(data.aspects));
-                }
-            });
-        }*/
-        // If it is target - run target collecting
-        /*if (task.collect_media_config && task.target) {
-            console.log('collect product media: ' + task.asin);
-            fetch('http://195.201.194.213:8832/products/target/collect/' + task.asin, { method: 'POST' }).then((res) => {
-                if (res.status > 201) {
-                    console.log('product ' + task.asin + ' target collecting start error:', res.statusText);
-                    console.error('product ' + task.asin + ' target collecting start error:', res.statusText);
-                }
-            });
-        }*/
         // Reviews
         if (task.stage) {
             // Goto reviews page
@@ -207,7 +186,7 @@ async function run(task, sender, sendResponse) {
                 return new Promise(async (resolve, reject) => {
                     // create parser
                     const collector = new CollectReviews(
-                        task.asin,
+                        asin,
                         null,
                         task.current_format,
                         task.keywords || '',

@@ -52,13 +52,20 @@ async function run(task, sender, sendResponse) {
         let result = await chrome.scripting.executeScript({
             target: { tabId: needle_tab.id },
             args: [task.target],
-            func: async (target) => {
+            func: async target => {
                 const bsr_collector = new BSRChildrenParser();
                 await bsr_collector.waitLoading();
                 bsr_collector.appendFunctions(bsr_collector.getASINsList, bsr_collector.getCurrent);
                 let res = bsr_collector.applyFunctions();
-                if (!res.asins.includes(target)) {
-                    res.asins = [...res.asins, target];
+                let found = false;
+                for (const asin of res.asins) {
+                    if (asin === target) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    res.asins = [...res.asins, { asin: target }];
                 }
                 return res;
             },
