@@ -6,7 +6,7 @@ chrome.tabs.query({
         chrome.tabs.create({
             url: 'html/control_panel.html',
         }, (tab) => {
-            chrome.tabs.update(tab.id, {autoDiscardable: false});
+            chrome.tabs.update(tab.id, { autoDiscardable: false });
         });
     }
 });
@@ -94,7 +94,7 @@ async function run(task, sender, sendResponse) {
             }),
         });
     } finally {
-        // await chrome.tabs.remove(needle_tab.id);
+        await chrome.tabs.remove(needle_tab.id);
     }
 }
 
