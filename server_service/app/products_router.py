@@ -2,6 +2,7 @@ import datetime
 import typing
 
 import pytz
+from bson import ObjectId
 from fastapi import APIRouter, HTTPException
 
 from .helpers import orjson_response
@@ -74,6 +75,8 @@ class ProductsResultItem(BaseModel):
     mediaConfig: dict | list | None = None
     collectMedia: bool = False
     aspects: list[AspectsResultItem] | None = None
+    bsr_url: str | None = None
+    number_in_BSR: int | None = None
 
 
 class ReviewsResultItem(BaseModel):
@@ -149,6 +152,18 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 
 @router.post('/set_result/card/{asin}')
 async def set_product_result(asin: str, card: ProductsResultItem):
+    if card.bsr_url:
+        deps = db('ai_highlights')['departments'].find({'URL': {'$regex': '^/' + card.bsr_url}})
+        for dep in deps:
+            db('ai_highlights')['departments'].update_one({'_id': dep['_id']}, {'$pull': {'items': {'asin': asin}}})
+            db('ai_highlights')['departments'].update_one({'_id': dep['_id']}, {'$push': {'items': {
+                'asin': card.asin,
+                'title': card.title,
+                'score': card.rating,
+                'number_in_BSR': card.number_in_BSR,
+                'image': card.picture_url,
+            }}})
+
     if card.picture_url:
         main_uri, *_, ext = card.picture_url.rsplit('.', maxsplit=2)
         card.picture_url = main_uri + '.' + ext
@@ -200,7 +215,6 @@ async def set_product_result(asin: str, card: ProductsResultItem):
                 pass
             except PyMongoError as e:
                 raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
-
 
     data = {
         'asin': card.asin,
