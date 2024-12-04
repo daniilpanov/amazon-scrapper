@@ -6,7 +6,7 @@ chrome.tabs.query({
         chrome.tabs.create({
             url: 'html/control_panel.html',
         }, (tab) => {
-            chrome.tabs.update(tab.id, {autoDiscardable: false});
+            chrome.tabs.update(tab.id, { autoDiscardable: false });
         });
     }
 });
