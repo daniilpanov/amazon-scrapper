@@ -1,10 +1,46 @@
+let lastUpdate = Date.now();
+const urlList = [
+    'https://localhost',
+    'http://localhost',
+    'https://cp.nyle.ai',
+    'http://cp.nyle.ai',
+    'https://195.201.194.213',
+    'http://195.201.194.213',
+];
+let currentUrl = urlList[0];
+
+const URL_EXPIRATION_TIME = 5 * 60 * 1000;
+
+async function getCurrentHostUrl(force = false) {
+    if (!force && Date.now() - lastUpdate < URL_EXPIRATION_TIME) {
+        return currentUrl;
+    }
+
+    for (const url of urlList) {
+        try {
+            const response = await fetch(url + ':8832/ping', { method: 'GET' });
+            if (response.ok) {
+                currentUrl = new URL(url).origin;
+                lastUpdate = Date.now();
+                return currentUrl;
+            }
+        } catch (error) {
+        }
+    }
+
+    return null;
+}
+
+await getCurrentHostUrl(true);
+
+
 chrome.tabs.query({
     url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
 }, tabs => {
     if (!tabs || !tabs.length) {
         chrome.tabs.create({
             url: 'html/control_panel.html',
-        }, (tab) => {
+        }, tab => {
             chrome.tabs.update(tab.id, { autoDiscardable: false });
         });
     }
