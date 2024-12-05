@@ -63,7 +63,7 @@ def run():
                 'domain': task['data'].get('domain', 'amazon.com'),
                 'bsr_link': bsr_link,
             }
-            for asin in asins[:int(task['count'])]:
+            for asin in asins[:int(task['data']['count'])]:
                 if asin == task['data'].get('target'):
                     data['asins'].append({'asin': asin, 'collect_media_config': True})
                 else:
