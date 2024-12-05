@@ -1,4 +1,4 @@
-FROM python:3.11-alpine AS bsrstarter
+FROM python:3.11-alpine AS tests
 
 WORKDIR '/src'
 
