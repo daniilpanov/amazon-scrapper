@@ -33,28 +33,30 @@ async function main() {
         return interval_id = setTimeout(main, 10000);
     }
     curr_limit = real_tabs_limit - tabs_count;
-    try {
-        const res = await fetch('http://195.201.194.213:8832/tasks/get_available/pt');
-        const data = await res.json();
-        for (let i in data) {
-            console.log('Available space left:', curr_limit, '; limit & count:', real_tabs_limit, tabs_count);
-            if (curr_limit <= 0) {
-                console.log('exit from cycle! limit!');
-                break;
+    for (let i = 0; i <= 1; ++i) {
+        try {
+            const res = await fetch('http://195.201.194.213:8832/tasks/get_available/bsr?stage=' + i);
+            const data = await res.json();
+            for (let i in data) {
+                console.log('Available space left:', curr_limit, '; limit & count:', real_tabs_limit, tabs_count);
+                if (curr_limit <= 0) {
+                    console.log('exit from cycle! limit!');
+                    break;
+                }
+                await sendTask({
+                    ...data[i].data,
+                    task_id: data[i]._id,
+                    header_id: data[i].header_id,
+                    stage: data[i].stage,
+                    alias: data[i].taskHeader.alias,
+                    windowId: current_window.id,
+                    script: data[i].script,
+                });
+                --curr_limit;
             }
-            await sendTask({
-                ...data[i].data,
-                task_id: data[i]._id,
-                header_id: data[i].header_id,
-                stage: data[i].stage,
-                alias: data[i].taskHeader.alias,
-                windowId: current_window.id,
-                script: data[i].script,
-            });
-            --curr_limit;
+        } catch (e) {
+            console.log(e);
         }
-    } catch (e) {
-        console.log(e);
     }
     interval_id = setTimeout(main, 10000);
 }

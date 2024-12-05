@@ -1,3 +1,15 @@
+chrome.tabs.query({
+    url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
+}, tabs => {
+    if (!tabs || !tabs.length) {
+        chrome.tabs.create({
+            url: 'html/control_panel.html',
+        }, (tab) => {
+            chrome.tabs.update(tab.id, { autoDiscardable: false });
+        });
+    }
+});
+
 const endpoint = 'http://195.201.194.213:8832/helium/set_100asins';
 
 chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
@@ -7,8 +19,8 @@ chrome.runtime.onMessageExternal.addListener(async (message, sender, sendRespons
     }
     let res = await fetch(
         'http://195.201.194.213:8832/tasks/acquire/100asins/' + message.header_id + '/' + message.task_id,
-        {method: 'post'},
-    )
+        { method: 'post' },
+    );
     if (res.status === 200) {
         sendResponse('OK');
         res = await startScraping100ASINS(message.label, message.type, message.limit, message.task_id, sender.id, message.windowId);
@@ -48,12 +60,13 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
             active: false,
             windowId: window_id,
         });
-        chrome.tabs.update(tab.id, {autoDiscardable: false});
+        chrome.tabs.update(tab.id, { autoDiscardable: false });
         const result = await chrome.scripting.executeScript({
-            target: {tabId: tab.id},
+            target: { tabId: tab.id },
             args: [asinList, type, label, limit],
             func: (asinList, type, label, limit) => {
                 window.finish_collecting = false;
+
                 function check(kw, str) {
                     str = str.toLowerCase();
                     for (const keyword of kw) {
@@ -111,7 +124,7 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
                         return resolve(scrap(document));
                     }
                 });
-            }
+            },
         });
         console.log(result);
         asinList = result[0]?.result || asinList;
@@ -134,7 +147,7 @@ async function sendData(asins, task_id) {
     while (attempts < maxAttemptsCount) {
         const response = await fetch(`${endpoint}/${task_id}`, {
             method: 'POST',
-            body: JSON.stringify({asins: asins}),
+            body: JSON.stringify({ asins: asins }),
             headers: {
                 'Content-Type': 'application/json',
             },
