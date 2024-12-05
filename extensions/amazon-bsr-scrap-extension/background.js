@@ -58,8 +58,9 @@ async function run(task, sender, sendResponse) {
             func: async target => {
                 const bsr_collector = new BSRChildrenParser();
                 await bsr_collector.waitLoading();
-                bsr_collector.appendFunctions(bsr_collector.getASINsList, bsr_collector.getCurrent);
+                bsr_collector.appendFunctions(bsr_collector.getASINsList, bsr_collector.getTree, bsr_collector.getCurrent);
                 let res = bsr_collector.applyFunctions();
+                delete res.tree;
                 let found = false;
                 for (const asin of res.asins) {
                     if (asin === target) {
@@ -73,6 +74,7 @@ async function run(task, sender, sendResponse) {
                 return res;
             },
         });
+        result = result[0]?.result;
         result.with_continue = Boolean(task.stage > 0);
         result.task_id = task.task_id;
         // load data
