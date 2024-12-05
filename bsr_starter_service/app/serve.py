@@ -68,7 +68,7 @@ def run():
                     data['asins'].append({'asin': asin, 'collect_media_config': True})
                 else:
                     data['asins'].append({'asin': asin})
-            for asin in asins[int(task['count']):]:
+            for asin in asins[int(task['data']['count']):]:
                 if asin == task['data'].get('target'):
                     data2['asins'].append({'asin': asin, 'collect_media_config': True})
                 else:
