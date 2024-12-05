@@ -1,101 +1,131 @@
 services:
     bsrstarter:
+        depends_on:
+            - server
         build:
-            context: ./bsr_starter_service
+            context: services/bsr_starter_service
             target: bsrstarter
             dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./bsr_starter_service:/src:rw
+            - ./services/bsr_starter_service:/src:rw
     dataimporter:
         build:
-            context: ./dataimporter_service
+            context: services/dataimporter_service
             target: dataimporter
             dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./dataimporter_service:/src:rw
+            - ./services/dataimporter_service:/src:rw
         env_file: .env
+        expose:
+            - "$DATA_IMPORTER_PORT"
         ports:
-            - "8831:8831"
+            - "$DATA_IMPORTER_PORT:$DATA_IMPORTER_PORT"
     proxies:
         build:
-            context: ./proxies_service
+            context: services/proxies_service
             target: proxies_manager
             dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./proxies_service:/src:rw
+            - ./services/proxies_service:/src:rw
         env_file: .env
+        expose:
+            - "$PROXIES_PORT"
         ports:
-            - "8833:8833"
+            - "$PROXIES_PORT:$PROXIES_PORT"
     s3:
         build:
-            context: ./s3_service
+            context: services/s3_service
             target: s3
             dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./s3_service:/src:rw
+            - ./services/s3_service:/src:rw
         env_file: .env
+        expose:
+            - "$S3_PORT"
         ports:
-            - "8836:8836"
+            - "$S3_PORT:$S3_PORT"
     google_upload:
+        depends_on:
+            - server
         build:
-            context: ./google_upload_service
+            context: services/google_upload_service
             target: google_upload
             dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./google_upload_service:/src:rw
+            - ./services/google_upload_service:/src:rw
         env_file: .env
     s3_upload:
+        depends_on:
+            - server
         build:
-            context: ./s3_upload_service
+            context: services/s3_upload_service
             target: s3_upload
             dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./s3_upload_service:/src:rw
+            - ./services/s3_upload_service:/src:rw
         env_file: .env
     server:
         build:
-            context: ./server_service
+            context: services/server_service
             target: server
             dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./server_service:/src:rw
+            - ./services/server_service:/src:rw
         env_file: .env
+        expose:
+            - "$SERVER_PORT"
         ports:
-            - "8832:8832"
+            - "$SERVER_PORT:$SERVER_PORT"
+        command:
+            - "--workers"
+            - "2"
+            - "--preload"
+            - "--worker-class=uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$SERVER_PORT"
     web:
+        depends_on:
+            - server
         build:
-            context: ./web
+            context: services/web
             target: web
             dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./web:/src:rw
+            - ./services/web:/src:rw
         env_file: .env
+        expose:
+            - "$WEB_PORT"
         ports:
-            - "8838:8838"
+            - "$WEB_PORT:$WEB_PORT"
+        command:
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "$WEB_PORT"
 #    capsolver:
 #        build:
 #            context: ./captcha_service
@@ -105,7 +135,11 @@ services:
 #        networks:
 #            - net
 #        volumes:
-#            - ./web:/src:rw
+#            - ./services/captcha_service:/src:rw
+#        expose:
+#            - "$CAPTCHA_PORT"
+#        ports:
+#            - "$CAPTCHA_PORT:$CAPTCHA_PORT"
 networks:
     net:
         driver: bridge
