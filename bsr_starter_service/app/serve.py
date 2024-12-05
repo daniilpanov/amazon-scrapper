@@ -30,7 +30,7 @@ def run():
                     },
                     json={
                         'asins': asins,
-                        'top5_asins': asins[:5],
+                        'top5_asins': [p['asin'] for p in asins[:5]],
                         'cat_name': task['data'].get('category'),
                         'client_name': task['data'].get('client'),
                         'target': task['data'].get('target'),
