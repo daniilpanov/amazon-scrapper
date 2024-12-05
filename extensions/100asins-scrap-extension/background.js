@@ -1,3 +1,9 @@
+AbortSignal.timeout ??= function timeout(ms) {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), ms);
+    return ctrl.signal;
+};
+
 let lastUpdate = Date.now();
 const urlList = [
     'https://localhost',
@@ -18,7 +24,7 @@ async function getCurrentHostUrl(force = false) {
 
     for (const url of urlList) {
         try {
-            const response = await fetch(url + ':8832/ping', { method: 'GET' });
+            const response = await fetch(url + ':8832/ping', { method: 'GET', signal: AbortSignal.timeout(5000) });
             if (response.ok) {
                 currentUrl = new URL(url).origin;
                 lastUpdate = Date.now();
