@@ -54,8 +54,8 @@ async function run(task, sender, sendResponse) {
     }
     sendResponse('OK');
     let needle_tab = null;
-    const asin = task.asin.asin;
-    const numberInBSR = task.asin.rank;
+    const asin = task.asin;
+    const numberInBSR = task.rank;
     // check if needle tab is already opened
     for (const tab of await chrome.tabs.query({ windowId: task.windowId })) {
         if (tab.url.startsWith('https://www.amazon.') && tab.url.includes('/dp/' + asin)) {
