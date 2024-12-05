@@ -77,7 +77,7 @@ class ProductsResultItem(BaseModel):
     mediaConfig: dict | list | None = None
     collectMedia: bool = False
     aspects: list[AspectsResultItem] | None = None
-    bsr_url: str | None = None
+    bsr_link: str | None = None
     number_in_BSR: int | None = None
 
 
@@ -154,8 +154,8 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 
 @router.post('/set_result/card/{asin}')
 async def set_product_result(asin: str, card: ProductsResultItem):
-    if card.bsr_url:
-        deps = db('ai_highlights')['departments'].find({'URL': {'$regex': '^/' + card.bsr_url}})
+    if card.bsr_link:
+        deps = db('ai_highlights')['departments'].find({'URL': {'$regex': '^/' + card.bsr_link}})
         for dep in deps:
             db('ai_highlights')['departments'].update_one({'_id': dep['_id']}, {'$pull': {'items': {'asin': asin}}})
             db('ai_highlights')['departments'].update_one({'_id': dep['_id']}, {'$push': {'items': {

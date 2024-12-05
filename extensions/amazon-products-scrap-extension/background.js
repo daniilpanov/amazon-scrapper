@@ -12,7 +12,7 @@ chrome.tabs.query({
         chrome.tabs.create({
             url: 'html/control_panel.html',
         }, (tab) => {
-            chrome.tabs.update(tab.id, {autoDiscardable: false});
+            chrome.tabs.update(tab.id, { autoDiscardable: false });
         });
     }
 });
@@ -120,7 +120,7 @@ async function run(task, sender, sendResponse) {
         // load data
         if (Object.keys(data || {}).length) {
             data.collectMedia = task.collect_media_config && task.target;
-            data.bsr_url = task.bsr_url;
+            data.bsr_link = task.bsr_link;
             data.number_in_BSR = numberInBSR;
             fetch('http://195.201.194.213:8832/products/set_result/card/' + asin, {
                 headers: {
@@ -182,11 +182,11 @@ async function run(task, sender, sendResponse) {
                 console.error(e);
             }
             // Reviews
-            const f = (task) => {
+            const f = task => {
                 return new Promise(async (resolve, reject) => {
                     // create parser
                     const collector = new CollectReviews(
-                        asin,
+                        task.asin,
                         null,
                         task.current_format,
                         task.keywords || '',
@@ -369,4 +369,3 @@ async function run(task, sender, sendResponse) {
 }
 
 chrome.runtime.onMessageExternal.addListener(run);
-// chrome.runtime.onMessage.addListener(run);
