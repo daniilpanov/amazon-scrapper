@@ -21,5 +21,7 @@ MONGO_DB_PROXY = os.environ.get('MONGO_DB_PROXY')
 WEB_PROXY = os.environ.get('WEB_PROXY')
 PROXY_AUTH_TOKEN = os.environ.get('PROXY_AUTH_TOKEN')
 
+WEB_PORT = int(os.environ.get('WEB_PORT') or 8838)
+
 # UserAgent Maker
 ua = fake_useragent.UserAgent(browsers=['chrome'], min_version=119.0, platforms=['pc'])

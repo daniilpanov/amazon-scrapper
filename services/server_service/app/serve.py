@@ -9,6 +9,8 @@ from starlette.requests import Request
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 import logging
 
+from .settings import WEB_PORT
+
 # Create a logger object
 logger = logging.getLogger(__name__)
 # Set the logging level to INFO
@@ -72,4 +74,4 @@ async def ping():
 
 @app.get('/cp')
 async def redirect_cp(req: Request):
-    return RedirectResponse(url=req.url.scheme + '://' + req.url.hostname + ':8838')
+    return RedirectResponse(url=req.url.scheme + '://' + req.url.hostname + ':' + str(WEB_PORT))

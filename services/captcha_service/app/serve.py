@@ -45,4 +45,4 @@ def run(host='0.0.0.0', port=8090):
 
 
 if __name__ == '__main__':
-    run()
+    run(port=int(os.environ.get('DATA_IMPORTER_PORT') or 8090))
