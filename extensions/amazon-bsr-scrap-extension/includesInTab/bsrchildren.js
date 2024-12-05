@@ -28,7 +28,9 @@ class BSRChildrenParser extends Parser {
         try {
             const data = JSON.parse(element.getAttribute('data-client-recs-list'));
             for (const item of data) {
-                this.ASINsList.push({ asin: item.id, rank: Number.parseInt(item.metadataMap['render.zg.rank']) });
+                if (item.id) {
+                    this.ASINsList.push({ asin: item.id, rank: Number.parseInt(item.metadataMap['render.zg.rank']) });
+                }
             }
         } catch (e) {
         }
