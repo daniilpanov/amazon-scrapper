@@ -17,9 +17,9 @@ let currentUrl = urlList[0];
 
 const URL_EXPIRATION_TIME = 5 * 60 * 1000;
 
-async function getCurrentHostUrl(force = false) {
+async function endp(uri, force = false) {
     if (!force && Date.now() - lastUpdate < URL_EXPIRATION_TIME) {
-        return currentUrl;
+        return currentUrl + uri;
     }
 
     for (const url of urlList) {
@@ -28,7 +28,7 @@ async function getCurrentHostUrl(force = false) {
             if (response.ok) {
                 currentUrl = new URL(url).origin;
                 lastUpdate = Date.now();
-                return currentUrl;
+                return currentUrl + uri;
             }
         } catch (error) {
         }
@@ -37,7 +37,7 @@ async function getCurrentHostUrl(force = false) {
     return null;
 }
 
-await getCurrentHostUrl(true);
+await endp('/ping', true);
 
 
 chrome.tabs.query({
@@ -52,22 +52,20 @@ chrome.tabs.query({
     }
 });
 
-const endpoint = 'http://195.201.194.213:8832/helium/set_100asins';
-
 chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
     if (message.stage > 1) {
         sendResponse('Bad task');
         return;
     }
     let res = await fetch(
-        'http://195.201.194.213:8832/tasks/acquire/100asins/' + message.header_id + '/' + message.task_id,
+        await endp(':8832/tasks/acquire/100asins/' + message.header_id + '/' + message.task_id),
         { method: 'post' },
     );
     if (res.status === 200) {
         sendResponse('OK');
         res = await startScraping100ASINS(message.label, message.type, message.limit, message.task_id, sender.id, message.windowId);
         if (!res) {
-            fetch('http://195.201.194.213:8832/tasks/report/' + message.task_id, {
+            fetch(await endp(':8832/tasks/report/' + message.task_id), {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -187,7 +185,7 @@ async function sendData(asins, task_id) {
     let attempts = 0;
 
     while (attempts < maxAttemptsCount) {
-        const response = await fetch(`${endpoint}/${task_id}`, {
+        const response = await fetch(await endp(':8832/helium/set_100asins/' + task_id)`, {
             method: 'POST',
             body: JSON.stringify({ asins: asins }),
             headers: {
