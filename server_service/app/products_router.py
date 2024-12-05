@@ -31,6 +31,7 @@ class AmazonTaskConfig(BaseModel):
 
 class AsinsItemCollectConfig(BaseModel):
     asin: str
+    rank: int | None = None
     keywords: list[str] | None = None
     collect_aspects: bool | None = None
     current_format: bool | None = None
@@ -43,6 +44,7 @@ class AsinsCollectingConfig(AmazonTaskConfig):
     current_format: bool = True
     collect_media_config: bool = False
     collect_reviews: bool = True
+    bsr_link: str | None = None
 
 
 class AspectsResultItem(BaseModel):

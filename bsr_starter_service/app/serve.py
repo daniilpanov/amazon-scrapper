@@ -1,6 +1,16 @@
 import time
 
 import requests
+import logging
+
+# Create a logger object
+logger = logging.getLogger(__name__)
+# Set the logging level to INFO
+logger.setLevel(logging.DEBUG)
+# Create a handler that logs to the Docker logs
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
 
 
 def run():
@@ -22,6 +32,7 @@ def run():
             if res.status_code == 409:
                 continue
             asins = task['result'].get('asins', [])
+            str_asins = [p['asin'] for p in asins[:5]]
             if task['data'].get('category'):
                 requests.post(
                     'http://server:8832/cmd/category/set',
@@ -29,8 +40,8 @@ def run():
                         'Content-Type': 'application/json',
                     },
                     json={
-                        'asins': asins,
-                        'top5_asins': [p['asin'] for p in asins[:5]],
+                        'asins': str_asins,
+                        'top5_asins': str_asins[:5],
                         'cat_name': task['data'].get('category'),
                         'client_name': task['data'].get('client'),
                         'target': task['data'].get('target'),
@@ -63,30 +74,28 @@ def run():
                 'domain': task['data'].get('domain', 'amazon.com'),
                 'bsr_link': bsr_link,
             }
-            for asin in asins[:int(task['data']['count'])]:
-                if asin == task['data'].get('target'):
-                    data['asins'].append({'asin': asin, 'collect_media_config': True})
-                else:
-                    data['asins'].append({'asin': asin})
-            for asin in asins[int(task['data']['count']):]:
-                if asin == task['data'].get('target'):
-                    data2['asins'].append({'asin': asin, 'collect_media_config': True})
-                else:
-                    data2['asins'].append({'asin': asin})
-            requests.post(
-                'http://server:8832/products/collect',
-                headers={
-                    'Content-Type': 'application/json',
-                },
-                json=data,
-            )
-            requests.post(
-                'http://server:8832/products/collect',
-                headers={
-                    'Content-Type': 'application/json',
-                },
-                json=data2,
-            )
+
+            for asin in asins[:int(task['data'].get('count', 0))]:
+                data['asins'].append({'asin': asin['asin'], 'rank': asin.get('rank'), 'collect_media_config': asin == task['data'].get('target')})
+            for asin in asins[int(task['data'].get('count', 0)):]:
+                data2['asins'].append({'asin': asin['asin'], 'rank': asin.get('rank'), 'collect_media_config': asin == task['data'].get('target')})
+
+            if len(data['asins']):
+                requests.post(
+                    'http://server:8832/products/collect',
+                    headers={
+                        'Content-Type': 'application/json',
+                    },
+                    json=data,
+                ).json()
+            if len(data2['asins']):
+                requests.post(
+                    'http://server:8832/products/collect',
+                    headers={
+                        'Content-Type': 'application/json',
+                    },
+                    json=data2,
+                )
             requests.patch('http://server:8832/tasks/finish/' + task['_id'])
             requests.post('http://server:8832/tasks/release/' + task['_id'])
 
