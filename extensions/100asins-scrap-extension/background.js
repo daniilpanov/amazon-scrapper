@@ -185,7 +185,7 @@ async function sendData(asins, task_id) {
     let attempts = 0;
 
     while (attempts < maxAttemptsCount) {
-        const response = await fetch(await endp(':8832/helium/set_100asins/' + task_id)`, {
+        const response = await fetch(await endp(':8832/helium/set_100asins/' + task_id), {
             method: 'POST',
             body: JSON.stringify({ asins: asins }),
             headers: {
