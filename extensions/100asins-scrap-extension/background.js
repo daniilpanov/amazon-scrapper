@@ -41,51 +41,53 @@ async function endp(uri, force = false) {
 
 endp(':8832/ping', true).then(res => {
     console.log('URL:', res);
-    if (res) {
-        chrome.tabs.query({
-            url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
-        }, tabs => {
-            if (!tabs || !tabs.length) {
-                chrome.tabs.create({
-                    url: 'html/control_panel.html',
-                }, tab => {
-                    chrome.tabs.update(tab.id, { autoDiscardable: false });
+    if (!res) {
+        console.log('Error! No endpoints found!');
+        return;
+    }
+    chrome.tabs.query({
+        url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
+    }, tabs => {
+        if (!tabs || !tabs.length) {
+            chrome.tabs.create({
+                url: 'html/control_panel.html',
+            }, tab => {
+                chrome.tabs.update(tab.id, { autoDiscardable: false });
+            });
+        }
+    });
+
+    chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
+        if (message.stage > 1) {
+            sendResponse('Bad task');
+            return;
+        }
+        let res = await fetch(
+            await endp(':8832/tasks/acquire/100asins/' + message.header_id + '/' + message.task_id),
+            { method: 'post' },
+        );
+        if (res.status === 200) {
+            sendResponse('OK');
+            res = await startScraping100ASINS(message.label, message.type, message.limit, message.task_id, sender.id, message.windowId);
+            if (!res) {
+                fetch(await endp(':8832/tasks/report/' + message.task_id), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        confirm: true,
+                        errors: [(new Date().toUTCString()) + ' [100asins] can\'t send the data'],
+                        stop: true,
+                    }),
                 });
             }
-        });
-
-        chrome.runtime.onMessageExternal.addListener(async (message, sender, sendResponse) => {
-            if (message.stage > 1) {
-                sendResponse('Bad task');
-                return;
-            }
-            let res = await fetch(
-                await endp(':8832/tasks/acquire/100asins/' + message.header_id + '/' + message.task_id),
-                { method: 'post' },
-            );
-            if (res.status === 200) {
-                sendResponse('OK');
-                res = await startScraping100ASINS(message.label, message.type, message.limit, message.task_id, sender.id, message.windowId);
-                if (!res) {
-                    fetch(await endp(':8832/tasks/report/' + message.task_id), {
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        method: 'PATCH',
-                        body: JSON.stringify({
-                            confirm: true,
-                            errors: [(new Date().toUTCString()) + ' [100asins] can\'t send the data'],
-                            stop: true,
-                        }),
-                    });
-                }
-            } else if (res.status === 409) {
-                sendResponse('busy');
-            } else {
-                sendResponse('fail');
-            }
-        });
-    }
+        } else if (res.status === 409) {
+            sendResponse('busy');
+        } else {
+            sendResponse('fail');
+        }
+    });
 });
 
 

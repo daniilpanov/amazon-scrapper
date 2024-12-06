@@ -66,7 +66,7 @@ function runProductTask(task_id) {
         chrome.runtime.sendMessage(
             {
                 fetch: [
-                    'http://195.201.194.213:8832/helium/set/' + task_id + '/amazon',
+                    ':8832/helium/set/' + task_id + '/amazon',
                     {
                         headers: {
                             // 'Content-Encoding': 'gzip',
@@ -81,16 +81,16 @@ function runProductTask(task_id) {
                             manufacturer: manufacturer,
                         }),
                     },
-                ]
+                ],
             },
-            (response) => {
+            () => {
                 // Close the window!!!
                 window.close();
             },
         );
     }, c => {
         if (c > 10) {
-            chrome.runtime.sendMessage({log: ['window.close call [other]']}, (response) => {});
+            chrome.runtime.sendMessage({ log: ['window.close call [other]'] }, () => {});
             window.close();
             return true;
         }

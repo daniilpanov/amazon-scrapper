@@ -1,13 +1,65 @@
-chrome.tabs.query({
-    url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
-}, tabs => {
-    if (!tabs || !tabs.length) {
-        chrome.tabs.create({
-            url: 'html/control_panel.html',
-        }, (tab) => {
-            chrome.tabs.update(tab.id, { autoDiscardable: false });
-        });
+AbortSignal.timeout ??= function timeout(ms) {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), ms);
+    return ctrl.signal;
+};
+
+let lastUpdate = Date.now();
+const urlList = [
+    'https://localhost',
+    'http://localhost',
+    'https://cp.nyle.ai',
+    'http://cp.nyle.ai',
+    'https://195.201.194.213',
+    'http://195.201.194.213',
+];
+let currentUrl = urlList[0];
+
+const URL_EXPIRATION_TIME = 5 * 60 * 1000;
+
+async function endp(uri, force = false) {
+    if (!force && Date.now() - lastUpdate < URL_EXPIRATION_TIME) {
+        return currentUrl + uri;
     }
+
+    for (const url of urlList) {
+        try {
+            const response = await fetch(url + ':8832/ping', { method: 'GET', signal: AbortSignal.timeout(5000) });
+            console.log(response.ok);
+            if (response.ok) {
+                currentUrl = new URL(url).origin;
+                lastUpdate = Date.now();
+                return currentUrl + uri;
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    return null;
+}
+
+
+endp(':8832/ping', true).then(res => {
+    console.log('URL:', res);
+    if (!res) {
+        console.log('Error! No endpoints found!');
+        return;
+    }
+    chrome.tabs.query({
+        url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
+    }, tabs => {
+        if (!tabs || !tabs.length) {
+            chrome.tabs.create({
+                url: 'html/control_panel.html',
+            }, tab => {
+                chrome.tabs.update(tab.id, { autoDiscardable: false });
+            });
+        }
+    });
+
+    chrome.runtime.onMessageExternal.addListener(run);
+    chrome.runtime.onMessage.addListener(run);
 });
 
 async function run(task, sender, sendResponse) {
@@ -78,7 +130,7 @@ async function run(task, sender, sendResponse) {
         result.task_id = task.task_id;
         // load data
         if (Object.keys(result || {}).length) {
-            fetch('http://195.201.194.213:8832/cmd/alias/bsr/finish/', {
+            fetch(await endp(':8832/cmd/alias/bsr/finish/'), {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -88,7 +140,7 @@ async function run(task, sender, sendResponse) {
         }
     } catch (e) {
         console.log(e);
-        fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+        fetch(await endp(':8832/tasks/report/' + task.task_id), {
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -105,6 +157,3 @@ async function run(task, sender, sendResponse) {
         await chrome.tabs.remove(needle_tab.id);
     }
 }
-
-chrome.runtime.onMessageExternal.addListener(run);
-chrome.runtime.onMessage.addListener(run);

@@ -12,12 +12,12 @@ function convertToCSV(arr) {
         // Учитываем два варианта отображения позиции:
         // 1) в виде объекта {asin: <>, position: <>}
         if (row.positionsRange && row.positionsRange.length) {
-            row0 = {...row};
+            row0 = { ...row };
             break;
         } else {  // 2) в виде отдельного столбца
             for (const key in row) {
                 if (key.length === 10 && key.startsWith('B0')) {
-                    row0 = {...row};
+                    row0 = { ...row };
                     last_header = row[key];
                     break;
                 }
@@ -27,7 +27,7 @@ function convertToCSV(arr) {
     // Снова определяем разницу между отображениями
     let range = null;
     if (!row0) {
-        row0 = {...arr[0]};
+        row0 = { ...arr[0] };
     } else if (row0.positionsRange) {
         range = row0.positionsRange;
         row0[range[0].asin] = range[0].position;
@@ -43,35 +43,35 @@ function convertToCSV(arr) {
     delete row0.positionsRange;
     // Переименовываем колонки
     let headers_map = {
-        "phrase": "Keyword Phrase",
-        "resultsNumber": "Competing Products",
-        "impressionExact30": "Search Volume",
-        "exactTitleMatchProductsCount": "Title Density",
-        "iq": "Cerebro IQ Score",
-        "sponsoredAsins": "Sponsored ASINs",
-        "searchVolumeTrend": "Search Volume Trend",
-        "newCprExact": "CPR",
-        "relativeRank": "Relative Rank",
+        'phrase': 'Keyword Phrase',
+        'resultsNumber': 'Competing Products',
+        'impressionExact30': 'Search Volume',
+        'exactTitleMatchProductsCount': 'Title Density',
+        'iq': 'Cerebro IQ Score',
+        'sponsoredAsins': 'Sponsored ASINs',
+        'searchVolumeTrend': 'Search Volume Trend',
+        'newCprExact': 'CPR',
+        'relativeRank': 'Relative Rank',
         /*"positionsRange": [
         {
             "asin": "B086XYZDLH",
             "position": 1
         }
         ], -- AA -- {{ASIN}}*/
-        "competitiveAvg": "Competitor Rank (avg)",
-        "rankingCompetitors": "Ranking Competitors (count)",
-        "amzSuggestedAvg": "Amazon Recommended Rank (avg)",
-        "amzSuggestedCount": "Amazon Recommended Rank (count)",
-        "sponsoredAvg": "Sponsored Rank (avg)",
-        "sponsoredCount": "Sponsored Rank (count)",
-        "competitorPerformanceScore": "Competitor Performance Score",
-        "rank": "Position (Rank)",
-        "monthlySales": "Keyword Sales",
-        "clickShareRate": "ABA Total Click Share",
-        "conversionShareRate": "ABA Total Conv. Share",
-        "cpc": "H10 PPC Sugg. Bid",
-        "highCpc": "H10 PPC Sugg. Max Bid",
-        "lowCpc": "H10 PPC Sugg. Min Bid",
+        'competitiveAvg': 'Competitor Rank (avg)',
+        'rankingCompetitors': 'Ranking Competitors (count)',
+        'amzSuggestedAvg': 'Amazon Recommended Rank (avg)',
+        'amzSuggestedCount': 'Amazon Recommended Rank (count)',
+        'sponsoredAvg': 'Sponsored Rank (avg)',
+        'sponsoredCount': 'Sponsored Rank (count)',
+        'competitorPerformanceScore': 'Competitor Performance Score',
+        'rank': 'Position (Rank)',
+        'monthlySales': 'Keyword Sales',
+        'clickShareRate': 'ABA Total Click Share',
+        'conversionShareRate': 'ABA Total Conv. Share',
+        'cpc': 'H10 PPC Sugg. Bid',
+        'highCpc': 'H10 PPC Sugg. Max Bid',
+        'lowCpc': 'H10 PPC Sugg. Min Bid',
     };
     let headers = Object.keys(headers_map);
     if (last_header) {
@@ -79,12 +79,12 @@ function convertToCSV(arr) {
         headers.push(last_header);
     }
     csvRows.push(headers.map(header => {
-        return headers_map[header]
+        return headers_map[header];
     }).join(','));
 
     // Преобразовать каждый объект в строку CSV
     for (let row of arr) {
-        row = {...row};
+        row = { ...row };
         // Добавляем последний столбец
         if (last_header) {
             const range = row.positionsRange;
@@ -135,13 +135,13 @@ function waitStatus(id, bearer, callback) {
             } else {
                 callback(data);
             }
-        })
+        });
     });
 }
 
 // Wait data
 function runH10Task(task) {
-    const {asins} = task;
+    const { asins } = task;
     // Wait for loading base form
     waitForElement('div[name=asins] input', (els) => {
         // Removing ASINs if exist
@@ -150,12 +150,12 @@ function runH10Task(task) {
         setTimeout(() => {
             // send the first query -- get-previous-search
             fetch('https://research-tools.helium10.com/api/cerebro/v1/search/multiple/previous-searches?accountId=1545531519&marketplace=ATVPDKIKX0DER&productIds%5B%5D=' + asins.join('&productIds%5B%5D='), {
-                "headers": {
-                    "Accept": "application/json",
-                    "Authorization": "Bearer " + my_bearer,
-                    "Content-Type": "application/json",
+                'headers': {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer ' + my_bearer,
+                    'Content-Type': 'application/json',
                 },
-                "method": "GET",
+                'method': 'GET',
             }).then(data => {
                 // [ignore response]
                 data.json().then(data => {
@@ -168,27 +168,27 @@ function runH10Task(task) {
             });
         }, 500);
     }, (counter) => {
-        return counter >= 500
+        return counter >= 500;
     });
 }
 
 function main(task_id, asins, _) {
     // The second query -- create-multiple-search
-    fetch("https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple?accountId=1545531519", {
-        "headers": {
-            "Accept": "application/json",
-            "Authorization": "Bearer " + my_bearer,
-            "Content-Type": "application/json",
+    fetch('https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple?accountId=1545531519', {
+        'headers': {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ' + my_bearer,
+            'Content-Type': 'application/json',
         },
-        "body": `{"marketplace":"ATVPDKIKX0DER","mainProductId":"${asins[0]}","productIds":${JSON.stringify(asins)},"adminSearch":false,"exactProduct":false}`,
-        "method": "POST",
+        'body': `{"marketplace":"ATVPDKIKX0DER","mainProductId":"${asins[0]}","productIds":${JSON.stringify(asins)},"adminSearch":false,"exactProduct":false}`,
+        'method': 'POST',
     }).then(res => {
         if (res.status >= 300) {
             res.json().then(d => {
                 chrome.runtime.sendMessage(
                     {
                         fetch: [
-                            'http://195.201.194.213:8832/tasks/report/' + task_id,
+                            ':8832/tasks/report/' + task_id,
                             {
                                 headers: {
                                     // 'Content-Encoding': 'gzip',
@@ -203,9 +203,9 @@ function main(task_id, asins, _) {
                                     stop: true,
                                 }),
                             },
-                        ]
+                        ],
                     },
-                    (response) => {
+                    () => {
                         // Close the window!!!
                         window.close();
                     },
@@ -221,7 +221,7 @@ function main(task_id, asins, _) {
                     chrome.runtime.sendMessage(
                         {
                             fetch: [
-                                'http://195.201.194.213:8832/tasks/report/' + task_id,
+                                ':8832/tasks/report/' + task_id,
                                 {
                                     headers: {
                                         // 'Content-Encoding': 'gzip',
@@ -236,9 +236,9 @@ function main(task_id, asins, _) {
                                         stop: true,
                                     }),
                                 },
-                            ]
+                            ],
                         },
-                        (response) => {
+                        () => {
                             // Close the window!!!
                             window.close();
                         },
@@ -247,30 +247,30 @@ function main(task_id, asins, _) {
                 }
                 // The fourth query -- get-end-task-body
                 fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}?accountId=1545531519`, {
-                    "headers": {
-                        "Accept": "application/json",
-                        "Authorization": "Bearer " + my_bearer,
-                        "Content-Type": "application/json",
+                    'headers': {
+                        'Accept': 'application/json',
+                        'Authorization': 'Bearer ' + my_bearer,
+                        'Content-Type': 'application/json',
                     },
-                    "method": "GET",
+                    'method': 'GET',
                 }).then(data => {
-                    data.json().then(data => {
+                    data.json().then(() => {
                         // [ignore response]
                         // The fifth query -- get additional data about ASINs
                         fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/data?accountId=1545531519&include-all=0&include-any=1&page=1&per_page=50&sort=default`, {
-                            "headers": {
-                                "Accept": "application/json",
-                                "Authorization": "Bearer " + my_bearer,
-                                "Content-Type": "application/json",
+                            'headers': {
+                                'Accept': 'application/json',
+                                'Authorization': 'Bearer ' + my_bearer,
+                                'Content-Type': 'application/json',
                             },
-                            "method": "GET",
+                            'method': 'GET',
                         }).then(data => {
                             data.json().then(data => {
                                 if (!data.data.productDetails) {
                                     chrome.runtime.sendMessage(
                                         {
                                             fetch: [
-                                                'http://195.201.194.213:8832/tasks/report/' + task_id,
+                                                ':8832/tasks/report/' + task_id,
                                                 {
                                                     headers: {
                                                         // 'Content-Encoding': 'gzip',
@@ -285,7 +285,7 @@ function main(task_id, asins, _) {
                                                         stop: true,
                                                     }),
                                                 },
-                                            ]
+                                            ],
                                         },
                                         (response) => {
                                         },
@@ -293,38 +293,38 @@ function main(task_id, asins, _) {
                                     return;
                                 }
                                 // Get only titles
-                                let result = {'titles': {}, 'image_urls': {}, 'export': []};
+                                let result = { 'titles': {}, 'image_urls': {}, 'export': [] };
                                 for (const details of data.data.productDetails) {
                                     result.titles[details.asin] = details.title;
                                     result.image_urls[details.asin] = details.imageUrl;
                                 }
                                 // The sixth query -- export-data
                                 fetch(`https://research-tools.helium10.com/api/cerebro/v1/amazon/search/multiple/${id}/exported-data?accountId=1545531519&include-all=0&include-any=1&sort=default`, {
-                                    "headers": {
-                                        "Accept": "application/json",
-                                        "Authorization": "Bearer " + my_bearer,
-                                        "Content-Type": "application/json",
+                                    'headers': {
+                                        'Accept': 'application/json',
+                                        'Authorization': 'Bearer ' + my_bearer,
+                                        'Content-Type': 'application/json',
                                     },
-                                    "method": "GET",
+                                    'method': 'GET',
                                 }).then(data => {
                                     data.json().then(data => {
                                         // Make the CSV
                                         result.export = convertToCSV(data.data);
                                         // The last (seventh) query -- track-event
-                                        fetch("https://research-tools.helium10.com/api/site/track-event?accountId=1545531519", {
-                                            "headers": {
-                                                "Accept": "application/json",
-                                                "Authorization": "Bearer " + my_bearer,
-                                                "Content-Type": "application/json",
+                                        fetch('https://research-tools.helium10.com/api/site/track-event?accountId=1545531519', {
+                                            'headers': {
+                                                'Accept': 'application/json',
+                                                'Authorization': 'Bearer ' + my_bearer,
+                                                'Content-Type': 'application/json',
                                             },
-                                            "body": "{\"eventName\":\"Cerebro Export\",\"eventProperties\":{\"marketplace\":\"ATVPDKIKX0DER\",\"format\":\"csv\"}}",
-                                            "method": "POST",
-                                        }).then(data => {
+                                            'body': '{"eventName":"Cerebro Export","eventProperties":{"marketplace":"ATVPDKIKX0DER","format":"csv"}}',
+                                            'method': 'POST',
+                                        }).then(() => {
                                             // HURRAY! All requests done!
                                             chrome.runtime.sendMessage(
                                                 {
                                                     fetch: [
-                                                        'http://195.201.194.213:8832/helium/set/' + task_id,
+                                                        ':8832/helium/set/' + task_id,
                                                         {
                                                             headers: {
                                                                 // 'Content-Encoding': 'gzip',
@@ -333,19 +333,19 @@ function main(task_id, asins, _) {
                                                             method: 'POST',
                                                             body: JSON.stringify(result),
                                                         },
-                                                    ]
+                                                    ],
                                                 },
-                                                (response) => {
+                                                () => {
                                                     // Close the window!!!
                                                     window.close();
                                                 },
                                             );
                                         });
-                                    })
+                                    });
                                 });
-                            })
+                            });
                         });
-                    })
+                    });
                 });
             });
         });
@@ -353,7 +353,7 @@ function main(task_id, asins, _) {
         chrome.runtime.sendMessage(
             {
                 fetch: [
-                    'http://195.201.194.213:8832/tasks/report/' + task_id,
+                    ':8832/tasks/report/' + task_id,
                     {
                         headers: {
                             // 'Content-Encoding': 'gzip',
@@ -368,12 +368,12 @@ function main(task_id, asins, _) {
                             stop: false,
                         }),
                     },
-                ]
+                ],
             },
             (response) => {
                 chrome.runtime.sendMessage(
-                    {fetch: ['http://195.201.194.213:8832/tasks/release/' + task_id, {method: 'POST'}]},
-                    (response) => {
+                    { fetch: [':8832/tasks/release/' + task_id, { method: 'POST' }] },
+                    () => {
                         // Close the window!!!
                         window.close();
                     },

@@ -1,3 +1,46 @@
+AbortSignal.timeout ??= function timeout(ms) {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), ms);
+    return ctrl.signal;
+};
+
+let lastUpdate = Date.now();
+const urlList = [
+    'https://localhost',
+    'http://localhost',
+    'https://cp.nyle.ai',
+    'http://cp.nyle.ai',
+    'https://195.201.194.213',
+    'http://195.201.194.213',
+];
+let currentUrl = urlList[0];
+
+const URL_EXPIRATION_TIME = 5 * 60 * 1000;
+
+async function endp(uri, force = false) {
+    if (!force && Date.now() - lastUpdate < URL_EXPIRATION_TIME) {
+        return currentUrl + uri;
+    }
+
+    for (const url of urlList) {
+        try {
+            const response = await fetch(url + ':8832/ping', { method: 'GET', signal: AbortSignal.timeout(5000) });
+            console.log(response.ok);
+            if (response.ok) {
+                currentUrl = new URL(url).origin;
+                lastUpdate = Date.now();
+                return currentUrl + uri;
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    return null;
+}
+
+console.log('URL:', await endp(':8832/ping', true));
+
 async function sendTask(data) {
     const msg = await chrome.runtime.sendMessage(data);
     console.log('Message sent');
@@ -35,7 +78,7 @@ async function main() {
     curr_limit = real_tabs_limit - tabs_count;
     for (let i = 0; i <= 1; ++i) {
         try {
-            const res = await fetch('http://195.201.194.213:8832/tasks/get_available/bsr?stage=' + i);
+            const res = await fetch(await endp(':8832/tasks/get_available/bsr?stage=' + i));
             const data = await res.json();
             for (let i in data) {
                 console.log('Available space left:', curr_limit, '; limit & count:', real_tabs_limit, tabs_count);

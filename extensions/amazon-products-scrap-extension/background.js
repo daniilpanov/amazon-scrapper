@@ -4,35 +4,78 @@ AbortSignal.timeout ??= function timeout(ms) {
     return ctrl.signal;
 };
 
-chrome.tabs.query({
-    url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
-    currentWindow: true,
-}, (tabs) => {
-    if (!tabs || !tabs.length) {
-        chrome.tabs.create({
-            url: 'html/control_panel.html',
-        }, (tab) => {
-            chrome.tabs.update(tab.id, { autoDiscardable: false });
-        });
-    }
-});
+let lastUpdate = Date.now();
+const urlList = [
+    'https://localhost',
+    'http://localhost',
+    'https://cp.nyle.ai',
+    'http://cp.nyle.ai',
+    'https://195.201.194.213',
+    'http://195.201.194.213',
+];
+let currentUrl = urlList[0];
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    let need_run = true;
-    for (let i in request) {
-        if (i === 'fetch') {
-            need_run = false;
-            fetch(request[i][0], request[i][1]).then((response) => {
-                sendResponse(response);
-            });
-        } else if (i === 'log') {
-            need_run = false;
-            console.log(request[i]);
+const URL_EXPIRATION_TIME = 5 * 60 * 1000;
+
+async function endp(uri, force = false) {
+    if (!force && Date.now() - lastUpdate < URL_EXPIRATION_TIME) {
+        return currentUrl + uri;
+    }
+
+    for (const url of urlList) {
+        try {
+            const response = await fetch(url + ':8832/ping', { method: 'GET', signal: AbortSignal.timeout(5000) });
+            console.log(response.ok);
+            if (response.ok) {
+                currentUrl = new URL(url).origin;
+                lastUpdate = Date.now();
+                return currentUrl + uri;
+            }
+        } catch (error) {
+            console.log(error);
         }
     }
 
-    if (need_run)
-        return run(request, sender, sendResponse);
+    return null;
+}
+
+
+endp(':8832/ping', true).then(res => {
+    console.log('URL:', res);
+    if (!res) {
+        console.log('Error! No endpoints found!');
+        return;
+    }
+    chrome.tabs.query({
+        url: 'chrome-extension://' + chrome.runtime.id + '/html/control_panel.html',
+    }, tabs => {
+        if (!tabs || !tabs.length) {
+            chrome.tabs.create({
+                url: 'html/control_panel.html',
+            }, tab => {
+                chrome.tabs.update(tab.id, { autoDiscardable: false });
+            });
+        }
+    });
+
+    chrome.runtime.onMessageExternal.addListener(run);
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        let need_run = true;
+        for (let i in request) {
+            if (i === 'fetch') {
+                need_run = false;
+                fetch(request[i][0], request[i][1]).then((response) => {
+                    sendResponse(response);
+                });
+            } else if (i === 'log') {
+                need_run = false;
+                console.log(request[i]);
+            }
+        }
+
+        if (need_run)
+            return run(request, sender, sendResponse);
+    });
 });
 
 async function run(task, sender, sendResponse) {
@@ -103,7 +146,7 @@ async function run(task, sender, sendResponse) {
         // handle errors
         if (data.error) {
             console.log(data.error);
-            fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+            fetch(await endp(':8832/tasks/report/' + task.task_id), {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -122,7 +165,7 @@ async function run(task, sender, sendResponse) {
             data.collectMedia = task.collect_media_config && task.target;
             data.bsr_link = task.bsr_link;
             data.number_in_BSR = numberInBSR;
-            fetch('http://195.201.194.213:8832/products/set_result/card/' + asin, {
+            fetch(await endp(':8832/products/set_result/card/' + asin), {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -199,7 +242,7 @@ async function run(task, sender, sendResponse) {
                             chrome.runtime.sendMessage(
                                 {
                                     fetch: [
-                                        'http://195.201.194.213:8832/products/set_result/reviews',
+                                        ':8832/products/set_result/reviews',
                                         {
                                             headers: {
                                                 // 'Content-Encoding': 'gzip',
@@ -264,7 +307,7 @@ async function run(task, sender, sendResponse) {
             // report errors of reviews collecting if exist
             errors = result[0].result?.errors;
             if (errors) {
-                fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+                fetch(await endp(':8832/tasks/report/' + task.task_id), {
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -278,13 +321,13 @@ async function run(task, sender, sendResponse) {
             }
             // else release and finish
             else {
-                fetch('http://195.201.194.213:8832/tasks/finish/' + task.task_id, {
+                fetch(await endp(':8832/tasks/finish/' + task.task_id), {
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     method: 'PATCH',
                 });
-                fetch('http://195.201.194.213:8832/tasks/release/' + task.task_id, {
+                fetch(await endp(':8832/tasks/release/' + task.task_id), {
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -292,13 +335,13 @@ async function run(task, sender, sendResponse) {
                 });
             }
         } else {
-            fetch('http://195.201.194.213:8832/tasks/finish/' + task.task_id, {
+            fetch(await endp(':8832/tasks/finish/' + task.task_id), {
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 method: 'PATCH',
             });
-            fetch('http://195.201.194.213:8832/tasks/release/' + task.task_id, {
+            fetch(await endp(':8832/tasks/release/' + task.task_id), {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -307,7 +350,7 @@ async function run(task, sender, sendResponse) {
         }
     } catch (e) {
         console.log(e);
-        fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+        fetch(await endp(':8832/tasks/report/' + task.task_id), {
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -343,7 +386,7 @@ async function run(task, sender, sendResponse) {
                 signal: AbortSignal.timeout(15000),
             }));
         } catch (e) {
-            fetch('http://195.201.194.213:8832/tasks/report/' + task.task_id, {
+            fetch(await endp(':8832/tasks/report/' + task.task_id), {
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -367,5 +410,3 @@ async function run(task, sender, sendResponse) {
         }
     }
 }
-
-chrome.runtime.onMessageExternal.addListener(run);
