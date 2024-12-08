@@ -107,8 +107,6 @@ services:
     sellercentral_loader:
         build:
             context: services/sellercentral_loader
-            target: server
-            dockerfile: Dockerfile
         restart: unless-stopped
         networks:
             - net
