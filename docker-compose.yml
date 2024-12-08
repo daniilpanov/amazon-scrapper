@@ -104,6 +104,26 @@ services:
             - "--worker-class=uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
+    sellercentral_loader:
+        build:
+            context: services/sellercentral_loader
+            target: server
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./services/sellercentral_loader:/src:rw
+        env_file: .env
+        expose:
+            - "$SELLERCENTRAL_PORT"
+        ports:
+            - "$SELLERCENTRAL_PORT:$SELLERCENTRAL_PORT"
+        command:
+            - "--preload"
+            - "--worker-class=uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$SELLERCENTRAL_PORT"
     web:
         depends_on:
             - server
