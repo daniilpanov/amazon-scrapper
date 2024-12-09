@@ -21,10 +21,6 @@ services:
         ports:
             - "$DATA_IMPORTER_PORT:$DATA_IMPORTER_PORT"
         command:
-            - "--workers"
-            - "2"
-            - "--preload"
-            - "--worker-class=uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     proxies:
@@ -40,8 +36,6 @@ services:
         ports:
             - "$PROXIES_PORT:$PROXIES_PORT"
         command:
-            - "--preload"
-            - "--worker-class=uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     s3:
@@ -60,8 +54,6 @@ services:
             - "gunicorn"
             - "app:app"
         command:
-            - "--preload"
-            - "--worker-class=uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
 #    google:
@@ -123,12 +115,6 @@ services:
         ports:
             - "$SERVER_PORT:$SERVER_PORT"
         command:
-            - "-k"
-            - "gevent"
-            - "--workers"
-            - "2"
-            - "--preload"
-            - "--worker-class=uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     sellercentral_loader:
@@ -144,8 +130,6 @@ services:
         ports:
             - "$SELLERCENTRAL_PORT:$SELLERCENTRAL_PORT"
         command:
-            - "--preload"
-            - "--worker-class=uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SELLERCENTRAL_PORT"
     web:
@@ -163,8 +147,6 @@ services:
         ports:
             - "$WEB_PORT:$WEB_PORT"
         command:
-            - "--preload"
-            - "--worker-class=uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$WEB_PORT"
 #    capsolver:
