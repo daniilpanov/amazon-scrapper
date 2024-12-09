@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-docker build ./dockerfiles/simple_server -t danielgreen1806/amascrap-simple_server
-docker build ./dockerfiles/light -t danielgreen1806/amascrap-light
-docker build ./dockerfiles/google -t danielgreen1806/amascrap-google
-docker build ./dockerfiles/s3 -t danielgreen1806/amascrap-s3
+docker build ./dockerfiles/simple_server -t danielgreen1806/amascrap-simple_server:latest
+docker build ./dockerfiles/light -t danielgreen1806/amascrap-light:latest
+docker build ./dockerfiles/google -t danielgreen1806/amascrap-google:latest
+docker build ./dockerfiles/s3 -t danielgreen1806/amascrap-s3:latest
 
 # docker push danielgreen1806/amascrap-simple_server
 # docker push danielgreen1806/amascrap-light

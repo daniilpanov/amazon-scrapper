@@ -8,8 +8,8 @@ import requests
 from starlette.responses import Response
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
 
-import db_mongo
-import config
+from . import db_mongo
+from . import config
 
 
 class AmazonProxy:

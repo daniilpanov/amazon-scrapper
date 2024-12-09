@@ -3,7 +3,7 @@ import certifi
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
 
-from config import *
+from .config import *
 
 client: MongoClient | None = None
 

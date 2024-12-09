@@ -1,18 +1,12 @@
-import asyncio
-import re
 from collections import defaultdict
 
-import fastapi
 import orjson
-import requests
-from bs4 import BeautifulSoup
 from fastapi import APIRouter, Body
 from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
-from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_201_CREATED, \
-    HTTP_503_SERVICE_UNAVAILABLE
+from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_201_CREATED
 
 from . import helpers
 from . import tasks_manager
@@ -132,41 +126,6 @@ async def finish_bsrtree_cmd(bsr: BSRTreeResult):
                                                   {'$set': {'items': result}})
     tasks_manager.release_task(bsr.task_id)
     return Response(status_code=HTTP_201_CREATED)
-
-
-@router.get('/reviews/count')
-async def reviews_count_cmd(asin: str, current_format: bool = True):
-    try:
-        cookie = db('amazon_data')['__cookies'].find_one(
-            {'session-id': {'$exists': True}, 'sp-cdn': {'$exists': False}})
-        count = db('amazon_data')['customer_reviews'].count_documents({'asin': asin})
-        data = db('amazon_data')['product_card'].find_one({'asin': asin})
-        soup = None
-        for i in range(30):
-            res = requests.get(
-                (data.get('canonical_link',
-                          'https://www.amazon.com/product-reviews/' + asin + '/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews') + '&formatType=' + (
-                     'current_format' if current_format else '')),
-                cookies=cookie,
-                headers=helpers.get_request_headers(),
-            )
-            if res.status_code and res.text:
-                html = res.text
-                soup = BeautifulSoup(html, features='lxml')
-                reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
-                if reviews_count_element:
-                    break
-            await asyncio.sleep(1)
-        if not soup:
-            raise HTTPException(HTTP_503_SERVICE_UNAVAILABLE)
-        reviews_count_element = soup.select_one('[data-hook="cr-filter-info-review-rating-count"]')
-        reviews_count = 0
-        reviews_count_part = ''.join(re.findall(r'[0-9., ]+', reviews_count_element.text)).split(' ,')
-        if len(reviews_count_part) == 2:
-            reviews_count = int(float(reviews_count_part[1].replace(',', '').replace(' ', '')))
-        return count, reviews_count, asin
-    except Exception as e:
-        raise HTTPException(status_code=fastapi.status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
 @router.post('/category/set')

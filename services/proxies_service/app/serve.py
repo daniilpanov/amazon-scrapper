@@ -1,7 +1,7 @@
 from threading import Thread
 
-from proxies_manager import updating, app
-from config import PORT
+from .proxies_manager import updating, app
+from .config import PORT
 
 
 def run():

@@ -1,5 +1,7 @@
-import certifi
+from gevent import monkey
+monkey.patch_all()
 
+import certifi
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
 

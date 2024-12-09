@@ -6,8 +6,8 @@ from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 from starlette.status import HTTP_404_NOT_FOUND
 
-from s3helper import *
-from config import PORT
+from .s3helper import *
+from .config import PORT
 
 app = FastAPI()
 

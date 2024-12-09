@@ -2,14 +2,14 @@ services:
     bsrstarter:
         depends_on:
             - server
-        image: amascrap-light:latest
+        image: danielgreen1806/amascrap-light:latest
         restart: unless-stopped
         networks:
             - net
         volumes:
             - ./services/bsr_starter_service:/src:rw
     dataimporter:
-        image: amascrap-simple_server:latest
+        image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -28,7 +28,7 @@ services:
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     proxies:
-        image: amascrap-simple_server:latest
+        image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -45,7 +45,7 @@ services:
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     s3:
-        image: amascrap-s3:latest
+        image: danielgreen1806/amascrap-s3:latest
         restart: unless-stopped
         networks:
             - net
@@ -56,28 +56,38 @@ services:
             - "$S3_PORT"
         ports:
             - "$S3_PORT:$S3_PORT"
+        entrypoint:
+            - "gunicorn"
+            - "app:app"
         command:
             - "--preload"
             - "--worker-class=uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
-    google:
-        image: amascrap-google:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/google_upload:/src:rw
-        env_file: .env
-        command:
-            - "--preload"
-            - "--worker-class=uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$SERVER_PORT"
+#    google:
+#        image: danielgreen1806/amascrap-google:latest
+#        restart: unless-stopped
+#        networks:
+#            - net
+#        volumes:
+#            - ./services/google_upload:/src:rw
+#        env_file: .env
+#        expose:
+#            - "$GOOGLE_PORT"
+#        ports:
+#            - "$GOOGLE_PORT:$GOOGLE_PORT"
+#        entrypoint:
+#            - "gunicorn"
+#            - "app:app"
+#        command:
+#            - "--preload"
+#            - "--worker-class=uvicorn.workers.UvicornWorker"
+#            - "-b"
+#            - "0.0.0.0:$GOOGLE_PORT"
     s3_upload:
         depends_on:
             - server
-        image: amascrap-s3:latest
+        image: danielgreen1806/amascrap-s3:latest
         restart: unless-stopped
         networks:
             - net
@@ -90,22 +100,18 @@ services:
     google_upload:
         depends_on:
             - server
-        image: amascrap-google:latest
+        image: danielgreen1806/amascrap-google:latest
         restart: unless-stopped
         networks:
             - net
         volumes:
             - ./services/google_upload_service:/src:rw
         env_file: .env
-        expose:
-            - "$GOOGLE_PORT"
-        ports:
-            - "$GOOGLE_PORT:$GOOGLE_PORT"
         entrypoint:
             - "python"
             - "app/serve.py"
     server:
-        image: amascrap-simple_server:latest
+        image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -117,6 +123,8 @@ services:
         ports:
             - "$SERVER_PORT:$SERVER_PORT"
         command:
+            - "-k"
+            - "gevent"
             - "--workers"
             - "2"
             - "--preload"
@@ -124,7 +132,7 @@ services:
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     sellercentral_loader:
-        image: amascrap-simple_server:latest
+        image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -143,7 +151,7 @@ services:
     web:
         depends_on:
             - server
-        image: amascrap-simple_server:latest
+        image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -160,7 +168,7 @@ services:
             - "-b"
             - "0.0.0.0:$WEB_PORT"
 #    capsolver:
-#        image: amascrap-tensorflow_server
+#        image: danielgreen1806/amascrap-tensorflow_server
 #        build:
 #            context: dockerfiles/tensorflow_server
 #        restart: unless-stopped
