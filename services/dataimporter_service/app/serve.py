@@ -9,8 +9,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-import db_mongo
-from config import *
+from . import db_mongo
+from .config import *
 
 app = fastapi.FastAPI()
 app.add_middleware(

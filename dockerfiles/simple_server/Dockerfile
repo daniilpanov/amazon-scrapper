@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS sellercentral_loader
+FROM python:3.11-slim AS loader
 
 WORKDIR '/src'
 

@@ -2,20 +2,14 @@ services:
     bsrstarter:
         depends_on:
             - server
-        build:
-            context: services/bsr_starter_service
-            target: bsrstarter
-            dockerfile: Dockerfile
+        image: amascrap-light:latest
         restart: unless-stopped
         networks:
             - net
         volumes:
             - ./services/bsr_starter_service:/src:rw
     dataimporter:
-        build:
-            context: services/dataimporter_service
-            target: dataimporter
-            dockerfile: Dockerfile
+        image: amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -26,11 +20,15 @@ services:
             - "$DATA_IMPORTER_PORT"
         ports:
             - "$DATA_IMPORTER_PORT:$DATA_IMPORTER_PORT"
+        command:
+            - "--workers"
+            - "2"
+            - "--preload"
+            - "--worker-class=uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$SERVER_PORT"
     proxies:
-        build:
-            context: services/proxies_service
-            target: proxies_manager
-            dockerfile: Dockerfile
+        image: amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -41,11 +39,13 @@ services:
             - "$PROXIES_PORT"
         ports:
             - "$PROXIES_PORT:$PROXIES_PORT"
+        command:
+            - "--preload"
+            - "--worker-class=uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$SERVER_PORT"
     s3:
-        build:
-            context: services/s3_service
-            target: s3
-            dockerfile: Dockerfile
+        image: amascrap-s3:latest
         restart: unless-stopped
         networks:
             - net
@@ -56,37 +56,56 @@ services:
             - "$S3_PORT"
         ports:
             - "$S3_PORT:$S3_PORT"
-    google_upload:
-        depends_on:
-            - server
-        build:
-            context: services/google_upload_service
-            target: google_upload
-            dockerfile: Dockerfile
+        command:
+            - "--preload"
+            - "--worker-class=uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$SERVER_PORT"
+    google:
+        image: amascrap-google:latest
         restart: unless-stopped
         networks:
             - net
         volumes:
-            - ./services/google_upload_service:/src:rw
+            - ./services/google_upload:/src:rw
         env_file: .env
+        command:
+            - "--preload"
+            - "--worker-class=uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$SERVER_PORT"
     s3_upload:
         depends_on:
             - server
-        build:
-            context: services/s3_upload_service
-            target: s3_upload
-            dockerfile: Dockerfile
+        image: amascrap-s3:latest
         restart: unless-stopped
         networks:
             - net
         volumes:
             - ./services/s3_upload_service:/src:rw
         env_file: .env
+        entrypoint:
+            - "python"
+            - "app/serve.py"
+    google_upload:
+        depends_on:
+            - server
+        image: amascrap-google:latest
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./services/google_upload_service:/src:rw
+        env_file: .env
+        expose:
+            - "$GOOGLE_PORT"
+        ports:
+            - "$GOOGLE_PORT:$GOOGLE_PORT"
+        entrypoint:
+            - "python"
+            - "app/serve.py"
     server:
-        build:
-            context: services/server_service
-            target: server
-            dockerfile: Dockerfile
+        image: amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -105,8 +124,7 @@ services:
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     sellercentral_loader:
-        build:
-            context: services/sellercentral_loader
+        image: amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -125,10 +143,7 @@ services:
     web:
         depends_on:
             - server
-        build:
-            context: services/web
-            target: web
-            dockerfile: Dockerfile
+        image: amascrap-simple_server:latest
         restart: unless-stopped
         networks:
             - net
@@ -140,15 +155,14 @@ services:
         ports:
             - "$WEB_PORT:$WEB_PORT"
         command:
-            - "--host"
-            - "0.0.0.0"
-            - "--port"
-            - "$WEB_PORT"
+            - "--preload"
+            - "--worker-class=uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$WEB_PORT"
 #    capsolver:
+#        image: amascrap-tensorflow_server
 #        build:
-#            context: ./captcha_service
-#            target: capsolver
-#            dockerfile: Dockerfile
+#            context: dockerfiles/tensorflow_server
 #        restart: unless-stopped
 #        networks:
 #            - net
