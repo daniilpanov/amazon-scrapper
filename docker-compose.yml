@@ -102,6 +102,21 @@ services:
         entrypoint:
             - "python"
             - "app/serve.py"
+    bsr_loader:
+        image: danielgreen1806/amascrap-simple_server:latest
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./services/amazon_departments_loader:/src:rw
+        env_file: .env
+        expose:
+            - "$BSR_PORT"
+        ports:
+            - "$BSR_PORT:$BSR_PORT"
+        command:
+            - "-b"
+            - "0.0.0.0:$BSR_PORT"
     server:
         image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
