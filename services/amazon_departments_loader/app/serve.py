@@ -1,13 +1,14 @@
 import os
 
 import certifi
+from bson import ObjectId
 from fastapi import FastAPI, APIRouter
 from future.backports.http.client import HTTPException
 from pymongo import AsyncMongoClient
 from pymongo.errors import DuplicateKeyError, PyMongoError
 from pymongo.server_api import ServerApi
 from starlette.responses import JSONResponse
-from starlette.status import HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_404_NOT_FOUND
 
 from services.amazon_departments_loader.app.fastapi_models import InfoBSRForm, ASINsBSRForm
 
@@ -74,7 +75,9 @@ async def load_bsr_info(info: InfoBSRForm):
 
 @router.post('/load/asins')
 async def load_bsr_asins(data: ASINsBSRForm):
-    pass
+    res = await collection('departments', 'ai_highlights').find_one({'_id': ObjectId(data.bsr_id)})
+    if not res:
+        raise HTTPException(HTTP_404_NOT_FOUND)
 
 
 app.include_router(router)
