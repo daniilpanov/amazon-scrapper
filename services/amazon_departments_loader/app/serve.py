@@ -69,24 +69,19 @@ async def load_bsr_info(info: InfoBSRForm):
         data[bsr_fields_map[i]] = key
     if not i:
         raise HTTPException(HTTP_400_BAD_REQUEST)
-    logger.debug('1Data: ' + str(data))
     data['URL'], data['ref'] = info.departments_flat_tree[key].rsplit('/', maxsplit=1)
-    logger.debug('2Data: ' + str(data))
     if not data['ref'].startswith('ref'):
         data['URL'] += '/' + data['ref']
         data['ref'] = None
-    logger.debug('3Data: ' + str(data))
     try:
         res = await collection('departments', 'ai_highlights').insert_one(data)
-        logger.debug('4Data: ' + str(data))
         return JSONResponse({
             'bsr_id': str(res.inserted_id),
         })
     except DuplicateKeyError:
         del data['ref']
+        del data['_id']
         res = await collection('departments', 'ai_highlights').find_one(data)
-        logger.debug('Res: ' + str(res))
-        logger.debug('Data: ' + str(data))
         return JSONResponse({
             'bsr_id': str(res['_id']),
         })

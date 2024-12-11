@@ -31,6 +31,15 @@ class TestBSR(unittest.TestCase):
     def test_departments_asins(self):
         res = requests.post(
             'http://0.0.0.0:' + str(os.environ.get('BSR_PORT', 8839)) + '/v1/bsr/load/asins',
-            json={},
+            json={
+                'bsr_id': self.bsr_id,
+                'asins': [
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                ],
+            },
         )
         assert res.status_code == 200, 'Status code is not 200: ' + str(res.status_code)
