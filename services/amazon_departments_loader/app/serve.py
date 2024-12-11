@@ -1,16 +1,27 @@
+import logging
 import os
+from logging.handlers import TimedRotatingFileHandler
 
 import certifi
 from bson import ObjectId
-from fastapi import FastAPI, APIRouter
-from future.backports.http.client import HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException
 from pymongo import AsyncMongoClient
 from pymongo.errors import DuplicateKeyError, PyMongoError
 from pymongo.server_api import ServerApi
 from starlette.responses import JSONResponse
 from starlette.status import HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_404_NOT_FOUND
 
-from services.amazon_departments_loader.app.fastapi_models import InfoBSRForm, ASINsBSRForm
+from .fastapi_models import InfoBSRForm, ASINsBSRForm
+
+
+# Create a logger object
+logger = logging.getLogger(__name__)
+# Set the logging level to INFO
+logger.setLevel(logging.DEBUG)
+# Create a handler that logs to the Docker logs
+handler = TimedRotatingFileHandler(when='h', backupCount=2, utc=True, filename='logs/bsrloader.log')
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
 
 db_global_prefix = os.environ.get('DB_GLOBAL_PREFIX', '')
 collections_global_prefix = os.environ.get('COLLECTIONS_GLOBAL_PREFIX', '')
@@ -58,14 +69,24 @@ async def load_bsr_info(info: InfoBSRForm):
         data[bsr_fields_map[i]] = key
     if not i:
         raise HTTPException(HTTP_400_BAD_REQUEST)
-    data['URL'] = info.departments_flat_tree[key]
+    logger.debug('1Data: ' + str(data))
+    data['URL'], data['ref'] = info.departments_flat_tree[key].rsplit('/', maxsplit=1)
+    logger.debug('2Data: ' + str(data))
+    if not data['ref'].startswith('ref'):
+        data['URL'] += '/' + data['ref']
+        data['ref'] = None
+    logger.debug('3Data: ' + str(data))
     try:
         res = await collection('departments', 'ai_highlights').insert_one(data)
+        logger.debug('4Data: ' + str(data))
         return JSONResponse({
             'bsr_id': str(res.inserted_id),
         })
     except DuplicateKeyError:
+        del data['ref']
         res = await collection('departments', 'ai_highlights').find_one(data)
+        logger.debug('Res: ' + str(res))
+        logger.debug('Data: ' + str(data))
         return JSONResponse({
             'bsr_id': str(res['_id']),
         })
@@ -78,6 +99,37 @@ async def load_bsr_asins(data: ASINsBSRForm):
     res = await collection('departments', 'ai_highlights').find_one({'_id': ObjectId(data.bsr_id)})
     if not res:
         raise HTTPException(HTTP_404_NOT_FOUND)
+    new_items = data.model_dump(include={'asins'})['asins']
+    for i in range(len(res['items'])):
+        asin_exist_data = res['items'][i]
+        if not asin_exist_data.get('asin'):
+            continue
+        if asin_exist_data.get('title') or asin_exist_data.get('image') or asin_exist_data.get('score') or asin_exist_data.get('number_in_BSR'):
+            for i in range(len(new_items)):
+                if new_items[i] != asin_exist_data['asin']:
+                    continue
+                for key in new_items[i]:
+                    new_items[i][key] = new_items[i][key] or asin_exist_data.get(key)
+                asin_exist_data = asin_exist_data | new_items[i]
+        res['items'][i] = asin_exist_data
+
+    for i in range(len(new_items)):
+        asin_new_data = new_items[i]
+        if not asin_new_data.get('asin'):
+            continue
+        if not all([asin_new_data.get('title'), asin_new_data.get('image'), asin_new_data.get('score'), asin_new_data.get('number_in_BSR')]):
+            for j in range(len(res['items'])):
+                asin_exist_data = res['items'][j]
+                if asin_new_data['asin'] != asin_exist_data['asin']:
+                    continue
+                asin_new_data = asin_exist_data | asin_new_data
+        new_items[i] = asin_new_data
+
+    return JSONResponse({
+        'bsr_url': res['URL'],
+        'bsr_id': str(res['_id']),
+        'nodata_asins': map(lambda item: item['asin'], filter(lambda item: not all([item.get('title'), item.get('score'), item.get('image')]), ))
+    })
 
 
 app.include_router(router)

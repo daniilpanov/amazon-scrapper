@@ -21,6 +21,8 @@ services:
         ports:
             - "$DATA_IMPORTER_PORT:$DATA_IMPORTER_PORT"
         command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     proxies:
@@ -36,6 +38,8 @@ services:
         ports:
             - "$PROXIES_PORT:$PROXIES_PORT"
         command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     s3:
@@ -54,6 +58,8 @@ services:
             - "gunicorn"
             - "app:app"
         command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
 #    google:
@@ -72,6 +78,8 @@ services:
 #            - "gunicorn"
 #            - "app:app"
 #        command:
+#            - "-k"
+#            - "uvicorn.workers.UvicornWorker"
 #            - "--preload"
 #            - "--worker-class=uvicorn.workers.UvicornWorker"
 #            - "-b"
@@ -109,12 +117,15 @@ services:
             - net
         volumes:
             - ./services/amazon_departments_loader:/src:rw
+            - ./logs/amazon_bsr_loader:/src/logs:rw
         env_file: .env
         expose:
             - "$BSR_PORT"
         ports:
             - "$BSR_PORT:$BSR_PORT"
         command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$BSR_PORT"
     server:
@@ -130,6 +141,8 @@ services:
         ports:
             - "$SERVER_PORT:$SERVER_PORT"
         command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
     sellercentral_loader:
@@ -145,6 +158,8 @@ services:
         ports:
             - "$SELLERCENTRAL_PORT:$SELLERCENTRAL_PORT"
         command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SELLERCENTRAL_PORT"
     web:
@@ -162,6 +177,8 @@ services:
         ports:
             - "$WEB_PORT:$WEB_PORT"
         command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$WEB_PORT"
 #    capsolver:
