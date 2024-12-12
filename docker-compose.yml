@@ -62,28 +62,26 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
-#    google:
-#        image: danielgreen1806/amascrap-google:latest
-#        restart: unless-stopped
-#        networks:
-#            - net
-#        volumes:
-#            - ./services/google_upload:/src:rw
-#        env_file: .env
-#        expose:
-#            - "$GOOGLE_PORT"
-#        ports:
-#            - "$GOOGLE_PORT:$GOOGLE_PORT"
-#        entrypoint:
-#            - "gunicorn"
-#            - "app:app"
-#        command:
-#            - "-k"
-#            - "uvicorn.workers.UvicornWorker"
-#            - "--preload"
-#            - "--worker-class=uvicorn.workers.UvicornWorker"
-#            - "-b"
-#            - "0.0.0.0:$GOOGLE_PORT"
+    google:
+        image: danielgreen1806/amascrap-google:latest
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./services/google_service:/src:rw
+        env_file: .env
+        expose:
+            - "$GOOGLE_PORT"
+        ports:
+            - "$GOOGLE_PORT:$GOOGLE_PORT"
+        entrypoint:
+            - "gunicorn"
+            - "app:app"
+        command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$GOOGLE_PORT"
     s3_upload:
         depends_on:
             - server
