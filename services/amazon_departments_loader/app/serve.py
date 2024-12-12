@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 from logging.handlers import TimedRotatingFileHandler
 
 import certifi
@@ -25,25 +26,33 @@ logger.addHandler(handler)
 
 db_global_prefix = os.environ.get('DB_GLOBAL_PREFIX', '')
 collections_global_prefix = os.environ.get('COLLECTIONS_GLOBAL_PREFIX', '')
-url = os.environ.get('MONGO_DB_HOST_SCHEMA', 'mongodb') + '://'
-username = None
-password = None
-if 'MONGO_DB_USER' in os.environ:
-    username = os.environ['MONGO_DB_USER']
-    url += username
-    if 'MONGO_DB_PASS' in os.environ:
-        password = os.environ['MONGO_DB_PASS']
-        url += ':' + password
-    url += '@'
-url += os.environ.get('MONGO_DB_HOST', 'localhost')
-db = AsyncMongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where())
+db: AsyncMongoClient | None = None
 
 
 def collection(name, schema):
     return db[db_global_prefix + schema][collections_global_prefix + name]
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    global db
+    url = os.environ.get('MONGO_DB_HOST_SCHEMA', 'mongodb') + '://'
+    username = None
+    password = None
+    if 'MONGO_DB_USER' in os.environ:
+        username = os.environ['MONGO_DB_USER']
+        url += username
+        if 'MONGO_DB_PASS' in os.environ:
+            password = os.environ['MONGO_DB_PASS']
+            url += ':' + password
+        url += '@'
+    url += os.environ.get('MONGO_DB_HOST', 'localhost')
+    db = AsyncMongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where())
+    yield
+    await db.close()
+
+
+app = FastAPI(lifespan=lifespan)
 router = APIRouter(prefix='/v1/bsr')
 
 
@@ -95,18 +104,7 @@ async def load_bsr_asins(data: ASINsBSRForm):
     if not res:
         raise HTTPException(HTTP_404_NOT_FOUND)
     new_items = data.model_dump(include={'asins'})['asins']
-    for i in range(len(res['items'])):
-        asin_exist_data = res['items'][i]
-        if not asin_exist_data.get('asin'):
-            continue
-        if asin_exist_data.get('title') or asin_exist_data.get('image') or asin_exist_data.get('score') or asin_exist_data.get('number_in_BSR'):
-            for i in range(len(new_items)):
-                if new_items[i] != asin_exist_data['asin']:
-                    continue
-                for key in new_items[i]:
-                    new_items[i][key] = new_items[i][key] or asin_exist_data.get(key)
-                asin_exist_data = asin_exist_data | new_items[i]
-        res['items'][i] = asin_exist_data
+    res['items'] = res.get('items', [])
 
     for i in range(len(new_items)):
         asin_new_data = new_items[i]
@@ -120,11 +118,15 @@ async def load_bsr_asins(data: ASINsBSRForm):
                 asin_new_data = asin_exist_data | asin_new_data
         new_items[i] = asin_new_data
 
-    return JSONResponse({
-        'bsr_url': res['URL'],
-        'bsr_id': str(res['_id']),
-        'nodata_asins': map(lambda item: item['asin'], filter(lambda item: not all([item.get('title'), item.get('score'), item.get('image')]), ))
-    })
+    try:
+        await collection('departments', 'ai_highlights').update_one({'_id': ObjectId(data.bsr_id)}, {'$set': {'items': new_items}})
+        return JSONResponse({
+            'bsr_url': res['URL'],
+            'bsr_id': str(res['_id']),
+            'nodata_asins': list(map(lambda item: item['asin'], filter(lambda item: not all([item.get('title'), item.get('score'), item.get('image')]), new_items)))
+        })
+    except PyMongoError as e:
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
 app.include_router(router)
