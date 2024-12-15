@@ -5,7 +5,9 @@ class BSRChildrenParser extends Parser {
 
     tree = [];
     flatTree = [];
+    ASINsListWithInternalInfo = [];
     ASINsList = [];
+    productsList = [];
 
     currentBSR = null;
 
@@ -26,8 +28,8 @@ class BSRChildrenParser extends Parser {
             return { asins: (this.ASINsList = []) };
         }
         try {
-            const data = JSON.parse(element.getAttribute('data-client-recs-list'));
-            for (const item of data) {
+            this.ASINsListWithInternalInfo = JSON.parse(element.getAttribute('data-client-recs-list'));
+            for (const item of this.ASINsListWithInternalInfo) {
                 if (item.id) {
                     this.ASINsList.push({ asin: item.id, rank: Number.parseInt(item.metadataMap['render.zg.rank']) });
                 }
@@ -35,6 +37,53 @@ class BSRChildrenParser extends Parser {
         } catch (e) {
         }
         return { asins: this.ASINsList };
+    }
+
+    async getProductsInfo() {
+        if (this.productsList && this.productsList.length) {
+            return { products: this.productsList };
+        }
+        this.getASINsList();
+        // Get the page without postprocessing
+        const pageResponse = await fetch(location.href);
+        if (pageResponse.status !== 200) {
+            return null;
+        }
+        const pageContent = await pageResponse.text();
+        const docWithoutPostprocessing = this.parser.parseFromString(pageContent, 'text/html');
+        // Then get all hidden params for internal requests
+        const paramsEl = docWithoutPostprocessing.querySelector('[data-acp-params][data-acp-path][data-acp-stamp][data-acp-tracking]');
+        if (!paramsEl) {
+            return null;
+        }
+        let requestPath = paramsEl.getAttribute('data-acp-path'),
+            tok_ts_rid_d1_d2= '', requestStamp = '';
+        if (!requestPath) {
+            return null;
+        }
+        tok_ts_rid_d1_d2 = paramsEl.getAttribute('data-acp-params');
+        requestStamp = paramsEl.getAttribute('data-acp-stamp');
+
+        const reftag = this.root.querySelector('[data-reftag]')?.getAttribute('data-reftag') || '';
+
+        const res = this.parser.parseFromString(await (await fetch(`https://www.amazon.com${requestPath}nextPage?page-type=zeitgeist&stamp=${requestStamp}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-amz-acp-params': tok_ts_rid_d1_d2,
+                'x-amz-amabot-click-attributes': 'disable',
+            },
+            body: JSON.stringify({
+                faceoutkataname: 'GeneralFaceout',
+                ids: this.ASINsListWithInternalInfo.slice(20, 50).map(el => JSON.stringify(el)),
+                indexes: this.ASINsListWithInternalInfo.slice(20, 50).map(el => Number.parseInt(el.metadataMap['render.zg.rank'])),
+                linkparameters: '',
+                offset: '20',
+                reftagprefix: reftag,
+            }),
+            method: 'POST',
+        })).text(), 'text/html');
+        const elements = res.querySelectorAll('#gridItemRoot');
+        return { products: this.productsList };
     }
 
     _findCurrent(elem) {

@@ -130,6 +130,13 @@ async function run(task, sender, sendResponse) {
         result.task_id = task.task_id;
         // load data
         if (Object.keys(result || {}).length) {
+            const resLoadBSR = await fetch(await endp(':8839/v1/bsr/load/bsr'), {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'POST',
+                body: JSON.stringify(result),
+            });
             fetch(await endp(':8832/cmd/alias/bsr/finish/'), {
                 headers: {
                     'Content-Type': 'application/json',

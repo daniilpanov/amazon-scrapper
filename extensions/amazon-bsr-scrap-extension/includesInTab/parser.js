@@ -1,4 +1,5 @@
 class Parser {
+    parser = new DOMParser();
     functions = [];
     allFunctions = [];
     root = document;
