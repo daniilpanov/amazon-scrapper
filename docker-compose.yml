@@ -8,6 +8,7 @@ services:
             - net
         volumes:
             - ./services/bsr_starter_service:/src:rw
+            - ./logs/bsrstarter:/src/logs:rw
     dataimporter:
         image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
@@ -15,6 +16,7 @@ services:
             - net
         volumes:
             - ./services/dataimporter_service:/src:rw
+            - ./logs/dataimporter:/src/logs:rw
         env_file: .env
         expose:
             - "$DATA_IMPORTER_PORT"
@@ -32,6 +34,7 @@ services:
             - net
         volumes:
             - ./services/proxies_service:/src:rw
+            - ./logs/proxies:/src/logs:rw
         env_file: .env
         expose:
             - "$PROXIES_PORT"
@@ -49,6 +52,7 @@ services:
             - net
         volumes:
             - ./services/s3_service:/src:rw
+            - ./logs/s3:/src/logs:rw
         env_file: .env
         expose:
             - "$S3_PORT"
@@ -69,6 +73,7 @@ services:
             - net
         volumes:
             - ./services/google_service:/src:rw
+            - ./logs/google:/src/logs:rw
         env_file: .env
         expose:
             - "$GOOGLE_PORT"
@@ -91,6 +96,7 @@ services:
             - net
         volumes:
             - ./services/s3_upload_service:/src:rw
+            - ./logs/s3_upload:/src/logs:rw
         env_file: .env
         entrypoint:
             - "python"
@@ -104,6 +110,7 @@ services:
             - net
         volumes:
             - ./services/google_upload_service:/src:rw
+            - ./logs/google_upload:/src/logs:rw
         env_file: .env
         entrypoint:
             - "python"
@@ -133,6 +140,7 @@ services:
             - net
         volumes:
             - ./services/server_service:/src:rw
+            - ./logs/server:/src/logs:rw
         env_file: .env
         expose:
             - "$SERVER_PORT"
@@ -150,6 +158,7 @@ services:
             - net
         volumes:
             - ./services/sellercentral_loader:/src:rw
+            - ./logs/sellercentral:/src/logs:rw
         env_file: .env
         expose:
             - "$SELLERCENTRAL_PORT"
@@ -169,6 +178,7 @@ services:
             - net
         volumes:
             - ./services/web:/src:rw
+            - ./logs/web:/src/logs:rw
         env_file: .env
         expose:
             - "$WEB_PORT"
@@ -188,6 +198,7 @@ services:
 #            - net
 #        volumes:
 #            - ./services/captcha_service:/src:rw
+#            - ./logs/capsolver:/src/logs:rw
 #        expose:
 #            - "$CAPTCHA_PORT"
 #        ports:

@@ -1,7 +1,8 @@
 import os
 import unittest
-
 import requests
+
+from . import config
 
 unittest.TestLoader.sortTestMethodsUsing = None
 
