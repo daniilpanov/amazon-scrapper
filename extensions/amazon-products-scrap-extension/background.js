@@ -83,7 +83,7 @@ async function run(task, sender, sendResponse) {
         return sendResponse('bad request');
     }
     let acq = await fetch(
-        'http://195.201.194.213:8832/tasks/acquire/products/' + task.header_id + '/' + task.task_id,
+        await endp(':8832/tasks/acquire/products/' + task.header_id + '/' + task.task_id),
         { method: 'post' },
     );
     if (acq.status !== 200) {
