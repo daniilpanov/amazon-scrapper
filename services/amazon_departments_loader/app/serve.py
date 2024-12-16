@@ -78,6 +78,7 @@ async def load_bsr_info(info: InfoBSRForm):
         data[bsr_fields_map[i]] = key
     if not i:
         raise HTTPException(HTTP_400_BAD_REQUEST)
+    data['URL'] = data['URL'].lstrip('https://').lstrip('www.').lstrip('amazon.com')
     data['URL'], data['ref'] = info.departments_flat_tree[key].rsplit('/', maxsplit=1)
     if not data['ref'].startswith('ref'):
         data['URL'] += '/' + data['ref']
@@ -90,6 +91,7 @@ async def load_bsr_info(info: InfoBSRForm):
     except DuplicateKeyError:
         del data['ref']
         del data['_id']
+        data['URL'] = {'$regex': '^/' + data['URL']}
         res = await collection('departments', 'ai_highlights').find_one(data)
         return JSONResponse({
             'bsr_id': str(res['_id']),

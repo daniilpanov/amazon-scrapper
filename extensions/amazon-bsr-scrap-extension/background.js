@@ -109,23 +109,24 @@ async function run(task, sender, sendResponse) {
             func: async target => {
                 const bsr_collector = new BSRChildrenParser();
                 await bsr_collector.waitLoading();
-                bsr_collector.appendFunctions([bsr_collector.getASINsList, bsr_collector.getTree, bsr_collector.getCurrent]);
-                let res = bsr_collector.applyFunctions();
+                bsr_collector.appendFunctions([bsr_collector.getProductsInfo, bsr_collector.getTree, bsr_collector.getCurrent]);
+                let res = bsr_collector.applyAsyncFunctions();
                 delete res.tree;
                 let found = false;
-                for (const asin of res.asins) {
+                for (const { asin } of res.products) {
                     if (asin === target) {
                         found = true;
                         break;
                     }
                 }
                 if (!found) {
-                    res.asins = [...res.asins, { asin: target }];
+                    res.products = [...res.products, { asin: target }];
                 }
                 return res;
             },
         });
         result = result[0]?.result;
+        const depsFlatTree = findDepartmentPath({ group: result.tree }, result.currentBSR);
         // load data
         if (Object.keys(result || {}).length) {
             const resLoadBSR = await fetch(await endp(':8839/v1/bsr/load/bsr'), {
@@ -133,15 +134,58 @@ async function run(task, sender, sendResponse) {
                     'Content-Type': 'application/json',
                 },
                 method: 'POST',
-                body: JSON.stringify(result),
+                body: JSON.stringify(depsFlatTree),
             });
-            fetch(await endp(':8832/cmd/alias/bsr/finish/'), {
+            if (!resLoadBSR.ok || resLoadBSR.status > 299) {
+                throw new Error('Error on loading result (load/bsr): ' + resLoadBSR.statusText + ' [' + await resLoadBSR.text() + ']');
+            }
+            let { bsr_id } = await resLoadBSR.json();
+            if (!bsr_id) {
+                throw new Error('Invalid data received! No bsr_id!');
+            }
+            const resLoadProducts = await fetch(await endp(':8839/v1/bsr/load/asins'), {
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 method: 'POST',
-                body: JSON.stringify(result),
+                body: JSON.stringify({
+                    bsr_id,
+                    asins: result.products,
+                }),
             });
+            if (!resLoadProducts.ok || resLoadProducts.status > 299) {
+                throw new Error('Error on loading result (load/asins): ' + resLoadProducts.statusText + ' [' + await resLoadProducts.text() + ']');
+            }
+            const resData = await resLoadProducts.json();
+            if (typeof resData.bsr_url === 'undefined' || typeof resData.bsr_id === 'undefined' || typeof resData.nodata_asins === 'undefined') {
+                throw new Error('Invalid data received! ' + JSON.stringify(resData));
+            }
+
+            // Finish
+            const yieldTask = await fetch(await endp(':8832/tasks/stage/' + task.task_id), {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                method: 'PATCH',
+                body: JSON.stringify({
+                    release: (task.stage > 0),
+                    stage: task.stage + (task.stage > 0),  // Increase stage if not 0
+                    result: resData,
+                }),
+            });
+            if (!yieldTask.ok || yieldTask.status > 299) {
+                throw new Error('Can\'t yield task! ' + yieldTask.status + ' ' + yieldTask.statusText + ' [' + await yieldTask.text() + ']');
+            }
+
+            if (task.stage < 0) {
+                const finishTask = await fetch(await endp(':8832/tasks/finish/' + task.task_id), {
+                    method: 'PATCH',
+                });
+                if (!finishTask.ok || finishTask.status > 299) {
+                    throw new Error('Can\'t finish task! ' + finishTask.status + ' ' + finishTask.statusText + ' [' + await finishTask.text() + ']');
+                }
+                fetch(await endp(':8832/tasks/release/' + task.task_id), { method: 'POST' });
+            }
         }
     } catch (e) {
         console.log(e);
@@ -161,4 +205,38 @@ async function run(task, sender, sendResponse) {
     } finally {
         await chrome.tabs.remove(needle_tab.id);
     }
+}
+
+
+function findDepartmentPath(departmentTree, currentDepartment) {
+    // Функция для поиска департамента
+    function search(department) {
+        // Проверяем, совпадает ли текущий департамент с искомым
+        if (department.bsrName === currentDepartment.bsrName && department.bsrLink === currentDepartment.bsrLink) {
+            return [ { bsrName: department.bsrName, bsrLink: department.bsrLink } ];
+        }
+
+        // Если у департамента есть подгруппы, ищем в них
+        if (department.group && department.group.length > 0) {
+            for (let subDepartment of department.group) {
+                const result = search(subDepartment);
+                if (result) {
+                    // Если нашли, добавляем текущий департамент в путь
+                    return [ { bsrName: department.bsrName, bsrLink: department.bsrLink }, ...result ];
+                }
+            }
+        }
+
+        return null; // Если не нашли, возвращаем null
+    }
+
+    // Запускаем поиск с верхнего уровня
+    const path = search(departmentTree);
+
+    // Убираем первый элемент (департамент 0 уровня)
+    if (path && path.length > 1) {
+        return path.slice(1);
+    }
+
+    return []; // Если путь не найден, возвращаем пустой массив
 }
