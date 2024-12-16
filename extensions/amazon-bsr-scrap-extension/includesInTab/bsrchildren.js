@@ -39,10 +39,7 @@ class BSRChildrenParser extends Parser {
         return { asins: this.ASINsList };
     }
 
-    async getProductsInfo() {
-        if (this.productsList && this.productsList.length) {
-            return { products: this.productsList };
-        }
+    async _uploadOtherProductsByRequest(offset){
         this.getASINsList();
         // Get the page without postprocessing
         const pageResponse = await fetch(location.href);
@@ -65,8 +62,7 @@ class BSRChildrenParser extends Parser {
         requestStamp = paramsEl.getAttribute('data-acp-stamp');
 
         const reftag = this.root.querySelector('[data-reftag]')?.getAttribute('data-reftag') || '';
-
-        const res = this.parser.parseFromString(await (await fetch(`https://www.amazon.com${requestPath}nextPage?page-type=zeitgeist&stamp=${requestStamp}`, {
+        const resDoc = await fetch(`https://www.amazon.com${requestPath}nextPage?page-type=zeitgeist&stamp=${requestStamp}`, {
             headers: {
                 'Content-Type': 'application/json',
                 'x-amz-acp-params': tok_ts_rid_d1_d2,
@@ -74,15 +70,41 @@ class BSRChildrenParser extends Parser {
             },
             body: JSON.stringify({
                 faceoutkataname: 'GeneralFaceout',
-                ids: this.ASINsListWithInternalInfo.slice(20, 50).map(el => JSON.stringify(el)),
-                indexes: this.ASINsListWithInternalInfo.slice(20, 50).map(el => Number.parseInt(el.metadataMap['render.zg.rank'])),
+                ids: this.ASINsListWithInternalInfo.slice(offset).map(el => JSON.stringify(el)),
+                indexes: this.ASINsListWithInternalInfo.slice(offset).map(el => Number.parseInt(el.metadataMap['render.zg.rank'])),
                 linkparameters: '',
-                offset: '20',
+                offset: String(offset),
                 reftagprefix: reftag,
             }),
             method: 'POST',
-        })).text(), 'text/html');
-        const elements = res.querySelectorAll('#gridItemRoot');
+        });
+        if (resDoc.status === 200){
+            const res = this.parser.parseFromString(await resDoc.text(), 'text/html');
+            return res || null;
+        }
+        return null;
+    }
+
+    _parseBSR(doc) {
+        const elements = doc?.querySelectorAll('#gridItemRoot, .gridItemRoot') || [];
+        let parsedData = [];
+        for (let el of elements) {
+            el = el.querySelector('div.a-cardui[id*="asin-index"]');
+            if (!el) continue;
+            el = el.querySelector('[data-asin]');
+            const asin = el?.getAttribute('data-asin') || null;
+            if (!asin) continue;
+            parsedData.push({ asin });
+        }
+        return parsedData;
+    }
+
+    async getProductsInfo() {
+        if (this.productsList && this.productsList.length) {
+            return { products: this.productsList };
+        }
+        this.productsList = this._parseBSR(this.root);
+        this.productsList = [...this.productsList, ...this._parseBSR(await this._uploadOtherProductsByRequest(this.productsList.length))];
         return { products: this.productsList };
     }
 
