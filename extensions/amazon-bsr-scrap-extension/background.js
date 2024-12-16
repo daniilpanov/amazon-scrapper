@@ -64,7 +64,7 @@ endp(':8832/ping', true).then(res => {
 
 async function run(task, sender, sendResponse) {
     let acq = await fetch(
-        'http://195.201.194.213:8832/tasks/acquire/bsr/' + task.header_id + '/' + task.task_id,
+        await endp(':8832/tasks/acquire/bsr/' + task.header_id + '/' + task.task_id),
         { method: 'post' },
     );
     if (acq.status !== 200) {
@@ -110,8 +110,7 @@ async function run(task, sender, sendResponse) {
                 const bsr_collector = new BSRChildrenParser();
                 await bsr_collector.waitLoading();
                 bsr_collector.appendFunctions([bsr_collector.getProductsInfo, bsr_collector.getTree, bsr_collector.getCurrent]);
-                let res = bsr_collector.applyAsyncFunctions();
-                delete res.tree;
+                let res = await bsr_collector.applyAsyncFunctions();
                 let found = false;
                 for (const { asin } of res.products) {
                     if (asin === target) {
@@ -134,7 +133,7 @@ async function run(task, sender, sendResponse) {
                     'Content-Type': 'application/json',
                 },
                 method: 'POST',
-                body: JSON.stringify(depsFlatTree),
+                body: JSON.stringify({ departments_flat_tree: depsFlatTree }),
             });
             if (!resLoadBSR.ok || resLoadBSR.status > 299) {
                 throw new Error('Error on loading result (load/bsr): ' + resLoadBSR.statusText + ' [' + await resLoadBSR.text() + ']');
@@ -213,7 +212,7 @@ function findDepartmentPath(departmentTree, currentDepartment) {
     function search(department) {
         // Проверяем, совпадает ли текущий департамент с искомым
         if (department.bsrName === currentDepartment.bsrName && department.bsrLink === currentDepartment.bsrLink) {
-            return [ { bsrName: department.bsrName, bsrLink: department.bsrLink } ];
+            return { [department.bsrName]: department.bsrLink };
         }
 
         // Если у департамента есть подгруппы, ищем в них
@@ -221,8 +220,12 @@ function findDepartmentPath(departmentTree, currentDepartment) {
             for (let subDepartment of department.group) {
                 const result = search(subDepartment);
                 if (result) {
-                    // Если нашли, добавляем текущий департамент в путь
-                    return [ { bsrName: department.bsrName, bsrLink: department.bsrLink }, ...result ];
+                    // Если нашли, добавляем текущий департамент в путь (если уровень текущего не нулевой)
+                    if (department.level > 0) {
+                        return { [department.bsrName]: department.bsrLink, ...result };
+                    }
+                    // Иначе просто возвращаем результат
+                    return result;
                 }
             }
         }
@@ -234,9 +237,9 @@ function findDepartmentPath(departmentTree, currentDepartment) {
     const path = search(departmentTree);
 
     // Убираем первый элемент (департамент 0 уровня)
-    if (path && path.length > 1) {
-        return path.slice(1);
+    if (path && Object.keys(path).length > 1) {
+        return path;
     }
 
-    return []; // Если путь не найден, возвращаем пустой массив
+    return null; // Если путь не найден, возвращаем пустой массив
 }

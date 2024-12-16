@@ -2,6 +2,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from logging.handlers import TimedRotatingFileHandler
+from urllib.parse import unquote
 
 import certifi
 from bson import ObjectId
@@ -78,8 +79,8 @@ async def load_bsr_info(info: InfoBSRForm):
         data[bsr_fields_map[i]] = key
     if not i:
         raise HTTPException(HTTP_400_BAD_REQUEST)
-    data['URL'] = data['URL'].lstrip('https://').lstrip('www.').lstrip('amazon.com')
     data['URL'], data['ref'] = info.departments_flat_tree[key].rsplit('/', maxsplit=1)
+    data['URL'] = data['URL'].lstrip('https://').lstrip('www.').lstrip('amazon.com')
     if not data['ref'].startswith('ref'):
         data['URL'] += '/' + data['ref']
         data['ref'] = None
@@ -129,6 +130,41 @@ async def load_bsr_asins(data: ASINsBSRForm):
         })
     except PyMongoError as e:
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR) from e
+
+
+@router.get('/by_url')
+async def load_bsr_asins(bsr_url: str, fields: str | None = None):
+    bsr_url, ref = unquote(bsr_url).lstrip('https://').lstrip('www.').lstrip('amazon.com').rsplit('/', maxsplit=1)
+    if not ref.startswith('ref'):
+        bsr_url += '/' + ref
+    if fields:
+        res = await collection('departments', 'ai_highlights').find_one({
+            'URL': {'$regex': '^/' + bsr_url}
+        }, {field.strip(): 1 for field in fields.split(',') if field})
+    else:
+        res = await collection('departments', 'ai_highlights').find_one({
+            'URL': {'$regex': '^/' + bsr_url}
+        })
+    if not res:
+        raise HTTPException(HTTP_404_NOT_FOUND, detail=bsr_url)
+    res['_id'] = str(res['_id'])
+    return res
+
+
+@router.get('/{bsr_id}')
+async def load_bsr_asins(bsr_id: str, fields: str | None = None):
+    if fields:
+        res = await collection('departments', 'ai_highlights').find_one({
+            '_id': ObjectId(bsr_id)
+        }, {field.strip(): 1 for field in fields.split(',') if field})
+    else:
+        res = await collection('departments', 'ai_highlights').find_one({
+            '_id': ObjectId(bsr_id)
+        })
+    if not res:
+        raise HTTPException(HTTP_404_NOT_FOUND)
+    res['_id'] = str(res['_id'])
+    return res
 
 
 app.include_router(router)

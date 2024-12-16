@@ -1,4 +1,6 @@
 import time
+from logging.handlers import TimedRotatingFileHandler
+from urllib.parse import quote
 
 import requests
 import logging
@@ -8,7 +10,7 @@ logger = logging.getLogger(__name__)
 # Set the logging level to INFO
 logger.setLevel(logging.DEBUG)
 # Create a handler that logs to the Docker logs
-handler = logging.StreamHandler()
+handler = TimedRotatingFileHandler(when='h', backupCount=2, utc=True, filename='logs/bsrstarter.log')
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(handler)
 
@@ -31,8 +33,23 @@ def run():
                 'http://server:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
             if res.status_code == 409:
                 continue
-            asins = task['result'].get('asins', [])
-            str_asins = [p['asin'] for p in asins[:5]]
+
+            department_document = None
+            bsr_id = task['result'].get('bsr_id')
+            bsr_url = task['result'].get('bsr_url')
+            if bsr_id:
+                department_document_resp = requests.get('http://bsr_loader:8839/v1/bsr/' + str(bsr_id) + '?fields=items')
+                if department_document_resp.ok and department_document_resp.status_code < 300:
+                    department_document = department_document_resp.json()
+            if not department_document and bsr_url:
+                department_document_resp = requests.get('http://bsr_loader:8839/v1/bsr/by_url?fields=items&bsr_url=' + quote(bsr_url))
+                if department_document_resp.ok and department_document_resp.status_code < 300:
+                    department_document = department_document_resp.json()
+            if not department_document:
+                continue  # TODO: make report
+
+            asins = task['result'].get('asins', [])[:int(task['data'].get('count', 0))]
+            str_asins = [p['asin'] for p in asins]
             if task['data'].get('category'):
                 requests.post(
                     'http://server:8832/cmd/category/set',
@@ -64,21 +81,9 @@ def run():
                 'domain': task['data'].get('domain', 'amazon.com'),
                 'bsr_link': bsr_link,
             }
-            data2 = {
-                'alias': task_alias,
-                'asins': [],
-                'current_format': False,
-                'collect_aspects': True,
-                'collect_media_config': False,
-                'collect_reviews': False,
-                'domain': task['data'].get('domain', 'amazon.com'),
-                'bsr_link': bsr_link,
-            }
 
             for asin in asins[:int(task['data'].get('count', 0))]:
                 data['asins'].append({'asin': asin['asin'], 'rank': asin.get('rank'), 'collect_media_config': asin == task['data'].get('target')})
-            for asin in asins[int(task['data'].get('count', 0)):]:
-                data2['asins'].append({'asin': asin['asin'], 'rank': asin.get('rank'), 'collect_media_config': asin == task['data'].get('target')})
 
             if len(data['asins']):
                 requests.post(
@@ -88,14 +93,7 @@ def run():
                     },
                     json=data,
                 ).json()
-            if len(data2['asins']):
-                requests.post(
-                    'http://server:8832/products/collect',
-                    headers={
-                        'Content-Type': 'application/json',
-                    },
-                    json=data2,
-                )
+
             requests.patch('http://server:8832/tasks/finish/' + task['_id'])
             requests.post('http://server:8832/tasks/release/' + task['_id'])
 

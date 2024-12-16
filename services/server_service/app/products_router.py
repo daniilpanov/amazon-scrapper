@@ -1,7 +1,11 @@
 import datetime
+import logging
 import typing
+from logging.handlers import TimedRotatingFileHandler
+from urllib.parse import quote
 
 import pytz
+import requests
 from fastapi import APIRouter, HTTPException
 
 from .helpers import orjson_response
@@ -13,6 +17,16 @@ from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR, HTTP_204_NO_CONTENT
 
 from . import tasks_manager
 from .db_mongo import db
+
+
+# Create a logger object
+logger = logging.getLogger(__name__)
+# Set the logging level to INFO
+logger.setLevel(logging.DEBUG)
+# Create a handler that logs to the Docker logs
+handler = TimedRotatingFileHandler(when='h', backupCount=2, utc=True, filename='logs/server_products_router.log')
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
 
 router = APIRouter(prefix='/products')
 AMADATA = db('amazon_data')
@@ -154,16 +168,24 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 @router.post('/set_result/card/{asin}')
 async def set_product_result(asin: str, card: ProductsResultItem):
     if card.bsr_link:
-        deps = db('ai_highlights')['departments'].find({'URL': {'$regex': '^/' + card.bsr_link}})
-        for dep in deps:
-            db('ai_highlights')['departments'].update_one({'_id': dep['_id']}, {'$pull': {'items': {'asin': asin}}})
-            db('ai_highlights')['departments'].update_one({'_id': dep['_id']}, {'$push': {'items': {
-                'asin': card.asin,
-                'title': card.title,
-                'score': card.rating,
-                'number_in_BSR': card.number_in_BSR,
-                'image': card.picture_url,
-            }}})
+        bsr_id_resp = requests.get('http://bsr_loader:8839/v1/bsr/by_url?fields=_id&bsr_url=' + quote(card.bsr_link))
+        logger.debug('Department found: ' + str(bsr_id_resp) + ' - ' + bsr_id_resp.text)
+        if bsr_id_resp.ok and bsr_id_resp.status_code < 300:
+            bsr_id = bsr_id_resp.json().get('_id')
+            if bsr_id:
+                asins_load_resp = requests.post('http://bsr_loader:8839/v1/bsr/load/asins', headers={
+                    'Content-Type': 'application/json',
+                }, json={
+                    'bsr_id': str(bsr_id),
+                    'asins': [{
+                        'asin': card.asin,
+                        'title': card.title,
+                        'score': card.rating,
+                        'number_in_BSR': card.number_in_BSR or None,
+                        'image': card.picture_url,
+                    }],
+                })
+                logger.debug('BSR ASINs loaded: ' + str(asins_load_resp) + ' - ' + asins_load_resp.text)
 
     if card.picture_url:
         main_uri, *_, ext = card.picture_url.rsplit('.', maxsplit=2)
