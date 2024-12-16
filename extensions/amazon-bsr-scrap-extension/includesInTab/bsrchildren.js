@@ -54,7 +54,7 @@ class BSRChildrenParser extends Parser {
             return null;
         }
         let requestPath = paramsEl.getAttribute('data-acp-path'),
-            tok_ts_rid_d1_d2= '', requestStamp = '';
+            tok_ts_rid_d1_d2 = '', requestStamp = '';
         if (!requestPath) {
             return null;
         }
@@ -94,7 +94,21 @@ class BSRChildrenParser extends Parser {
             el = el.querySelector('[data-asin]');
             const asin = el?.getAttribute('data-asin') || null;
             if (!asin) continue;
-            parsedData.push({ asin });
+            const score = Number(el.querySelector('a i span')?.textContent.trim().split(' ')[0] || 0) || null;
+            const title = el.querySelector('a > span > div')?.textContent || null;
+            const number_in_BSR = Number(el.querySelector('div > div > span')?.textContent.slice(1) || 0) || null;
+
+            let image = el.getElementsByTagName('img')[0]?.getAttribute('src') || null;
+            if (image) {
+                const splitImageUrl = image.split('/');
+                let imageUriName = splitImageUrl[splitImageUrl.length - 1];
+                // Make it universal (remove size spec)
+                const imageUriNameParts = imageUriName.split('.');
+                imageUriName = imageUriNameParts.slice(0, -2).join('.') + '.' + imageUriNameParts[imageUriNameParts.length - 1];
+                image = splitImageUrl.slice(0, -1).join('/') + '/' + imageUriName;
+            }
+
+            parsedData.push({ asin, title, score, number_in_BSR, image });
         }
         return parsedData;
     }

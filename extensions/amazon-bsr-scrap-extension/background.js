@@ -126,8 +126,6 @@ async function run(task, sender, sendResponse) {
             },
         });
         result = result[0]?.result;
-        result.with_continue = Boolean(task.stage > 0);
-        result.task_id = task.task_id;
         // load data
         if (Object.keys(result || {}).length) {
             const resLoadBSR = await fetch(await endp(':8839/v1/bsr/load/bsr'), {
