@@ -92,8 +92,11 @@ async def load_bsr_info(info: InfoBSRForm):
     except DuplicateKeyError:
         del data['ref']
         del data['_id']
-        data['URL'] = {'$regex': '^/' + data['URL']}
+        data['URL'] = {'$regex': '^' + data['URL']}
         res = await collection('departments', 'ai_highlights').find_one(data)
+        logger.debug('Result: ' + str(res) + ', Data: ' + str(data))
+        if not res:
+            raise HTTPException(HTTP_404_NOT_FOUND)
         return JSONResponse({
             'bsr_id': str(res['_id']),
         })

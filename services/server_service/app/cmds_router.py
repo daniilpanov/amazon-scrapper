@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import orjson
+import pymongo
 from fastapi import APIRouter, Body
 from pydantic import BaseModel
 from pymongo.errors import BulkWriteError, PyMongoError
@@ -141,12 +142,27 @@ async def category_set_cmd(data=Body()):
     top5_asins = set(data.get('top5_asins', []))
     client_name = data.get('client_name')
     try:
-        db('amazon_data')['all_categories'].insert_many([{
-            'Category': data['cat_name'],
-            'ASIN': asin,
-            'relation_to_category': client_name if asin in target else None,
-            'relation_to_TOP5': asin in top5_asins,
-        } for asin in asins])
+        operations = [
+            pymongo.UpdateOne(
+                {'Category': data['cat_name'], 'ASIN': asin},  # Фильтр для поиска существующих записей
+                {
+                    '$set': {
+                        'relation_to_category': client_name if asin in target else None,
+                        'relation_to_TOP5': asin in top5_asins,
+                    }
+                },
+                upsert=True,
+            )
+            for asin in asins
+        ]
+        if operations:
+            db('amazon_data')['all_categories'].bulk_write(operations)
+        # db('amazon_data')['all_categories'].insert_many([{
+        #     'Category': data['cat_name'],
+        #     'ASIN': asin,
+        #     'relation_to_category': client_name if asin in target else None,
+        #     'relation_to_TOP5': asin in top5_asins,
+        # } for asin in asins])
         return Response(status_code=HTTP_201_CREATED)
     except BulkWriteError:
         pass

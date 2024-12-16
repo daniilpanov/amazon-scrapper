@@ -37,21 +37,27 @@ def run():
             department_document = None
             bsr_id = task['result'].get('bsr_id')
             bsr_url = task['result'].get('bsr_url')
+            logger.debug('Task ID: ' + task['_id'] + ', BSR ID: ' + str(bsr_id) + ', BSR URL: ' + str(bsr_url))
             if bsr_id:
                 department_document_resp = requests.get('http://bsr_loader:8839/v1/bsr/' + str(bsr_id) + '?fields=items')
+                logger.debug('Task ID: ' + task['_id'] + ', 1st resp: ' + str(department_document_resp))
                 if department_document_resp.ok and department_document_resp.status_code < 300:
                     department_document = department_document_resp.json()
             if not department_document and bsr_url:
                 department_document_resp = requests.get('http://bsr_loader:8839/v1/bsr/by_url?fields=items&bsr_url=' + quote(bsr_url))
+                logger.debug('Task ID: ' + task['_id'] + ', 2nd resp: ' + str(department_document_resp))
                 if department_document_resp.ok and department_document_resp.status_code < 300:
                     department_document = department_document_resp.json()
+            logger.debug('Task ID: ' + task['_id'] + ', BSR Document: ' + str(department_document))
             if not department_document:
                 continue  # TODO: make report
 
-            asins = task['result'].get('asins', [])[:int(task['data'].get('count', 0))]
+            asins = department_document.get('items', [])[:int(task['data'].get('count', 0))]
+            logger.debug('Task ID: ' + task['_id'] + ', ASINs list: ' + str(asins))
             str_asins = [p['asin'] for p in asins]
+            logger.debug('Task ID: ' + task['_id'] + ', string ASINs list: ' + str(str_asins))
             if task['data'].get('category'):
-                requests.post(
+                logger.debug(requests.post(
                     'http://server:8832/cmd/category/set',
                     headers={
                         'Content-Type': 'application/json',
@@ -63,7 +69,7 @@ def run():
                         'client_name': task['data'].get('client'),
                         'target': task['data'].get('target'),
                     },
-                )
+                ))
             if isinstance(task['result'].get('bsr'), dict) and isinstance(task['result']['bsr'].get('bsrLink'), str):
                 bsr_link = '/'.join(task['result']['bsr']['bsrLink'].split('/')[3:-1])
             else:
