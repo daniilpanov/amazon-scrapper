@@ -1,4 +1,4 @@
-function parsePage(shift = 0) {
+async function parsePage(shift = 0) {
     const rootEl = document.getElementsByClassName('arco-table-body');
     if (!rootEl || !rootEl.length) {
         return false;
@@ -13,7 +13,8 @@ function parsePage(shift = 0) {
     for (let i = shift; i < all_rows.length; ++i) {
         const cells = all_rows[i].getElementsByTagName('td');
         const profile_cell = cells[0];
-        // const video_cell = cells[1];
+        const video_cell = cells[1];
+
         const gmv_val = Number.parseFloat((cells[2]?.innerText.trim().slice(1, -1) || '0').replaceAll(',', ''));
         const items_sold_val = Number.parseFloat((cells[3]?.innerText.trim().slice(0, -1) || '0').replaceAll(',', ''));
         const avg_video_views = Number.parseFloat((cells[4]?.innerText.trim().slice(0, -1) || '0').replaceAll(',', ''));
@@ -46,6 +47,17 @@ function parsePage(shift = 0) {
         let [profile_followers_gender, profile_followers_gender_percents] = profile_followers_gender_p?.split(' ') || [null, '0'];
         profile_followers_gender_percents = Number.parseFloat(profile_followers_gender_percents.slice(0, -1) || '0');
 
+        const video_block_link = video_cell.querySelector('div > span > div > div');
+        video_block_link.click();
+        let video_src = null;
+        for (let i = 0; i < 6 && !video_src; ++i) {
+            await new Promise(r => setTimeout(r, 1000, r));
+            const modal = document.querySelector('[data-tid="m4b_modal"][style*="block"]');
+            if (!modal) continue;
+            video_src = modal.getElementsByTagName('video')[0]?.getAttribute('src') || null;
+            modal.parentNode?.remove();
+        }
+
         data.push({
             'Profile_name': profile_name,
             'Profile_description': profile_description,
@@ -60,6 +72,7 @@ function parsePage(shift = 0) {
             'Items sold, K': items_sold_val,
             'Avg. video views, K': avg_video_views,
             'Engagement rate, %': engagement_rate,
+            'Video URL': video_src,
         });
     }
 
