@@ -103,28 +103,68 @@ async function run(task, sender, sendResponse) {
         });
         console.log('bsr imported');
         // BSR result
-        let result = await chrome.scripting.executeScript({
+        let response = await chrome.scripting.executeScript({
             target: { tabId: needle_tab.id },
-            args: [task.target],
-            func: async target => {
+            func: async () => {
                 const bsr_collector = new BSRChildrenParser();
                 await bsr_collector.waitLoading();
                 bsr_collector.appendFunctions([bsr_collector.getProductsInfo, bsr_collector.getTree, bsr_collector.getCurrent]);
-                let res = await bsr_collector.applyAsyncFunctions();
-                let found = false;
-                for (const { asin } of res.products) {
-                    if (asin === target) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    res.products = [...res.products, { asin: target }];
-                }
-                return res;
+
+                return {
+                    result: await bsr_collector.applyAsyncFunctions(),
+                    newPage: bsr_collector.clickNextPage(),
+                };
             },
         });
-        result = result[0]?.result;
+
+        const asins = new Set();
+        const { result, newPage } = response[0]?.result;
+
+        if (!result) {
+            throw new Error('Unknown error: empty result from the tab');
+        }
+
+        let found = false;
+        for (const { asin } of result.products) {
+            if (asin === task.target) {
+                found = true;
+            }
+            asins.add(asin);
+        }
+
+        if (newPage) {
+            await new Promise(r => setTimeout(r, 1000, r));
+            // BSR lib
+            await chrome.scripting.executeScript({
+                target: { tabId: needle_tab.id },
+                files: ['./includesInTab/parser.js', './includesInTab/bsrchildren.js'],
+            });
+            response = await chrome.scripting.executeScript({
+                target: { tabId: needle_tab.id },
+                func: async () => {
+                    const bsr_collector = new BSRChildrenParser();
+                    await bsr_collector.waitLoading();
+                    bsr_collector.offset = 50;
+
+                    return await bsr_collector.getProductsInfo();  // Call the parsing function directly
+                },
+            });
+
+            const newResult = response[0]?.result;
+            if (newResult && newResult.products?.length) {
+                for (const product of newResult.products) {
+                    if (product.asin === task.target) {
+                        found = true;
+                    }
+                    if (asins.has(product.asin)) continue;
+                    result.products.push(product);
+                }
+            }
+        }
+
+        if (!found) {
+            result.products.push({ asin: task.target });
+        }
         const depsFlatTree = findDepartmentPath({ group: result.tree }, result.currentBSR);
         // load data
         if (Object.keys(result || {}).length) {
@@ -176,7 +216,7 @@ async function run(task, sender, sendResponse) {
                 throw new Error('Can\'t yield task! ' + yieldTask.status + ' ' + yieldTask.statusText + ' [' + await yieldTask.text() + ']');
             }
 
-            if (task.stage < 0) {
+            if (!task.stage) {
                 const finishTask = await fetch(await endp(':8832/tasks/finish/' + task.task_id), {
                     method: 'PATCH',
                 });

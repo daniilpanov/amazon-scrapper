@@ -10,6 +10,7 @@ class BSRChildrenParser extends Parser {
     productsList = [];
 
     currentBSR = null;
+    offset = 0;
 
     _getCategoryName(el) {
         return { bsrName: el.textContent.trim() || null };
@@ -39,8 +40,12 @@ class BSRChildrenParser extends Parser {
         return { asins: this.ASINsList };
     }
 
-    async _uploadOtherProductsByRequest(offset){
+    async _uploadOtherProductsByRequest(offset) {
         this.getASINsList();
+        let ASINsList = this.ASINsListWithInternalInfo.slice(offset);
+        if (!ASINsList.length) {
+            ASINsList = this.ASINsListWithInternalInfo.slice(offset - this.ASINsListWithInternalInfo.length);
+        }
         // Get the page without postprocessing
         const pageResponse = await fetch(location.href);
         if (pageResponse.status !== 200) {
@@ -49,7 +54,7 @@ class BSRChildrenParser extends Parser {
         const pageContent = await pageResponse.text();
         const docWithoutPostprocessing = this.parser.parseFromString(pageContent, 'text/html');
         // Then get all hidden params for internal requests
-        const paramsEl = docWithoutPostprocessing.querySelector('[data-acp-params][data-acp-path][data-acp-stamp][data-acp-tracking]');
+        const paramsEl = docWithoutPostprocessing.querySelector('[data-acp-path]');
         if (!paramsEl) {
             return null;
         }
@@ -70,15 +75,15 @@ class BSRChildrenParser extends Parser {
             },
             body: JSON.stringify({
                 faceoutkataname: 'GeneralFaceout',
-                ids: this.ASINsListWithInternalInfo.slice(offset).map(el => JSON.stringify(el)),
-                indexes: this.ASINsListWithInternalInfo.slice(offset).map(el => Number.parseInt(el.metadataMap['render.zg.rank'])),
+                ids: ASINsList.map(el => JSON.stringify(el)),
+                indexes: ASINsList.map(el => Number.parseInt(el.metadataMap['render.zg.rank'])),
                 linkparameters: '',
                 offset: String(offset),
                 reftagprefix: reftag,
             }),
             method: 'POST',
         });
-        if (resDoc.status === 200){
+        if (resDoc.status === 200) {
             const res = this.parser.parseFromString(await resDoc.text(), 'text/html');
             return res || null;
         }
@@ -118,7 +123,7 @@ class BSRChildrenParser extends Parser {
             return { products: this.productsList };
         }
         this.productsList = this._parseBSR(this.root);
-        this.productsList = [...this.productsList, ...this._parseBSR(await this._uploadOtherProductsByRequest(this.productsList.length))];
+        this.productsList = [...this.productsList, ...this._parseBSR(await this._uploadOtherProductsByRequest(this.productsList.length + this.offset))];
         return { products: this.productsList };
     }
 
@@ -179,10 +184,13 @@ class BSRChildrenParser extends Parser {
     }
 
     clickNextPage() {
-        const newPage = document.querySelector('.a-pagination .a-last:not(.a-disabled) > a');
-        if (newPage) {
-            newPage.click();
-            return true;
+        try {
+            const newPage = document.querySelector('.a-pagination .a-last:not(.a-disabled) > a');
+            if (newPage) {
+                newPage.click();
+                return true;
+            }
+        } catch (e) {
         }
         return false;
     }
