@@ -202,8 +202,8 @@ class CollectReviews {
                 this.named_options[key] = opts;
             }
             // Remove redundant params
-            this.named_options['star-count'].pop(7);
-            this.named_options['star-count'].pop(6);
+            this.named_options['star-count'].pop();
+            this.named_options['star-count'].pop();
             // Move special filters
             if ('format-type' in this.named_filters) {
                 this.format_type_filter = this.named_filters['format-type'];
@@ -228,13 +228,13 @@ class CollectReviews {
     async switching() {
         if (this.index >= this.params_count) {
             console.log(...Object.values(this.indexes_map), 'END');
-            chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map), 'END']}, (response) => {});
+            chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map), 'END']}, () => {});
             return false;
         }
         let curr = this.index++;
         if (curr === 0) {
             console.log(...Object.values(this.indexes_map));
-            chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map)]}, (response) => {});
+            chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map)]}, () => {});
             return true;
         } else if (this.reviews_count <= 125) {
             return false;
@@ -254,13 +254,13 @@ class CollectReviews {
         this.indexes_map[key] += this.directions[key];
 
         console.log(...Object.values(this.indexes_map));
-        chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map)]}, (response) => {});
+        chrome.runtime.sendMessage({log: [...Object.values(this.indexes_map)]}, () => {});
 
         try {
             this.named_filters[key].click();
         } catch (e) {
             console.error('Error when trying to click to filter:', e);
-            chrome.runtime.sendMessage({log: ['Error when trying to click to filter:', e]}, (response) => {});
+            chrome.runtime.sendMessage({log: ['Error when trying to click to filter:', e]}, () => {});
             return false;
         }
         const opts = this.named_options[key] = [];
@@ -269,7 +269,7 @@ class CollectReviews {
             document.querySelectorAll('.a-popover li[aria-labelledby*="' + this.named_filters[key].id + '"] a').forEach(o => opts.push(o));
         } catch (e) {
             console.error('Error when looking for options:', e);
-            chrome.runtime.sendMessage({log: ['Error when looking for options:', e]}, (response) => {});
+            chrome.runtime.sendMessage({log: ['Error when looking for options:', e]}, () => {});
             return false;
         }
         try {
@@ -277,7 +277,7 @@ class CollectReviews {
             this.named_options[key][this.indexes_map[key]].click();
         } catch (e) {
             console.error('Error when clicking option:', e);
-            chrome.runtime.sendMessage({log: ['Error when clicking option:', e]}, (response) => {});
+            chrome.runtime.sendMessage({log: ['Error when clicking option:', e]}, () => {});
             return false;
         }
         this.page = 1;
@@ -343,7 +343,7 @@ class CollectReviews {
                     next.click();
                 } catch (e) {
                     console.log('No pagination found:', e);
-                    chrome.runtime.sendMessage({log: ['No pagination found:', e]}, (response) => {});
+                    chrome.runtime.sendMessage({log: ['No pagination found:', e]}, () => {});
                     break;
                 }
             }
