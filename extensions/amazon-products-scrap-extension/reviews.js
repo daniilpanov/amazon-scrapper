@@ -214,6 +214,7 @@ class CollectReviews {
             // Count filters params variants
             let l;
             for (const i in this.named_options) {
+                if (i !== 'star-count') continue;
                 l = this.named_options[i].length;
                 this.indexes_map[i] = 0;
                 this.indexes_limits[i] = l;
