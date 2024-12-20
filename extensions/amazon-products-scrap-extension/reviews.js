@@ -299,7 +299,7 @@ class CollectReviews {
         }
 
         let result, res_arr = [];
-        for (; this.index < this.params_count; ++this.index) {
+        while (this.index < this.params_count) {
             await this.waitLoad();
             if (!await this.switching()) {
                 break;
