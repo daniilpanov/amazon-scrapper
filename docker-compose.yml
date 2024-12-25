@@ -169,6 +169,24 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SELLERCENTRAL_PORT"
+    tiktok_loader:
+        image: danielgreen1806/amascrap-simple_server:latest
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./services/tiktok_loader:/src:rw
+            - ./logs/tiktok:/src/logs:rw
+        env_file: .env
+        expose:
+            - "TIKTOK_PORT"
+        ports:
+            - "$TIKTOK_PORT:$TIKTOK_PORT"
+        command:
+            - "-k"
+            - "uvicorn.workers.UvicornWorker"
+            - "-b"
+            - "0.0.0.0:$TIKTOK_PORT"
     web:
         depends_on:
             - server
