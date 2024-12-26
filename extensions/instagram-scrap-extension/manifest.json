@@ -1,0 +1,23 @@
+{
+    "name": "Instagram Scraper",
+    "description": "Instagram Scraper",
+    "version": "1.0",
+    "manifest_version": 3,
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "host_permissions": [
+        "*://*/*"
+    ],
+    "permissions": [
+        "webNavigation",
+        "tabs",
+        "activeTab",
+        "scripting",
+        "alarms",
+        "declarativeContent",
+        "storage",
+        "management"
+    ]
+}
