@@ -314,8 +314,6 @@ class CollectReviews {
                     }
                     if (this.per_page_callback) {
                         this.per_page_callback(result);
-                    }
-                    if (this.per_index_callback) {
                         for (const item of result){
                             res_arr.push(item);
                         }
