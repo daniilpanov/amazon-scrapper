@@ -289,22 +289,30 @@ class CollectReviews {
     async collect() {
         await this.updateParams();
         this.parse(true);
+        console.log('ok1');
 
         if (this.format_type_filter) {
+            console.log('ok - filter');
             this.format_type_filter.click();
             const opts = this.format_type_options = [];
             await new Promise(resolve => setTimeout(resolve, 100));
             document.querySelectorAll('.a-popover li[aria-labelledby*="' + this.format_type_filter.id + '"] a').forEach(o => opts.push(o));
             this.format_type_options[Number(this.current_format)].click();
+            console.log('ok - filter clicked');
         }
+
+        console.log('ok2');
 
         let result, res_arr = [];
         while (this.index < this.params_count) {
+            console.log('ok - while params count - ' + this.index);
             await this.waitLoad();
             if (!await this.switching()) {
+                console.log('end!');
                 break;
             }
             for (; this.page <= 10; ++this.page) {
+                console.log('page ' + this.page);
                 await this.waitLoad();
                 await new Promise(resolve => setTimeout(resolve, 100));
                 try {
@@ -314,6 +322,8 @@ class CollectReviews {
                     }
                     if (this.per_page_callback) {
                         this.per_page_callback(result);
+                    }
+                    if (this.per_index_callback) {
                         for (const item of result){
                             res_arr.push(item);
                         }
