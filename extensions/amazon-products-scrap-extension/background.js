@@ -59,12 +59,12 @@ endp(':8832/ping', true).then(res => {
     });
 
     chrome.runtime.onMessageExternal.addListener(run);
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         let need_run = true;
         for (let i in request) {
             if (i === 'fetch') {
                 need_run = false;
-                fetch(request[i][0], request[i][1]).then((response) => {
+                fetch(await endp(request[i][0]), request[i][1]).then((response) => {
                     sendResponse(response);
                 });
             } else if (i === 'log') {
