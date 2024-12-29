@@ -88,6 +88,7 @@ class ProductsParser extends Parser {
                 }
             }
         }
+        return { marketplaceId: null };
     }
 
     getMainImage() {
@@ -322,8 +323,10 @@ class ProductsParser extends Parser {
     getRelatedProducts() {
         const { mediaConfig } = this.getFullMediaConfig();
         const { asinVariationValues } = mediaConfig;
+        if (!asinVariationValues) return { relatedProducts: null };
         let relatedProducts = {};
         for (const ASIN in asinVariationValues) {
+            if (!asinVariationValues[ASIN]) continue;
             delete asinVariationValues[ASIN].ASIN;
             relatedProducts[ASIN] = asinVariationValues[ASIN];
         }
@@ -335,6 +338,7 @@ class ProductsParser extends Parser {
         const { mediaConfig } = this.getFullMediaConfig();
         const { dimensions } = mediaConfig;
         const { dimensionValuesData } = mediaConfig;
+        if (!dimensions || !dimensionValuesData) return { options: null };
         let options = {};
         for (const optIdx in dimensions) {
             options[dimensions[optIdx]] = {};
@@ -349,6 +353,7 @@ class ProductsParser extends Parser {
     getCurrentOptions() {
         const { mediaConfig } = this.getFullMediaConfig();
         const { selected_variations } = mediaConfig;
+        if (!mediaConfig || !selected_variations) return { currentOptions: null };
         let currentOptions = {};
         for (const optionName in selected_variations) {
             currentOptions[optionName] = selected_variations[optionName];
