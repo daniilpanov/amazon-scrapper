@@ -78,7 +78,7 @@ async function main() {
     curr_limit = real_tabs_limit - tabs_count;
     for (let i = 0; i <= 1; ++i) {
         try {
-            const res = await fetch(await endp(':8832/tasks/get_available/bsr?stage=' + i));
+            const res = await fetch(await endp(':8832/tasks/get_available/100asins?stage=' + i));
             const data = await res.json();
             for (let i in data) {
                 console.log('Available space left:', curr_limit, '; limit & count:', real_tabs_limit, tabs_count);
