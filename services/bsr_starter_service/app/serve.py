@@ -28,7 +28,16 @@ def run():
         bsr_tasks = ready_bsrs.json()
         for task in bsr_tasks:
             if 'data' not in task or 'result' not in task:
-                continue  # TODO: make report
+                requests.patch('http://server:8832/tasks/report/' + task['_id'], json={
+                    'stop': True,
+                    'confirm': True,
+                    'errors': [
+                        'This task has no data or no result',
+                    ],
+                }, headers={
+                    'Content-Type': 'application/json',
+                })
+                continue
             res = requests.post(
                 'http://server:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
             if res.status_code == 409:
@@ -50,7 +59,16 @@ def run():
                     department_document = department_document_resp.json()
             logger.debug('Task ID: ' + task['_id'] + ', BSR Document: ' + str(department_document))
             if not department_document:
-                continue  # TODO: make report
+                requests.patch('http://server:8832/tasks/report/' + task['_id'], json={
+                    'stop': True,
+                    'confirm': True,
+                    'errors': [
+                        'There is an error on getting the department document',
+                    ],
+                }, headers={
+                    'Content-Type': 'application/json',
+                })
+                continue
 
             asins = department_document.get('items', [])[:int(task['data'].get('count', 0))]
             logger.debug('Task ID: ' + task['_id'] + ', ASINs list: ' + str(asins))

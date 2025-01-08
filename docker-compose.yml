@@ -9,6 +9,16 @@ services:
         volumes:
             - ./services/bsr_starter_service:/src:rw
             - ./logs/bsrstarter:/src/logs:rw
+    100asinshandler:
+        depends_on:
+            - server
+        image: danielgreen1806/amascrap-simple_server:latest
+        restart: unless-stopped
+        networks:
+            - net
+        volumes:
+            - ./services/100asins_handler_service:/src:rw
+            - ./logs/100asinshandler:/src/logs:rw
     dataimporter:
         image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
