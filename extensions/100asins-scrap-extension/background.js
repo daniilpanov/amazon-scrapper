@@ -174,7 +174,6 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
                         if (oldLength < res.size) {
                             resData.push({
                                 asin,
-                                description: cardDescription,
                                 title: brandTitle,
                                 score,
                                 image,
