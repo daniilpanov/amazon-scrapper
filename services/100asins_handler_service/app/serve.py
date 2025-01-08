@@ -1,11 +1,9 @@
 import time
 from logging.handlers import TimedRotatingFileHandler
-from urllib.parse import quote
 
 import requests
 import logging
 
-from future.backports.email.feedparser import headerRE
 from pymongo import MongoClient
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 
@@ -50,7 +48,7 @@ def run(collection):
             data = task['data']
             result = task['result']
             collection_data = []
-            query = data['type'] + ' ' + data['query']
+            query = (data['type'] + ' ' + data['label']).strip()
 
             for i in range(len(result)):
                 collection_data.append({
@@ -73,14 +71,20 @@ def run(collection):
                 }, headers={
                     'Content-Type': 'application/json',
                 })
-            else:
-                requests.patch('http://server:8832/tasks/finish/' + task['_id'])
-                requests.post('http://server:8832/tasks/release/' + task['_id'])
+                continue
+            requests.patch('http://server:8832/tasks/finish/' + task['_id'])
+            requests.post('http://server:8832/tasks/release/' + task['_id'])
 
 
 if __name__ == '__main__':
-    with MongoClient() as db:
+    import certifi
+    from os import environ as env
+    from pymongo.server_api import ServerApi
+
+    url = f"{env.get('MONGO_DB_HOST_SCHEMA')}://{env.get('MONGO_DB_USER')}:{env.get('MONGO_DB_PASS')}@{env.get('MONGO_DB_HOST')}"
+    # Create a new client and connect to the server_service
+    with MongoClient(url, server_api=ServerApi('1'), username=env.get('MONGO_DB_USER'), password=env.get('MONGO_DB_PASS'), tlsCAFile=certifi.where()) as db:
         try:
-            run(db['Keywords']['keyword_tracking_new'])
+            run(db[env.get('DB_GLOBAL_PREFIX', '') + 'Keywords'][env.get('COLLECTIONS_GLOBAL_PREFIX', '') + 'keyword_tracking_new'])
         finally:
             pass

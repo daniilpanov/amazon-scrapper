@@ -6,16 +6,18 @@ services:
         restart: unless-stopped
         networks:
             - net
+        env_file: .env
         volumes:
             - ./services/bsr_starter_service:/src:rw
             - ./logs/bsrstarter:/src/logs:rw
     100asinshandler:
         depends_on:
             - server
-        image: danielgreen1806/amascrap-simple_server:latest
+        image: danielgreen1806/amascrap-light:latest
         restart: unless-stopped
         networks:
             - net
+        env_file: .env
         volumes:
             - ./services/100asins_handler_service:/src:rw
             - ./logs/100asinshandler:/src/logs:rw
