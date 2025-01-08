@@ -25,7 +25,6 @@ async function endp(uri, force = false) {
     for (const url of urlList) {
         try {
             const response = await fetch(url + ':8832/ping', { method: 'GET', signal: AbortSignal.timeout(5000) });
-            console.log(response.ok);
             if (response.ok) {
                 currentUrl = new URL(url).origin;
                 lastUpdate = Date.now();
@@ -61,10 +60,14 @@ endp(':8832/ping', true).then(res => {
         sendResponse('OK');
         run(message, sender, sendResponse);
     });
+
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        sendResponse('OK');
+        run(message, sender, sendResponse);
+    });
 });
 
 async function run(message, sender, sendResponse) {
-    console.log(message);
     if (message.stage > 1) {
         console.error('Bad task');
         return;
@@ -73,10 +76,8 @@ async function run(message, sender, sendResponse) {
         await endp(':8832/tasks/acquire/100asins/' + message.header_id + '/' + message.task_id),
         { method: 'post' },
     );
-    console.log(res);
     if (res.status === 200) {
-        console.log('OK');
-        res = await startScraping100ASINS(message.label, message.type, message.limit, message.task_id, sender.id, message.windowId, (message?.stage || 0) > 0);
+        res = await startScraping100ASINS(message.label, message.type, message.limit, message.task_id, sender.id, message.windowId, (message?.stage || 0) <= 0);
         if (!res) {
             fetch(await endp(':8832/tasks/report/' + message.task_id), {
                 headers: {
@@ -110,7 +111,7 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
     let counter = 1;
     let tab;
 
-    while (asinList.length < limit) {
+    while (counter <= limit) {
         tab = await chrome.tabs.create({
             url: encodeURI(`https://amazon.com/s?k=${query}&page=${counter}`),
             active: false,
@@ -119,8 +120,8 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
         chrome.tabs.update(tab.id, { autoDiscardable: false });
         let result = await chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            args: [countAsins, type, label, limit, !helium],
-            func: (countAsins, type, label, limit, returnAllData = false) => {
+            args: [counter, type, label, limit, !helium],
+            func: (counter, type, label, limit, returnAllData = false) => {
                 window.finish_collecting = false;
 
                 function check(kw, str) {
@@ -138,9 +139,8 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
                     const resData = [];
                     const productCards = document.querySelectorAll('div[data-asin]');
                     for (const card of productCards) {
-                        if (countAsins >= limit) {
-                            console.log(res);
-                            return res;
+                        if (counter > limit) {
+                            return returnAllData ? [[], []] : [];
                         }
                         const asin = card.getAttribute('data-asin');
                         const cardDescription = card.querySelector('a.s-underline-text')?.textContent;
@@ -182,7 +182,13 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
                             });
                         }
                     }
-                    return returnAllData ? [res, resData] : res;
+                    return returnAllData ? [Array.from(res), resData] : Array.from(res);
+                }
+
+                const appElement = document.querySelector('.s-result-item');
+                if (appElement) {
+                    window.finish_collecting = true;
+                    return scrap(document);
                 }
 
                 return new Promise((resolve) => {
@@ -203,33 +209,26 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
                         childList: true,
                         subtree: true,
                     });
-
-                    const appElement = document.querySelector('.s-result-item');
-                    if (appElement) {
-                        observer.disconnect();
-                        window.finish_collecting = true;
-                        return resolve(scrap(document));
-                    }
                 });
             },
         });
-        console.log(result);
-        result = result[0]?.result;
-        if (helium) {
-            if (result)
-                asinList = asinList.union(result);
-        } else {
-            resData = [...resData, ...result[1]];
+        result = result[0]?.result || (helium ? [] : [[], []]);
+        if (result) {
+            if (helium)
+                asinList = asinList.union(new Set(result));
+            else {
+                asinList = asinList.union(new Set(result[0]));
+                resData = [...resData, ...result[1]];
+            }
         }
         await chrome.tabs.remove(tab.id);
         ++counter;
         countAsins = asinList.size;
-        if (!result || !result.length || counter > limit) {
+        if (!result || !result.length) {
             break;
         }
     }
     asinList = Array.from(asinList);
-    console.log(asinList);
     return helium ? await sendData(asinList, task_id) : await sendUsualData(resData, task_id);
 }
 
@@ -244,11 +243,11 @@ async function sendUsualData(data, task_id) {
                 'Content-Type': 'application/json',
             },
             method: 'PATCH',
-            body: {
+            body: JSON.stringify({
                 release: true,
                 stage: 2,
-                result: JSON.stringify(data),
-            },
+                result: data,
+            }),
         });
 
         if (response.ok && response.status === 200) {
