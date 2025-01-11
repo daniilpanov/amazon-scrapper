@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS loader
+FROM python:3.11-slim
 
 WORKDIR '/src'
 
