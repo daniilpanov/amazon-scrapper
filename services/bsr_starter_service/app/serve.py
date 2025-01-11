@@ -28,6 +28,7 @@ def run():
         bsr_tasks = ready_bsrs.json()
         for task in bsr_tasks:
             if 'data' not in task or 'result' not in task:
+                logger.warning('A task with no result or no data received: ' + task['_id'])
                 requests.patch('http://server:8832/tasks/report/' + task['_id'], json={
                     'stop': True,
                     'confirm': True,
@@ -40,13 +41,14 @@ def run():
                 continue
             res = requests.post(
                 'http://server:8832/tasks/acquire/' + task['script'] + '/' + task['header_id'] + '/' + task['_id'])
-            if res.status_code == 409:
+            logger.debug('Task acquiring result: ' + str(res))
+            if not res.ok:
                 continue
 
             department_document = None
             bsr_id = task['result'].get('bsr_id')
             bsr_url = task['result'].get('bsr_url')
-            logger.debug('Task ID: ' + task['_id'] + ', BSR ID: ' + str(bsr_id) + ', BSR URL: ' + str(bsr_url))
+            logger.info('Task ID: ' + task['_id'] + ', BSR ID: ' + str(bsr_id) + ', BSR URL: ' + str(bsr_url))
             if bsr_id:
                 department_document_resp = requests.get('http://bsr_loader:8839/v1/bsr/' + str(bsr_id) + '?fields=items')
                 logger.debug('Task ID: ' + task['_id'] + ', 1st resp: ' + str(department_document_resp))
@@ -74,6 +76,7 @@ def run():
             logger.debug('Task ID: ' + task['_id'] + ', ASINs list: ' + str(asins))
             str_asins = [p['asin'] for p in asins]
             logger.debug('Task ID: ' + task['_id'] + ', string ASINs list: ' + str(str_asins))
+            target = task['data'].get('target')
             if task['data'].get('category'):
                 logger.debug(requests.post(
                     'http://server:8832/cmd/category/set',
@@ -85,7 +88,7 @@ def run():
                         'top5_asins': str_asins[:5],
                         'cat_name': task['data'].get('category'),
                         'client_name': task['data'].get('client'),
-                        'target': task['data'].get('target'),
+                        'target': target,
                     },
                 ))
             if isinstance(task['result'].get('bsr'), dict) and isinstance(task['result']['bsr'].get('bsrLink'), str):
@@ -106,9 +109,16 @@ def run():
                 'bsr_link': bsr_link,
             }
 
+            no_target_in_bsr = True
             for asin in asins[:int(task['data'].get('count', 0))]:
-                data['asins'].append({'asin': asin['asin'], 'rank': asin.get('rank'), 'collect_media_config': asin == task['data'].get('target')})
+                is_target = no_target_in_bsr and asin == target
+                data['asins'].append({'asin': asin['asin'], 'rank': asin.get('rank'), 'collect_media_config': is_target})
+                if is_target and no_target_in_bsr:
+                    no_target_in_bsr = False
 
+            if no_target_in_bsr:
+                data['asins'] = [{'asin': target, 'rank': None, 'collect_media_config': True}, *data['asins']]
+            logger.info('Task ID: ' + task['_id'] + ', ASINs list: ' + str(data['asins']))
             if len(data['asins']):
                 requests.post(
                     'http://server:8832/products/collect',
@@ -118,8 +128,9 @@ def run():
                     json=data,
                 ).json()
 
-            requests.patch('http://server:8832/tasks/finish/' + task['_id'])
-            requests.post('http://server:8832/tasks/release/' + task['_id'])
+            re1 = requests.patch('http://server:8832/tasks/finish/' + task['_id'])
+            re2 = requests.post('http://server:8832/tasks/release/' + task['_id'])
+            logger.debug('Task ID: ' + task['_id'] + ', Ending responses: ' + str(re1) + ' and ' + str(re2))
 
 
 if __name__ == '__main__':
