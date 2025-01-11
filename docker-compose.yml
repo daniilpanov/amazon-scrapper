@@ -1,4 +1,14 @@
 services:
+    crx3packer:
+        image: danielgreen1806/crx3packer:latest
+        restart: unless-stopped
+        networks:
+            - net
+        env_file: .env
+        volumes:
+            - ./services/crx3_service/app:/src/app:rw
+            - ./logs/crx3:/src/logs:rw
+            - ./extensions:/src/ext:r
     bsrstarter:
         depends_on:
             - server

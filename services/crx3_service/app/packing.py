@@ -2,7 +2,6 @@ import os
 import zipfile
 import crx3_pb2
 import struct
-import argparse
 import io
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
@@ -111,33 +110,6 @@ def zipdir(directory, inject=None):
     return zipdata
 
 
-def argparser():
-    parser = argparse.ArgumentParser(description='crx3 creator')
-    parser.add_argument(
-        'src',
-        type=str,
-        default='',
-        help='Source directory containing unpacked chrome ext',
-    )
-    parser.add_argument(
-        '-o', '--output', type=str, default='', help='File location for packed .crx'
-    )
-    parser.add_argument(
-        '-pem',
-        '--private-key',
-        type=str,
-        default='',
-        help='Private key location if no private key script will generate and save private key',
-    )
-    return parser
-
-
-def cli():
-    parser = argparser()
-    args = parser.parse_args()
-    package(args.src, args.output)
-
-
 def get_crx_id(public_key):
     digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
     digest.update(public_key)
@@ -168,7 +140,3 @@ def save_crx_file(header_str, zipped, path, crdx):
         data = [kCrxFileHeaderMagic, VERSION, header_size_octets, header_str, zipped]
         for d in data:
             crx.write(d)
-
-
-if __name__ == '__main__':
-    cli()
