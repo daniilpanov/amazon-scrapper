@@ -73,7 +73,7 @@ class AspectsResultItem(BaseModel):
 class ProductsResultItem(BaseModel):
     rootAsin: str | None = None
     marketplaceId: str | None = None
-    asin: str
+    asin: str | None = None
     title: str | None = None
     breadcrumbs: list[str] | None = None
     currentBreadcrumb: str | None = None
@@ -167,6 +167,8 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 
 @router.post('/set_result/card/{asin}')
 async def set_product_result(asin: str, card: ProductsResultItem):
+    if not card.asin:
+        card.asin = asin
     if card.bsr_link:
         bsr_id_resp = requests.get('http://bsr_loader:8839/v1/bsr/by_url?fields=_id&bsr_url=' + quote(card.bsr_link))
         logger.debug('Department found: ' + str(bsr_id_resp) + ' - ' + bsr_id_resp.text)
