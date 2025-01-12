@@ -5,6 +5,9 @@ from logging.handlers import TimedRotatingFileHandler
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from .crx3packer import package
+from .xpi_packer import pack
+
 # Create a logger object
 logger = logging.getLogger(__name__)
 # Set the logging level to INFO
@@ -34,3 +37,4 @@ def resign_firefox(all_files: bool = False, ext_list: ExtensionsListForm | None 
         extensions_dirs = ext_list.ext_list
     else:
         extensions_dirs = os.listdir('/src/ext')
+

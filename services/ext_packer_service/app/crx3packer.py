@@ -1,11 +1,12 @@
 import os
 import zipfile
-import crx3_pb2
 import struct
 import io
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, utils, padding
+
+from . import crx3_pb2
 
 kCrxFileHeaderMagic = b'Cr24'
 VERSION = struct.pack('<I', 3)
