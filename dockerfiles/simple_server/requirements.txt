@@ -1,4 +1,9 @@
 requests
+cffi==1.13.2
+cryptography==3.3.2
+protobuf==3.15.0
+pycparser==2.19
+six==1.13.0
 anyio==4.3.0
 starlette==0.36.3
 fastapi==0.110.0
