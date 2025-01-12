@@ -133,10 +133,10 @@ def create_header_str(public_key, signed, signed_header_data_str):
     return header.SerializeToString()
 
 
-def save_crx_file(header_str, zipped, path, crdx):
+def save_crx_file(header_str, zipped, path, crdx: str):
     header_size_octets = struct.pack('<I', len(header_str))
 
-    file_location = path if path else '%s.crx' % crdx
+    file_location = (path if path else './') + '%s.crx' % os.path.split(crdx)[1]
     with open(file_location, 'wb') as crx:
         data = [kCrxFileHeaderMagic, VERSION, header_size_octets, header_str, zipped]
         for d in data:

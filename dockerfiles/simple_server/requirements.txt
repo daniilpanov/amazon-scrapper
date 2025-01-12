@@ -1,5 +1,4 @@
 requests
-cffi==1.13.2
 cryptography==3.3.2
 protobuf==3.15.0
 pycparser==2.19

@@ -9,6 +9,8 @@ services:
             - ./services/ext_packer_service/app:/src/app:rw
             - ./logs/ext_packer:/src/logs:rw
             - ./extensions:/src/ext:r
+            - ./extensions:/src/compiled_ext:rw
+            - ./extensions:/src/update_metadata:rw
         expose:
             - "$EXT_PACKER_PORT"
         ports:
