@@ -122,8 +122,6 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
             target: { tabId: tab.id },
             args: [counter, type, label, limit, !helium],
             func: (counter, type, label, limit, returnAllData = false) => {
-                window.finish_collecting = false;
-
                 function check(kw, str) {
                     str = str.toLowerCase();
                     for (const keyword of kw) {
@@ -139,14 +137,16 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
                     const resData = [];
                     const productCards = document.querySelectorAll('div[data-asin]');
                     for (const card of productCards) {
+                        if (!card) continue;
+
                         if (counter > limit) {
                             return returnAllData ? [[], []] : [];
                         }
+
                         const asin = card.getAttribute('data-asin');
                         const cardDescription = card.querySelector('a.s-underline-text')?.textContent;
-                        if (!asin || !cardDescription) {
-                            continue;
-                        }
+                        if (!asin || !cardDescription) continue;
+
                         const score = Number(card.querySelector('a i span')?.textContent.trim().split(' ')[0] || 0) || null;
                         let image = card.getElementsByTagName('img')[0]?.getAttribute('src') || null;
                         if (image) {
@@ -158,7 +158,7 @@ async function startScraping100ASINS(label, type, limit, task_id, sender_id, win
                             image = splitImageUrl.slice(0, -1).join('/') + '/' + imageUriName;
                         }
                         const brandTitle = card.querySelector('h2 > span')?.textContent;
-                        const priceEls = card.querySelector('[data-cy="secondary-offer-recipe"]').children[0].children;
+                        const priceEls = card.querySelector('[data-cy="secondary-offer-recipe"]')?.children[0]?.children || [];
                         let price = null;
                         for (const priceEl of priceEls) {
                             const text = priceEl.textContent.trim();
