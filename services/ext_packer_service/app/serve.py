@@ -4,14 +4,13 @@ import os
 import hashlib
 import xml.etree.ElementTree as ET
 from contextlib import asynccontextmanager
-from json import JSONDecoder
 from logging.handlers import TimedRotatingFileHandler
 from os.path import isdir
 
 from fastapi import FastAPI, APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from requests import JSONDecodeError
+from json import JSONDecodeError
 
 from .crx3packer import package as crx3pack
 from .xpi_packer import pack as xpipack
