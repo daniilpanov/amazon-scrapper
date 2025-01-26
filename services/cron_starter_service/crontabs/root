@@ -1,0 +1,1 @@
+0 10 * * * python cmd_handler.py -s KW
