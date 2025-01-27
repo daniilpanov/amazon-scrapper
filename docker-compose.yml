@@ -42,6 +42,19 @@ services:
         volumes:
             - ./services/100asins_handler_service:/src:rw
             - ./logs/100asinshandler:/src/logs:rw
+    cron:
+        depends_on:
+            - server
+        image: danielgreen1806/amascrap-cron:latest
+        restart: unless-stopped
+        networks:
+            - net
+        env_file: .env
+        volumes:
+            - ./services/cron_starter_service/app:/src:r
+            - ./services/cron_starter_service/crontabs:/etc/crontabs:rw
+            - ./logs/cron:/var/log:rw
+        command: ["/src/cron-start.sh"]
     dataimporter:
         image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped

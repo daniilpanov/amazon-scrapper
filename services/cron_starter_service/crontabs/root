@@ -1,1 +1,1 @@
-0 10 * * * python cmd_handler.py -s KW
+0 10 * * * /src/cmd_handler.py --script KW
