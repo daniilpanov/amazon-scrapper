@@ -4,9 +4,6 @@ set -u
 # Create log directory
 [ ! -f /var/log/cron.log ] && touch /var/log/cron.log
 
-# Create crontab file
-cat /dev/null > /etc/crontabs/root
-
 # Directly use cron jobs from /etc/crontabs/root (already mounted)
 echo "> Using cron jobs from /etc/crontabs/root"
 
