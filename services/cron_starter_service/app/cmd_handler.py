@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 from run_keyword import run_keyword
+from run_spfd import run_spfd
 
 actions = {
     'KW': run_keyword,
+    'SPFD': run_spfd,
 }
 
 if __name__ == '__main__':
