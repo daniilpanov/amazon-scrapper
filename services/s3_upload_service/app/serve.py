@@ -12,7 +12,7 @@ import logging
 # Create a logger object
 logger = logging.getLogger(__name__)
 # Set the logging level to INFO
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # Create a handler that logs to the Docker logs
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -49,6 +49,11 @@ def do_task(task):
     prefix = data.get('prefix', '')
 
     try:
+        logger.debug('Video url: ' + video_url)
+        if video_url.endswith('.mp4'):
+            data['media_type'] = 'mp4'
+            logger.warning('Invalid media type. Auto converting. Task dump: ' + str({'video_url': video_url, 'asin': asin, 'variant': variant, 'mimetype': mimetype, 'filename': filename, 'prefix': prefix}))
+        logger.debug('Params: ' + ' '.join(map(str, (asin, variant, mimetype, filename, prefix))))
         # if video uploads from YouTube
         if data['media_type'] == 'yt':
             controller.process_youtube(
