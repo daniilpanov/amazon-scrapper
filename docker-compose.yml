@@ -44,6 +44,7 @@ services:
             - ./logs/100asinshandler:/src/logs:rw
     cron:
         depends_on:
+            - msgbroker
             - server
         image: danielgreen1806/amascrap-cron:latest
         restart: unless-stopped
@@ -235,6 +236,20 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$WEB_PORT"
+    msgbroker:
+        image: danielgreen1806/amascrap-rabbitmq:latest
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+            - "15692:15692"
+            - "15674:15674"
+            - "61613:61613"
+            - "55670:55670"
+        networks:
+            - net
+        volumes:
+            - ./external-data/rabbitmq:/var/lib/rabbitmq:rw
+            - ./logs/rabbitmq:/var/log/rabbitmq:rw
 #    capsolver:
 #        image: danielgreen1806/amascrap-tensorflow_server
 #        build:
