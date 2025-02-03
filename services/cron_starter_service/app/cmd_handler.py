@@ -15,13 +15,30 @@ if __name__ == '__main__':
 
     from dotenv import load_dotenv
     load_dotenv('.env') or load_dotenv('../.env') or load_dotenv('../../.env') or load_dotenv('../../../.env')
+    
+    from inspect import signature
+    from contextlib import ExitStack
+    
+    import pika
     from pymongo import MongoClient
     from os import environ as env
     import certifi
     from pymongo.server_api import ServerApi
-
-    url = f"{env.get('MONGO_DB_HOST_SCHEMA')}://{env.get('MONGO_DB_USER')}:{env.get('MONGO_DB_PASS')}@{env.get('MONGO_DB_HOST')}"
-    # Create a new client and connect to the server_service
-    with MongoClient(url, server_api=ServerApi('1'), username=env.get('MONGO_DB_USER'),
-                     password=env.get('MONGO_DB_PASS'), tlsCAFile=certifi.where()) as db:
-        actions[args.script](db)
+    
+    func = actions[args.script]
+    params = signature(func).parameters
+    kwargs = {}
+    
+    with ExitStack() as es:
+        for name, sign in params:
+            if sign.annotation is MongoClient:
+                url = f"{env.get('MONGO_DB_HOST_SCHEMA')}://{env.get('MONGO_DB_USER')}:{env.get('MONGO_DB_PASS')}@{env.get('MONGO_DB_HOST')}"
+                client = MongoClient(url, server_api=ServerApi('1'), username=env.get('MONGO_DB_USER'),
+                     password=env.get('MONGO_DB_PASS'), tlsCAFile=certifi.where())
+                es.enter_context(client)
+                kwargs[name] = client
+            elif sign.annotation is pika.BlockingConnection:
+                client = pika.BlockingConnection(pika.ConnectionParameters())
+                es.enter_context(client)
+                kwargs[name] = client
+        func(**kwargs)
