@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from logging import StreamHandler
+
 from run_keyword import run_keyword
 from run_spfd import run_spfd
 
@@ -12,9 +14,20 @@ if __name__ == '__main__':
     parser = ArgumentParser(description='Run the autostart scripts by cron', add_help=True)
     parser.add_argument('-s', '--script', choices=actions.keys(), help='The script name to run')
     args = parser.parse_args()
+    import logging
 
-    from dotenv import load_dotenv
-    load_dotenv('.env') or load_dotenv('../.env') or load_dotenv('../../.env') or load_dotenv('../../../.env')
+    # Create a logger object
+    logger = logging.getLogger(__name__)
+    # Set the logging level to INFO
+    logger.setLevel(logging.DEBUG)
+    # Create a handler that logs to the Docker logs
+    handler = StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
+    logger.info(args)
+
+    # from dotenv import load_dotenv
+    # load_dotenv('.env') or load_dotenv('../.env') or load_dotenv('../../.env') or load_dotenv('../../../.env')
     
     from inspect import signature
     from contextlib import ExitStack
@@ -38,7 +51,7 @@ if __name__ == '__main__':
                 es.enter_context(client)
                 kwargs[name] = client
             elif sign.annotation is pika.BlockingConnection:
-                client = pika.BlockingConnection(pika.ConnectionParameters())
+                client = pika.BlockingConnection(pika.ConnectionParameters('msgbroker'))
                 es.enter_context(client)
                 kwargs[name] = client
         func(**kwargs)

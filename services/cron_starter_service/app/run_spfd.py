@@ -1,2 +1,5 @@
-def run_spfd(conn):
-    pass
+import pika
+
+def run_spfd(rabbit: pika.BlockingConnection):
+    chan = rabbit.channel()
+

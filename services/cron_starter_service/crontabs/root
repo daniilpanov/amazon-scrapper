@@ -1,3 +1,0 @@
-0 10 * * * /src/cmd_handler.py --script KW
-0 17 * * * /src/cmd_handler.py --script SPFD
-30 20 * * * /src/cmd_handler.py --script SPFD
