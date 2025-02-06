@@ -247,6 +247,7 @@ services:
         networks:
             - net
         volumes:
+            - ./external-data/rabbitmq/mnesia:/var/lib/rabbitmq/mnesia:rw
             - ./logs/rabbitmq:/var/log/rabbitmq:rw
 #    capsolver:
 #        image: danielgreen1806/amascrap-tensorflow_server

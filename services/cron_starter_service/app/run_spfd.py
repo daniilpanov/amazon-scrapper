@@ -4,7 +4,7 @@ def run_spfd(rabbit: pika.BlockingConnection, url: str, fname: str, lname: str, 
     with rabbit.channel() as chan:
         chan.exchange_declare(exchange='tasks', exchange_type='direct')
         chan.queue_declare(queue='spfd', durable=True)
-        chan.queue_bind(queue='spfd', exchange='tasks')
+        chan.queue_bind(queue='spfd', exchange='tasks', routing_key='spfd')
         chan.basic_publish(
             exchange='tasks',
             routing_key='spfd',
