@@ -233,9 +233,11 @@ def get_all_tasks(_filters=None, exclude=None, limit=None):
 
 
 def get_tasks_groups(_filters: dict | None = None, visible: bool | None = None, exclude: dict | None = None):
+    if not _filters:
+        _filters = {}
+    if visible is not None:
+        _filters.setdefault('visible', visible)
     try:
-        if visible is not None:
-            _filters.setdefault('visible', visible)
         return list(TasksGroups.find(_filters or {}, exclude or {}))
     except OperationFailure:
         # TODO: log
