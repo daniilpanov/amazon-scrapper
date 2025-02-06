@@ -58,7 +58,7 @@ if __name__ == '__main__':
                 es.enter_context(client)
                 kwargs[name] = client
             elif sign.annotation is pika.BlockingConnection:
-                client = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+                client = pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost')))
                 es.enter_context(client)
                 kwargs[name] = client
         func(**(kwargs | func_args))
