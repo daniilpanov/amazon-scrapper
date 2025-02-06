@@ -43,9 +43,8 @@ services:
             - ./services/100asins_handler_service:/src:rw
             - ./logs/100asinshandler:/src/logs:rw
     cron:
-#         depends_on:
-#             - msgbroker
-#             - server
+        depends_on:
+             - msgbroker
         image: danielgreen1806/amascrap-cron:latest
         restart: unless-stopped
         networks:
@@ -248,7 +247,6 @@ services:
         networks:
             - net
         volumes:
-            - ./external-data/rabbitmq:/var/lib/rabbitmq:rw
             - ./logs/rabbitmq:/var/log/rabbitmq:rw
 #    capsolver:
 #        image: danielgreen1806/amascrap-tensorflow_server

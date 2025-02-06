@@ -1,22 +1,19 @@
 #!/bin/bash
 set -u
 
-# Directly use cron jobs from /etc/crontabs/* and /etc/cron.d/* (already mounted)
-echo "> Using cron jobs from /etc/crontabs/* and /etc/cron.d/*"
+# Write the cron jobs (already mounted)
+echo "> Applying cron jobs"
 
 # Create logrotate configuration file
 cat << EOF > /etc/logrotate.d/cron_logs
-/var/log/cron.log {
-    size 10M
+/var/log/* {
+    size 1M
     rotate 5
     missingok
     notifempty
     compress
     delaycompress
-    create 0644 root root
-    postrotate
-        /usr/bin/killall -HUP crond
-    endscript
+    su root root
 }
 EOF
 

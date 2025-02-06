@@ -13,12 +13,19 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser(description='Run the autostart scripts by cron', add_help=True)
     parser.add_argument('-s', '--script', choices=actions.keys(), help='The script name to run')
+    parser.add_argument('-p', '--params', help='The script execution params', default=None)
     args = parser.parse_args()
-    import logging
 
+    func_args = {}
+    if args.params:
+        items = args.params.split(';')
+        for item in items:
+            k, v = item.strip().split('=')
+            func_args[k] = v
+
+    import logging
     # Create a logger object
     logger = logging.getLogger(__name__)
-    # Set the logging level to INFO
     logger.setLevel(logging.DEBUG)
     # Create a handler that logs to the Docker logs
     handler = StreamHandler()
@@ -26,8 +33,8 @@ if __name__ == '__main__':
     logger.addHandler(handler)
     logger.info(args)
 
-    # from dotenv import load_dotenv
-    # load_dotenv('.env') or load_dotenv('../.env') or load_dotenv('../../.env') or load_dotenv('../../../.env')
+    from dotenv import load_dotenv
+    load_dotenv('.env') or load_dotenv('../.env') or load_dotenv('../../.env') or load_dotenv('../../../.env')
     
     from inspect import signature
     from contextlib import ExitStack
@@ -39,7 +46,7 @@ if __name__ == '__main__':
     from pymongo.server_api import ServerApi
     
     func = actions[args.script]
-    params = signature(func).parameters
+    params = signature(func).parameters.items()
     kwargs = {}
     
     with ExitStack() as es:
@@ -51,7 +58,7 @@ if __name__ == '__main__':
                 es.enter_context(client)
                 kwargs[name] = client
             elif sign.annotation is pika.BlockingConnection:
-                client = pika.BlockingConnection(pika.ConnectionParameters('msgbroker'))
+                client = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
                 es.enter_context(client)
                 kwargs[name] = client
-        func(**kwargs)
+        func(**(kwargs | func_args))
