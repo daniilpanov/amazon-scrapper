@@ -33,8 +33,8 @@ if __name__ == '__main__':
     logger.addHandler(handler)
     logger.info(args)
 
-    from dotenv import load_dotenv
-    load_dotenv('.env') or load_dotenv('../.env') or load_dotenv('../../.env') or load_dotenv('../../../.env')
+    # from dotenv import load_dotenv
+    # load_dotenv('.env') or load_dotenv('../.env') or load_dotenv('../../.env') or load_dotenv('../../../.env')
     
     from inspect import signature
     from contextlib import ExitStack
