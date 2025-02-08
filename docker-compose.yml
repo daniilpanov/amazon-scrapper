@@ -1,4 +1,14 @@
 services:
+    msgbroker_startup:
+        depends_on:
+            - msgbroker
+        image: danielgreen1806/amascrap-light:latest
+        restart: no
+        networks:
+            - net
+        env_file: .env
+        volumes:
+            - ./services/ext_packer_service/app:/src/app:rw
     ext_packer:
         image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
