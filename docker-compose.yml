@@ -207,6 +207,11 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:$SERVER_PORT/ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
     sellercentral_loader:
         image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
@@ -245,6 +250,11 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$WEB_PORT"
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:$WEB_PORT"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
     msgbroker:
         image: danielgreen1806/amascrap-rabbitmq:latest
         ports:
@@ -259,6 +269,11 @@ services:
         volumes:
             - ./external-data/rabbitmq/mnesia:/var/lib/rabbitmq/mnesia:rw
             - ./logs/rabbitmq:/var/log/rabbitmq:rw
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:15672"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
 #    capsolver:
 #        image: danielgreen1806/amascrap-tensorflow_server
 #        build:
