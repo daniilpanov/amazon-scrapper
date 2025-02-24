@@ -2,3 +2,4 @@ requests
 pymongo
 certifi
 pika
+pandas
