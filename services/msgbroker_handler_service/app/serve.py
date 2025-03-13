@@ -43,6 +43,6 @@ with (pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST',
             print('Module', module_path, 'has no attribute:', e)
             continue
         for path, conf in module.Handler(db).handlers.items():
-            channel.basic_consume(path, conf['handler'], auto_ack=conf.get('auto_ack', False), consumer_tag=conf['handler'].__doc__ or None)
+            channel.basic_consume(path, conf['handler'], auto_ack=conf.get('auto_ack', False), consumer_tag=conf['handler'].__doc__ or None, arguments={'prefetch-count': 10} | conf.get('arguments', {}))
 
     channel.start_consuming()

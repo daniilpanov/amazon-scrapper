@@ -19,13 +19,12 @@ class Handler:
 
     def handle_success(self, chan: BlockingChannel, deliver: pika.spec.Basic.Deliver, props, msg):
         data = json.loads(msg.decode())
-        print(data)
-        sq = data['searchQuery']
-        data = data['chunk']
 
+        sq = data['searchQuery']
+        organic_count = data.get('co', 0)
+        sponsored_count = data.get('cs', 0)
+        data = data['chunk']
         new_data = []
-        organic_count = 0
-        sponsored_count = 0
 
         for item in data:
             if not item:
