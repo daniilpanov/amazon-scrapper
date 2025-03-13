@@ -268,7 +268,7 @@ services:
         depends_on:
             - msgbroker
         image: danielgreen1806/amascrap-light:latest
-        restart: no
+        restart: on-failure
         networks:
             - net
         env_file: .env
