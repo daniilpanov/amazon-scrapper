@@ -16,3 +16,5 @@ out/*
 *.json
 !manifest.json
 !*/manifest.json
+extensions/*.xml
+extensions/*.crx

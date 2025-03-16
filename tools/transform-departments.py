@@ -1,7 +1,3 @@
-import dns.resolver
-dns.resolver.default_resolver=dns.resolver.Resolver(configure=False)
-dns.resolver.default_resolver.nameservers=['8.8.8.8']
-
 import logging
 import uuid
 import asyncio
@@ -67,7 +63,7 @@ class Uploader:
                 self.cache[item.levels] = item.uuid
 
     async def load_data(self, item):
-        if not item.parent and item.level:
+        if not item.parent and item.level > 1:
             print(item.levels, item.uuid, item.url, item.target, item.items)
             logger.error(f"{item.levels} {item.uuid} {item.url} {item.target} {item.items}")
             print(self.cache.parent_list_uid if self.cache else None)
@@ -77,7 +73,7 @@ class Uploader:
             logger.info('loading items: ' + item.uuid + str(item.levels[-1]))
             try:
                 await self.lnk_coll.insert_many(
-                    [{'product_id': i['asin'], 'category': item.uuid, 'bsr_number': i['number_in_BSR'], 'product_source': 'AMAZON'} for i in item.items],
+                    [{'asin': i['asin'], 'category': item.uuid, 'bsr_number': i['number_in_BSR'], 'product_source': 'AMAZON'} for i in item.items],
                     ordered=False)
             except BulkWriteError as e:
                 logger.exception(str(e))
@@ -134,7 +130,7 @@ class Item:
     def inst_data(self):
         if self.uuid is None:
             return None
-        return self.uuid, self.levels[-1], self.type, self.parent, len(self.levels) - 1, self.url
+        return self.uuid, self.levels[-1], self.type, self.parent, len(self.levels), self.url
 
     def __hash__(self):
         return hash(self.inst_data()[1:])
@@ -151,13 +147,13 @@ class Item:
             if item[bsr_fields_map[i + 1]] == 'NaN':
                 end_level = True
                 break
-            if i >= level:
+            if i + 1 >= level:
                 break
         else:
             ls.append(item[bsr_fields_map[-1]].strip())
             end_level = True
         if end_level:
-            if level > len(ls) - 1:
+            if level > len(ls):
                 self.target = False
                 return
             self.items = item.get('items', [])
@@ -169,8 +165,6 @@ class Item:
                     url += '/' + ref
                 if not url.startswith('/'):
                     url = '/' + url
-            if url:
-                url = 'https://www.amazon.com' + url
             self.url = url or None
         self.level = level
         self.levels = tuple(ls)
@@ -195,7 +189,7 @@ async def slice_parse_data(data, level, cache):
         item = find_parent(Item(item, level), cache)
         if not item.uuid or not item.target:
             continue
-        if not item.parent and level:
+        if not item.parent and level > 1:
             print(item.levels, item.uuid, item.url, item.target, item.items)
             logger.error(f"{item.levels} {item.uuid} {item.url} {item.target} {item.items}")
             print(cache.parent_list_uid)
@@ -208,8 +202,8 @@ async def slice_parse_data(data, level, cache):
 async def main():
     url = f"{env.get('MONGO_DB_HOST_SCHEMA')}://{env.get('MONGO_DB_USER')}:{env.get('MONGO_DB_PASS')}@{env.get('MONGO_DB_HOST')}"
 
-    async with AsyncMongoClient(url, server_api=ServerApi('1'), username=env.get('MONGO_DB_USER'),
-                                password=env.get('MONGO_DB_PASS'), tlsCAFile=certifi.where()) as mc:
+    async with AsyncMongoClient(url, server_api=ServerApi('1'), username='scrape_and_control',
+                                password='kzy0obs6o4UDQWNY', tlsCAFile=certifi.where()) as mc:
         coll = mc['ai_highlights']['departments']
         data = coll.find({'Sub_category_-': {'$exists': True}})
         upl = Uploader(mc['amazon_dev']['categories'], mc['amazon_dev']['products_categories'])
@@ -217,8 +211,8 @@ async def main():
         upl.cache = cache
         logger.info('Start loading data...')
         for i, k in enumerate(bsr_fields_map):
-            logger.info('Loading level: ' + str(i))
-            _slice = await slice_parse_data(data.clone(), i, cache)
+            logger.info('Loading level: ' + str(i + 1))
+            _slice = await slice_parse_data(data.clone(), i + 1, cache)
             for item in _slice:
                 logger.info('item data: ' + str(item.inst_data()))
                 await upl.load_data(item)

@@ -8,7 +8,7 @@ with ExitStack() as stack:
     chan = msgbroker.channel()
     stack.enter_context(chan)
 
-    # setup main exchange
+    # setup tasks exchange
     chan.exchange_declare(exchange='tasks', exchange_type='direct')
 
 
@@ -21,8 +21,22 @@ with ExitStack() as stack:
     declare_tasks_queue('spfd')
     declare_tasks_queue('junglescout')
     declare_tasks_queue('kalodata')
-    declare_tasks_queue('tiiktok')
+    declare_tasks_queue('tiktok')
     declare_tasks_queue('products')
     declare_tasks_queue('bsr')
-    declare_tasks_queue('100asins')
+    declare_tasks_queue('kwt')
 
+    # setup results exchange
+    chan.exchange_declare(exchange='results', exchange_type='direct')
+
+    def declare_results_queue(name: str):
+        sname = 'result.success.' + name
+        ename = 'result.error.' + name
+        chan.queue_declare(queue=sname, durable=True)
+        chan.queue_declare(queue=ename, durable=True)
+        chan.queue_bind(queue=sname, exchange='results', routing_key=sname)
+        chan.queue_bind(queue=ename, exchange='results', routing_key=ename)
+
+    # setup results queues
+    declare_results_queue('kwt')
+    declare_results_queue('products')
