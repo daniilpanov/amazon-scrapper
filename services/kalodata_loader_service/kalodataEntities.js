@@ -361,6 +361,16 @@ class Entity {
             }, this.otherOptions[other]);
         }
     }
+    
+    toJSON() {
+        return {
+            details: this.details,
+            metrics: this.metrics,
+            history: this.history,
+            other: this.other,
+            relationships: this.relationships,
+        };
+    }
 }
 
 function createProduct(id, dtc) {
