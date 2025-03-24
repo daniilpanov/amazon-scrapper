@@ -42,6 +42,7 @@ class Handler:
                 item['organic_rank'] = organic_count
             del item['isSponsored']
             item['date'] = datetime.datetime.fromisoformat(item['date'])
+            item['date_key'] = item['date'].date()
             new_data.append(item)
 
         if new_data:
