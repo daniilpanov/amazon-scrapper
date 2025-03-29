@@ -418,37 +418,10 @@
     </div>
 </div>
 
-<script>
-    function showNotification(message) {
-        const toastEl = document.createElement('div');
-        toastEl.className = 'toast';
-        toastEl.innerHTML = `
-                <div class="toast-header">
-                    <strong class="me-auto">Notification</strong>
-                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-                <div class="toast-body">
-                    ${message}
-                </div>
-            `;
-        document.body.appendChild(toastEl);
-        const toast = new bootstrap.Toast(toastEl);
-        toast.show();
-        setTimeout(function() {
-            toast.hide();
-            toastEl.parentNode.removeChild(toastEl);
-        }, 5000);
-    }
-</script>
+<div id="notifications">
 
-<div class="toast" id="notificationToast" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="toast-header">
-        <strong class="me-auto">Notification</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-    <div class="toast-body" id="notificationBody">
-    </div>
 </div>
+
 <script src="js/multiselect-lib.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/bootstrap.bundle.min.js"></script>
