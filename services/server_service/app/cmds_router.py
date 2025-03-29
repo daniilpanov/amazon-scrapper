@@ -27,6 +27,7 @@ class CollectProductsForm(BaseModel):
     collect_aspects: bool = False
     collect_reviews: bool = False
     current_format: bool = False
+    domain: str = 'amazon.com'
 
 
 @router.post('/alias/products/collect')
@@ -48,16 +49,17 @@ async def collect_products_form(config: CollectProductsForm):
         })
     target = set(target)
     asins = list(set(asins))
-    res = await products_router.collect_products_task(products_router.AsinsCollectingConfig(**{
-        'alias': config.alias,
-        'asins': [products_router.AsinsItemCollectConfig(
+    res = await products_router.collect_products_task(products_router.AsinsCollectingConfig(
+        alias=config.alias,
+        asins=[products_router.AsinsItemCollectConfig(
             asin=asin,
             collect_media_config=asin in target,  # if asin=target then collect media
         ) for asin in asins],
-        'collect_aspects': config.collect_aspects,
-        'collect_reviews': config.collect_reviews,
-        'current_format': config.current_format,
-    }))
+        collect_aspects=config.collect_aspects,
+        collect_reviews=config.collect_reviews,
+        current_format=config.current_format,
+        domain=config.domain,
+    ))
     return res
 
 
