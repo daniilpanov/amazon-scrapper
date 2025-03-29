@@ -204,24 +204,30 @@
             <div class="tab-pane" id="CVnM">
                 <h2>Categories management</h2>
 
-                <h5>This form is under development</h5>
-
                 <div>
                     <h4>Set category for ASINs</h4>
                     <form method='post' action='/cmd/category/set' data-bs-special='true'>
                         <label>
                             Category name
-                            <input type='text' class='form-control' name='category' placeholder='Category name'>
+                            <input type='text' class='form-control' name='cat_name' placeholder='Category name'>
                         </label>
                         <label>
                             Client alias
-                            <input type='text' class='form-control' name='alias-client'
+                            <input type='text' class='form-control' name='client_name'
                                    placeholder='Client alias'>
                         </label>
                         <p></p>
                         <label>
                             Enter the ASINs (divide by any punctuation symbol):
                             <textarea name='asins' class='form-control'
+                                      placeholder='ASINs or links list'></textarea>
+                        </label>
+                        <p></p>
+                        <label>
+                            Enter the Target ASINs (divide by any punctuation symbol):
+                            <br>
+                            <small>Please duplicate target ASINs from the main ASINs field</small>
+                            <textarea name='target' class='form-control'
                                       placeholder='ASINs or links list'></textarea>
                         </label>
                         <p></p>
@@ -309,7 +315,7 @@
             <div class="tab-pane" id="BSR">
                 <h2>Collect data from BSR</h2>
 
-                <form method='post' action='/cmd/alias/get_all'>
+                <form method='post' action='/cmd/alias/bsr/collect'>
                     <p></p>
                     <div>
                         <label>
