@@ -27,6 +27,7 @@ class CollectProductsForm(BaseModel):
     collect_aspects: bool = False
     collect_reviews: bool = False
     current_format: bool = False
+    domain: str = 'amazon.com'
 
 
 @router.post('/alias/products/collect')
@@ -48,16 +49,17 @@ async def collect_products_form(config: CollectProductsForm):
         })
     target = set(target)
     asins = list(set(asins))
-    res = await products_router.collect_products_task(products_router.AsinsCollectingConfig(**{
-        'alias': config.alias,
-        'asins': [products_router.AsinsItemCollectConfig(
+    res = await products_router.collect_products_task(products_router.AsinsCollectingConfig(
+        alias=config.alias,
+        asins=[products_router.AsinsItemCollectConfig(
             asin=asin,
-            collect_media_config=asin in target,  # if asin=target then collect media
+            collect_media_config=asin in target,
         ) for asin in asins],
-        'collect_aspects': config.collect_aspects,
-        'collect_reviews': config.collect_reviews,
-        'current_format': config.current_format,
-    }))
+        collect_aspects=config.collect_aspects,
+        collect_reviews=config.collect_reviews,
+        current_format=config.current_format,
+        domain=config.domain,
+    ))
     return res
 
 
@@ -144,7 +146,7 @@ async def category_set_cmd(data=Body()):
     try:
         operations = [
             pymongo.UpdateOne(
-                {'Category': data['cat_name'], 'ASIN': asin},  # Фильтр для поиска существующих записей
+                {'Category': data['cat_name'], 'ASIN': asin},
                 {
                     '$set': {
                         'relation_to_category': client_name if asin in target else None,
@@ -157,12 +159,6 @@ async def category_set_cmd(data=Body()):
         ]
         if operations:
             db('amazon_data')['all_categories'].bulk_write(operations)
-        # db('amazon_data')['all_categories'].insert_many([{
-        #     'Category': data['cat_name'],
-        #     'ASIN': asin,
-        #     'relation_to_category': client_name if asin in target else None,
-        #     'relation_to_TOP5': asin in top5_asins,
-        # } for asin in asins])
         return Response(status_code=HTTP_201_CREATED)
     except BulkWriteError:
         pass
