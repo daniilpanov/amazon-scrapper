@@ -136,7 +136,7 @@ async def category_set_cmd(data=Body()):
     asins = data['asins']
     if isinstance(asins, str):
         asins = get_all_asins_from_text(asins)
-    target = data.get('target')
+    target = data.get('target', [])
     if isinstance(target, str):
         target = get_all_asins_from_text(target)
     top5_asins = set(data.get('top5_asins', []))
@@ -167,7 +167,6 @@ async def category_set_cmd(data=Body()):
     except BulkWriteError:
         pass
     except Exception as e:
-        print(type(e), e)
         raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
