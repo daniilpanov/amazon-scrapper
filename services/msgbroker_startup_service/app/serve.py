@@ -40,3 +40,4 @@ with ExitStack() as stack:
     # setup results queues
     declare_results_queue('kwt')
     declare_results_queue('products')
+    declare_results_queue('kalodata')
