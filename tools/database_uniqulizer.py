@@ -1,18 +1,37 @@
+import certifi
+import pymongo
 import pandas as pd
-import db_mongo as db
 
-if __name__ == '__main__':
-    if input('Are you sure?').lower() == 'yes':
-        collection = input('Enter the collection name [amazon_data.customer_reviews]: ') or 'amazon_data.customer_reviews'
-        uniq_cols = (input('Enter the unique columns, divided by ",": ') or 'review_id').split(',')
+from dotenv import load_dotenv
+from pymongo.errors import DuplicateKeyError, BulkWriteError
+from pymongo.server_api import ServerApi
+
+load_dotenv() or load_dotenv('.env') or load_dotenv('../.env')
+
+from os import environ as env
+
+if __name__ == '__main__' and input('Are you sure?').lower().strip() == 'yes':
+    url = f"{env.get('MONGO_DB_HOST_SCHEMA')}://{env.get('MONGO_DB_USER')}:{env.get('MONGO_DB_PASS')}@{env.get('MONGO_DB_HOST')}"
+    with pymongo.MongoClient(url, server_api=ServerApi('1'), username=env.get('MONGO_DB_USER'),
+                         password=env.get('MONGO_DB_PASS'), tlsCAFile=certifi.where()) as client:
+        collection = input('Enter the collection name: ')
+        uniq_cols = input('Enter the unique columns, divided by ",": ').split(',')
         db_name, collection = collection.split('.')
-        c = db.db(db_name)[collection]
+        c = client[db_name][collection]
         data = list(c.find({}))
         df = pd.DataFrame(data)
         print('Data saved to local DataFrame')
         df = df.drop_duplicates(subset=uniq_cols)
         print('Duplicates dropped')
-        c.delete_many({})
-        print('Deleted old data')
-        c.insert_many(list(df.T.to_dict().values()))
-        print('Inserted uniqulized data')
+        if input('Continue?').lower().strip() == 'yes':
+            c.delete_many({})
+            print('Deleted old data')
+            try:
+                c.insert_many(list(df.T.to_dict().values()), ordered=False)
+            except (DuplicateKeyError, BulkWriteError) as e:
+                pass
+            except Exception as e:
+                print('An error occurred:', type(e), e)
+            print('Inserted uniqulized data')
+        else:
+            print('Cancelled')
