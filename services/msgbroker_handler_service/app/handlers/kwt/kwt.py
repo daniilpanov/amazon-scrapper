@@ -31,7 +31,7 @@ class Handler:
                 continue
             item['searchQuery'] = sq
             setdefaultmany(item, ('score', 'price', 'itemPrice', 'oldPrice', 'subscriptionDiscount', 'subscriptionDiscountPercents'), float)
-            setdefaultmany(item, ('BestSellerIn', 'image', 'title', 'asin'), str, None)
+            setdefaultmany(item, ('bestSellerIn', 'image', 'title', 'asin'), str, None)
             item['sponsored_rank'] = None
             item['organic_rank'] = None
             if item.get('isSponsored'):
