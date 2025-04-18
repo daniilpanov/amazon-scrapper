@@ -202,8 +202,8 @@ async def slice_parse_data(data, level, cache):
 async def main():
     url = f"{env.get('MONGO_DB_HOST_SCHEMA')}://{env.get('MONGO_DB_USER')}:{env.get('MONGO_DB_PASS')}@{env.get('MONGO_DB_HOST')}"
 
-    async with AsyncMongoClient(url, server_api=ServerApi('1'), username='scrape_and_control',
-                                password='kzy0obs6o4UDQWNY', tlsCAFile=certifi.where()) as mc:
+    async with AsyncMongoClient(url, server_api=ServerApi('1'), username=env.get('MONGO_DB_USER'),
+                                password=env.get('MONGO_DB_PASS'), tlsCAFile=certifi.where()) as mc:
         coll = mc['ai_highlights']['departments']
         data = coll.find({'Sub_category_-': {'$exists': True}})
         upl = Uploader(mc['amazon_dev']['categories'], mc['amazon_dev']['products_categories'])
