@@ -13,7 +13,7 @@ class Handler:
     def __init__(self, db):
         self.db = db
         self._categories_collection = self.db['amazon_dev']['cat_tmp2']
-        self._product_categories_collection = self.db['amazon_dev']['product_categories']
+        self._product_categories_collection = self.db['amazon_dev']['product_categories2']
         self.handlers = {
             'result.success.bsr': {'handler': self.handle_success, 'arguments': {'prefetch-count': 6}},
             'result.error.bsr': {'handler': self.handle_error},
@@ -25,6 +25,7 @@ class Handler:
         tree = data.get('tree', [])
         current_bsr = data.get('currentBSR', None)
         task_id = data.get('taskId', None)
+        products = data.get('ASINs', [])
         tree_items_chains = []
         last_level = None
 
@@ -164,6 +165,21 @@ class Handler:
                 self._categories_collection.bulk_write(operations, ordered=False)
             except BulkWriteError:
                 pass
+
+        if not products:
+            return chan.basic_ack(deliver.delivery_tag)
+
+        self._product_categories_collection.delete_many({'category': needle_chain[-1]['uuid']})
+
+        try:
+            self._product_categories_collection.insert_many(({
+                'product_id': prod['asin'],
+                'category': needle_chain[-1]['uuid'],
+                'bsr_number': prod['rank'],
+                'product_source': 'AMAZON',
+            } for prod in products), ordered=False)
+        except BulkWriteError:
+            pass
 
         chan.basic_ack(deliver.delivery_tag)
 

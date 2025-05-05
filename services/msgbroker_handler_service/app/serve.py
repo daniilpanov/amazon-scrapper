@@ -23,7 +23,7 @@ if 'MONGO_DB_USER' in os.environ:
     url += '@'
 url += os.environ.get('MONGO_DB_HOST', 'localhost')
 
-with (pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost'))) as msgbroker,
+with (pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST1', 'localhost'))) as msgbroker,
     MongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where()) as db):
 
     channel = msgbroker.channel()
