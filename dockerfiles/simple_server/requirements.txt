@@ -16,3 +16,4 @@ more-itertools
 pandas
 python-multipart
 gevent
+pika
