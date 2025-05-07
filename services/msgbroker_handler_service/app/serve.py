@@ -27,6 +27,7 @@ with (pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST',
     MongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where()) as db):
 
     channel = msgbroker.channel()
+    channel.basic_qos(prefetch_count=10)
 
     for handler in pkgutil.iter_modules(handlers.__path__):
         module_path = 'handlers.' + handler.name + '.' + handler.name
