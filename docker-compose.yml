@@ -1,47 +1,4 @@
 services:
-    ext_packer:
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: unless-stopped
-        networks:
-            - net
-        env_file: .env
-        volumes:
-            - ./services/ext_packer_service/app:/src/app:rw
-            - ./logs/ext_packer:/src/logs:rw
-            - ./extensions:/src/ext:r
-            - ./extensions:/src/compiled_ext:rw
-            - ./extensions:/src/update_metadata:rw
-        expose:
-            - "$EXT_PACKER_PORT"
-        ports:
-            - "$EXT_PACKER_PORT:$EXT_PACKER_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$EXT_PACKER_PORT"
-    bsrstarter:
-        depends_on:
-            - server
-        image: danielgreen1806/amascrap-light:latest
-        restart: unless-stopped
-        networks:
-            - net
-        env_file: .env
-        volumes:
-            - ./services/bsr_starter_service:/src:rw
-            - ./logs/bsrstarter:/src/logs:rw
-    100asinshandler:
-        depends_on:
-            - server
-        image: danielgreen1806/amascrap-light:latest
-        restart: unless-stopped
-        networks:
-            - net
-        env_file: .env
-        volumes:
-            - ./services/100asins_handler_service:/src:rw
-            - ./logs/100asinshandler:/src/logs:rw
     cron:
         depends_on:
              - msgbroker
@@ -55,24 +12,6 @@ services:
             - ./services/cron_starter_service/cron_tasks:/res/crontabs:rw
             - ./logs/cron:/var/log:rw
         command: ["/src/cron-start.sh"]
-    dataimporter:
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/dataimporter_service:/src:rw
-            - ./logs/dataimporter:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$DATA_IMPORTER_PORT"
-        ports:
-            - "$DATA_IMPORTER_PORT:$DATA_IMPORTER_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$DATA_IMPORTER_PORT"
     proxies:
         image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
@@ -161,24 +100,6 @@ services:
         entrypoint:
             - "python"
             - "app/serve.py"
-    bsr_loader:
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/amazon_departments_loader:/src:rw
-            - ./logs/amazon_bsr_loader:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$BSR_PORT"
-        ports:
-            - "$BSR_PORT:$BSR_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$BSR_PORT"
     server:
         image: danielgreen1806/amascrap-simple_server:latest
         restart: unless-stopped
@@ -202,24 +123,6 @@ services:
             interval: 30s
             timeout: 10s
             retries: 3
-    sellercentral_loader:
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/sellercentral_loader:/src:rw
-            - ./logs/sellercentral:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$SELLERCENTRAL_PORT"
-        ports:
-            - "$SELLERCENTRAL_PORT:$SELLERCENTRAL_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$SELLERCENTRAL_PORT"
     web:
         depends_on:
             - server
@@ -286,20 +189,6 @@ services:
             - ./services/msgbroker_handler_service/app:/src/app:rw
             - ./logs/msgbroker_handler:/src/logs:rw
         env_file: .env
-#    capsolver:
-#        image: danielgreen1806/amascrap-tensorflow_server
-#        build:
-#            context: dockerfiles/tensorflow_server
-#        restart: unless-stopped
-#        networks:
-#            - net
-#        volumes:
-#            - ./services/captcha_service:/src:rw
-#            - ./logs/capsolver:/src/logs:rw
-#        expose:
-#            - "$CAPTCHA_PORT"
-#        ports:
-#            - "$CAPTCHA_PORT:$CAPTCHA_PORT"
 networks:
     net:
         driver: bridge
