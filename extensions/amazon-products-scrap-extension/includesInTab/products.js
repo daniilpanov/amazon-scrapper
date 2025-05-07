@@ -305,18 +305,10 @@ class ProductsParser extends Parser {
     }
 
     getReviewsCount() {
-        const countEl = this.root.querySelector('#averageCustomerReviews > span:last-of-type');
-        if (!countEl) {
-            return { reviewsCount: null };
-        }
-        let reviewsCount = countEl.textContent?.trim().split(' ')[0]?.replaceAll(',', '');
-        if (!reviewsCount) {
-            return { reviewsCount: null };
-        }
+        let reviewsCount = this.root.getElementById('acrCustomerReviewLink')?.textContent.trim().slice(1, -1).replaceAll(',', '') || null;
+        if (!reviewsCount) return { reviewsCount: null };
         reviewsCount = Number.parseInt(reviewsCount);
-        if (Number.isNaN(reviewsCount)) {
-            return { reviewsCount: null };
-        }
+        if (Number.isNaN(reviewsCount)) return { reviewsCount: null };
         return { reviewsCount };
     }
 
