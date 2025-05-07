@@ -12,24 +12,6 @@ services:
             - ./services/cron_starter_service/cron_tasks:/res/crontabs:rw
             - ./logs/cron:/var/log:rw
         command: ["/src/cron-start.sh"]
-    proxies:
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/proxies_service:/src:rw
-            - ./logs/proxies:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$PROXIES_PORT"
-        ports:
-            - "$PROXIES_PORT:$PROXIES_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$PROXIES_PORT"
     s3:
         image: danielgreen1806/amascrap-s3:latest
         restart: unless-stopped
