@@ -169,25 +169,6 @@ async def set_reviews_result(reviews: list[ReviewsResultItem]):
 async def set_product_result(asin: str, card: ProductsResultItem):
     if not card.asin:
         card.asin = asin
-    if card.bsr_link:
-        bsr_id_resp = requests.get('http://bsr_loader:8839/v1/bsr/by_url?fields=_id&bsr_url=' + quote(card.bsr_link))
-        logger.debug('Department found: ' + str(bsr_id_resp) + ' - ' + bsr_id_resp.text)
-        if bsr_id_resp.ok and bsr_id_resp.status_code < 300:
-            bsr_id = bsr_id_resp.json().get('_id')
-            if bsr_id:
-                asins_load_resp = requests.post('http://bsr_loader:8839/v1/bsr/load/asins', headers={
-                    'Content-Type': 'application/json',
-                }, json={
-                    'bsr_id': str(bsr_id),
-                    'asins': [{
-                        'asin': card.asin,
-                        'title': card.title,
-                        'score': card.rating,
-                        'number_in_BSR': card.number_in_BSR or None,
-                        'image': card.picture_url,
-                    }],
-                })
-                logger.debug('BSR ASINs loaded: ' + str(asins_load_resp) + ' - ' + asins_load_resp.text)
 
     if card.picture_url:
         main_uri, *_, ext = card.picture_url.rsplit('.', maxsplit=2)
