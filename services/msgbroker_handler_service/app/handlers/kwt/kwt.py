@@ -31,14 +31,14 @@ class Handler:
             item['searchQuery'] = sq
             setdefaultmany(item, ('score', 'price', 'itemPrice', 'oldPrice', 'subscriptionDiscount', 'subscriptionDiscountPercents'), float)
             setdefaultmany(item, ('bestSellerIn', 'image', 'title', 'asin'), str, None)
-            item['sponsored_rank'] = None
-            item['organic_rank'] = None
             if item.get('isSponsored'):
                 sponsored_count += 1
+                item['organic_rank'] = None
                 item['sponsored_rank'] = sponsored_count
             else:
                 organic_count += 1
                 item['organic_rank'] = organic_count
+                item['sponsored_rank'] = None
             del item['isSponsored']
             item['date'] = datetime.datetime.fromisoformat(item['date'])
             item['date_key'] = datetime.datetime.combine(item['date'].date(), datetime.time())
