@@ -21,14 +21,13 @@ class Handler:
         data = json.loads(msg.decode())
 
         sq = data['searchQuery']
-        organic_count = data.get('co', 0)
-        sponsored_count = data.get('cs', 0)
+        organic_count = data.get('countOrganic', 0)
+        sponsored_count = data.get('countSponsored', 0)
         data = data['chunk']
         new_data = []
 
         for item in data:
-            if not item:
-                continue
+            if not item: continue
             item['searchQuery'] = sq
             setdefaultmany(item, ('score', 'price', 'itemPrice', 'oldPrice', 'subscriptionDiscount', 'subscriptionDiscountPercents'), float)
             setdefaultmany(item, ('bestSellerIn', 'image', 'title', 'asin'), str, None)
