@@ -12,8 +12,8 @@ with ExitStack() as stack:
     chan.exchange_declare(exchange='tasks', exchange_type='direct')
 
 
-    def declare_tasks_queue(name: str):
-        chan.queue_declare(queue=name, durable=True)
+    def declare_tasks_queue(name: str, args=None):
+        chan.queue_declare(queue=name, durable=True, arguments=args)
         chan.queue_bind(queue=name, exchange='tasks', routing_key=name)
 
 
@@ -24,16 +24,16 @@ with ExitStack() as stack:
     declare_tasks_queue('tiktok')
     declare_tasks_queue('products')
     declare_tasks_queue('bsr')
-    declare_tasks_queue('kwt')
+    declare_tasks_queue('kwt', {'x-max-priority': 20})
 
     # setup results exchange
     chan.exchange_declare(exchange='results', exchange_type='direct')
 
-    def declare_results_queue(name: str):
+    def declare_results_queue(name: str, args=None):
         sname = 'result.success.' + name
         ename = 'result.error.' + name
-        chan.queue_declare(queue=sname, durable=True)
-        chan.queue_declare(queue=ename, durable=True)
+        chan.queue_declare(queue=sname, durable=True, arguments=args)
+        chan.queue_declare(queue=ename, durable=True, arguments=args)
         chan.queue_bind(queue=sname, exchange='results', routing_key=sname)
         chan.queue_bind(queue=ename, exchange='results', routing_key=ename)
 
