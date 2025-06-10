@@ -29,7 +29,7 @@ class Handler:
         for item in data:
             if not item: continue
             item['searchQuery'] = sq
-            setdefaultmany(item, ('score', 'price', 'itemPrice', 'oldPrice', 'subscriptionDiscount', 'subscriptionDiscountPercents'), float)
+            setdefaultmany(item, ('bought_count', 'score', 'price', 'itemPrice', 'oldPrice', 'subscriptionDiscount', 'subscriptionDiscountPercents'), float)
             setdefaultmany(item, ('bestSellerIn', 'image', 'title', 'asin'), str, None)
             if item.get('isSponsored'):
                 sponsored_count += 1
