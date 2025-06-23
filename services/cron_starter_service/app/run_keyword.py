@@ -1,3 +1,4 @@
+import json
 from itertools import chain
 
 import pika
@@ -43,10 +44,16 @@ def run_keyword(conn: MongoClient, rabbit: pika.BlockingConnection):
         del sqs
         items.sort(key=lambda i: i['search_query_volume'], reverse=True)
         for sq in items:
-            msg = '{"destination":"remote","searchQuery":"' + sq['search_query'] + '","timeLimit": 120000}' \
-                    if sq.get('asin') else \
-                    '{"destination":"remote","searchQuery":"' + sq['search_query'] + '","timeLimit":120000,"asins":["' \
-                    '","'.join(sq['asin']) + '"]}'
+            msg = json.dumps({
+                "destination": "remote",
+                "searchQuery": sq['search_query'],
+                "timeLimit": 120000,
+            } if sq.get('asin') else {
+                "destination": "remote",
+                "searchQuery": sq['search_query'],
+                "timeLimit": 120000,
+                "asins": sq['asin'],
+            })
             chan.basic_publish(
                 'tasks', 'kwt', msg.encode(),
                 BasicProperties(delivery_mode=pika.DeliveryMode.Persistent),
