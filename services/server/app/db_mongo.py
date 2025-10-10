@@ -34,7 +34,7 @@ def init(username=None, password=None):
     if 'proxy' in config and config['proxy']:
         import os
         os.environ['MONGO_PROXY'] = config['proxy']
-    # Create a new client and connect to the server_service
+    # Create a new client and connect to the server
     client = MongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where())
     # Send a ping to confirm a successful connection
     try:

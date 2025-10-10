@@ -24,8 +24,8 @@ services:
             - net
         env_file: .env
         volumes:
-            - ./services/cron_starter_service/app:/src:rw
-            - ./services/cron_starter_service/cron_tasks:/res/crontabs:rw
+            - ./services/cron/app:/src:rw
+            - ./services/cron/cron_tasks:/res/crontabs:rw
             - ./logs/cron:/var/log:rw
         command: ["/src/cron-start.sh"]
     msgbroker_handler:
@@ -37,7 +37,7 @@ services:
         networks:
             - net
         volumes:
-            - ./services/msgbroker_handler_service/app:/src/app:rw
+            - ./services/msgbroker_handler/app:/src/app:rw
             - ./logs/msgbroker_handler:/src/logs:rw
         env_file: .env
     ### SERVICE
@@ -47,7 +47,7 @@ services:
         networks:
             - net
         volumes:
-            - ./services/s3_service:/src:rw
+            - ./services/s3:/src:rw
             - ./logs/s3:/src/logs:rw
         env_file: .env
         expose:
@@ -69,7 +69,7 @@ services:
         networks:
             - net
         volumes:
-            - ./services/server_service:/src:rw
+            - ./services/server:/src:rw
             - ./logs/server:/src/logs:rw
         env_file: .env
         expose:
@@ -89,7 +89,7 @@ services:
         networks:
             - net
         volumes:
-            - ./services/s3_upload_service:/src:rw
+            - ./services/s3_upload:/src:rw
             - ./logs/s3_upload:/src/logs:rw
         env_file: .env
         entrypoint:
