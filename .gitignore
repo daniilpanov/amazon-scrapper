@@ -13,8 +13,7 @@ downloaded_files/*
 out/*
 *.log
 */*.log
-*.json
-!manifest.json
-!*/manifest.json
+/*.json
+tools/*.json
 extensions/*.xml
 extensions/*.crx
