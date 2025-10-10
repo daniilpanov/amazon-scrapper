@@ -2,29 +2,27 @@ import datetime
 import json
 import uuid
 
-import pika.spec
 import pytz
 from bson import ObjectId
-from pika import BasicProperties
-from pika.adapters.blocking_connection import BlockingChannel
-from pika.spec import PERSISTENT_DELIVERY_MODE
-from pymongo import MongoClient, UpdateOne, InsertOne
+from pymongo import UpdateOne, InsertOne
 from pymongo.errors import BulkWriteError
 
+from ..abstract_handler import AbstractHandler
 
-class Handler:
-    db: MongoClient
 
-    def __init__(self, db):
-        self.db = db
-        self._categories_collection = self.db['amazon_dev']['cat_tmp2']
-        self._product_categories_collection = self.db['amazon_dev']['product_categories2']
-        self.handlers = {
+class BSRHandler(AbstractHandler):
+    def _post_init(self):
+        self._categories_collection = self._db['amazon_dev']['cat_tmp2']
+        self._product_categories_collection = self._db['amazon_dev']['product_categories2']
+
+    @property
+    def handlers(self):
+        return {
             'result.success.bsr': {'handler': self.handle_success, 'arguments': {'prefetch-count': 6}},
             'result.error.bsr': {'handler': self.handle_error},
         }
 
-    def handle_success(self, chan: BlockingChannel, deliver: pika.spec.Basic.Deliver, props, msg):
+    def handle_success(self, msg):
         # parent_list, current, neighbours, products_data
         data = json.loads(msg.decode())
         tree = data.get('tree', [])
@@ -38,7 +36,7 @@ class Handler:
         last_level = None
 
         if not current_bsr:
-            return chan.basic_ack(delivery_tag=deliver.delivery_tag)
+            raise ValueError('No current BSR found!')
 
         for item in reversed(tree):
             if item['level'] <= 0:
@@ -92,8 +90,7 @@ class Handler:
             needle_chain = tree_items_chains[0][1:]
 
         if not needle_chain:
-            print(':-/')
-            return chan.basic_nack(deliver.delivery_tag)
+            raise Exception('No chain found!')
 
         skipped_items = []
         for chain_item in needle_chain:
@@ -195,16 +192,17 @@ class Handler:
             for item in reversed(tree):
                 if item['level'] < last_level - 1:
                     break
-                chan.basic_publish('tasks', 'bsr', json.dumps({
+                # TODO: make publish ability
+                self._publish_message('tasks', 'bsr', {
                     'BSR_URL': item['url'],
                     'startNewTreeTasks': True,
                     'startNewProdTasks': start_new_prod_tasks,
                     'startNewProdTasksWithReview': start_new_prod_tasks_with_reviews,
                     'targetAsins': list(target_asins),
-                }).encode(), BasicProperties(delivery_mode=PERSISTENT_DELIVERY_MODE))
+                })
 
         if start_new_prod_tasks and products:
-            header_res = self.db['scrap_process']['tasks_headers'].insert_one({
+            header_res = self._db['scrap_process']['tasks_headers'].insert_one({
                 'script': 'products',
                 'visible': True,
                 'created_at': datetime.datetime.now(pytz.UTC),
@@ -236,10 +234,10 @@ class Handler:
                     'ended_at': None,
                     'result': {},
                 })
-            self.db['scrap_process']['tasks_bodies'].insert_many(tasks)
+            self._db['scrap_process']['tasks_bodies'].insert_many(tasks)
 
-        chan.basic_ack(deliver.delivery_tag)
+    def handle_error(self, msg):
+        self._logger.error(msg)
 
-    def handle_error(self, chan: BlockingChannel, deliver: pika.spec.Basic.Deliver, props, msg):
-        print(msg)
-        chan.basic_ack(deliver.delivery_tag)
+
+handler = BSRHandler

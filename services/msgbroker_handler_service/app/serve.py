@@ -1,49 +1,114 @@
-import inspect
+import logging
 import os
+from functools import wraps
 from os import environ as env
 import importlib
 import pkgutil
 
 import certifi
 import pika
+from concurrent.futures import ThreadPoolExecutor
+from pika.adapters.blocking_connection import BlockingChannel
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
 import handlers
+from handlers.abstract_handler import AbstractHandler
 
-url = os.environ.get('MONGO_DB_HOST_SCHEMA', 'mongodb') + '://'
-username = None
-password = None
-if 'MONGO_DB_USER' in os.environ:
-    username = os.environ['MONGO_DB_USER']
-    url += username
-    if 'MONGO_DB_PASS' in os.environ:
-        password = os.environ['MONGO_DB_PASS']
-        url += ':' + password
-    url += '@'
-url += os.environ.get('MONGO_DB_HOST', 'localhost')
+from startup import startup
 
-with (pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost'))) as msgbroker,
-    MongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where()) as db):
+# Create a logger object
+logger = logging.getLogger(__name__)
+# Set the logging level to INFO
+logger.setLevel(logging.DEBUG)
+# Create a handler that logs to the Docker logs
+log_handler = logging.StreamHandler()
+log_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(log_handler)
 
-    channel = msgbroker.channel()
-    channel.basic_qos(prefetch_count=10)
+# Call 'on startup'
+startup(logger)
 
-    for handler in pkgutil.iter_modules(handlers.__path__):
-        module_path = 'handlers.' + handler.name + '.' + handler.name
+
+def handler_wrapper(func):
+    @wraps(func)
+    def wrapper(chan: BlockingChannel, deliver: pika.spec.Basic.Deliver, _, msg):
         try:
-            module = importlib.import_module(module_path)
-            params = set(map(lambda i: i[0], inspect.getmembers(module)))
-            if 'Handler' not in params:
-                continue
-        except ModuleNotFoundError as e:
-            print(e)
-            print('Module not found:', module_path)
-            continue
-        except AttributeError as e:
-            print('Module', module_path, 'has no attribute:', e)
-            continue
-        for path, conf in module.Handler(db).handlers.items():
-            channel.basic_consume(path, conf['handler'], auto_ack=conf.get('auto_ack', False), consumer_tag=conf['handler'].__doc__ or None, arguments={'prefetch-count': 10} | conf.get('arguments', {}))
+            res = func(msg)
+            if res is None or res:
+                chan.basic_ack(deliver.delivery_tag)
+            else:
+                chan.basic_reject(deliver.delivery_tag, requeue=True)
+        except Exception as e:
+            logger.exception(e)
+            chan.basic_reject(deliver.delivery_tag, requeue=False)
 
-    channel.start_consuming()
+    return wrapper
+
+
+def build_mongo_config():
+    url = os.environ.get('MONGO_DB_HOST_SCHEMA', 'mongodb') + '://'
+    username = None
+    password = None
+    if 'MONGO_DB_USER' in os.environ:
+        username = os.environ['MONGO_DB_USER']
+        url += username
+        if 'MONGO_DB_PASS' in os.environ:
+            password = os.environ['MONGO_DB_PASS']
+            url += ':' + password
+        url += '@'
+    url += os.environ.get('MONGO_DB_HOST', 'localhost')
+    return {'url': url, 'username': username, 'password': password}
+
+
+def start_consumer(handler: type[AbstractHandler]):
+    with (
+        get_pika() as broker,
+        get_mongo(**build_mongo_config()) as db,
+    ):
+        chan = broker.channel()
+        inst = handler(db, chan, logger)
+        chan.basic_qos(prefetch_count=inst.prefetch_count)
+        for queue, conf in inst.handlers.items():
+            logger.info('MSG Handler module loaded: ' + queue)
+            chan.basic_consume(queue, handler_wrapper(inst), auto_ack=conf.get('auto_ack'), arguments=conf.get('arguments'))
+        chan.start_consuming()
+
+
+def get_pika():
+    return pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost')))
+
+
+def get_mongo(url, username, password):
+    return MongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where())
+
+
+def run():
+    with (ThreadPoolExecutor() as executor):
+        futures = []
+
+        for handler in pkgutil.iter_modules(handlers.__path__):
+            module_path = 'handlers.' + handler.name + '.main'
+            try:
+                module = importlib.import_module(module_path)
+                if not getattr(module, 'handler', None):
+                    continue
+            except ModuleNotFoundError as e:
+                logger.error('Module not found: ' + module_path + ' [error: ' + str(e) + ']')
+                continue
+            except AttributeError as e:
+                logger.error('Module ' + module_path + ' has no attribute: ' + str(e))
+                continue
+
+            logger.info('Handler module loaded: ' + module_path)
+            futures.append(executor.submit(
+                start_consumer,
+                module.handler,
+            ))
+
+        for future in futures:
+            future.result()
+
+
+if __name__ == '__main__':
+    run()

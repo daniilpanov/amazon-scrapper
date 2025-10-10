@@ -1,23 +1,19 @@
 import datetime
 import json
 
-import pika.spec
-from pika.adapters.blocking_connection import BlockingChannel
-from pymongo import MongoClient
 from pymongo.errors import BulkWriteError, DuplicateKeyError
+from ..abstract_handler import AbstractHandler
 
 
-class Handler:
-    db: MongoClient
-
-    def __init__(self, db):
-        self.db = db
-        self.handlers = {
+class KeywordTrackerHandler(AbstractHandler):
+    @property
+    def handlers(self):
+        return {
             'result.success.kwt': {'handler': self.handle_success},
             'result.error.kwt': {'handler': self.handle_error},
         }
 
-    def handle_success(self, chan: BlockingChannel, deliver: pika.spec.Basic.Deliver, props, msg):
+    def handle_success(self, msg):
         data = json.loads(msg.decode())
 
         sq = data['searchQuery']
@@ -46,17 +42,17 @@ class Handler:
 
         if new_data:
             try:
-                self.db['Keywords']['keyword_tracking_new'].insert_many(new_data, ordered=False)
+                self._db['Keywords']['keyword_tracking_new'].insert_many(new_data, ordered=False)
             except (DuplicateKeyError, BulkWriteError):
                 pass
 
-        chan.basic_ack(deliver.delivery_tag)
-
-    def handle_error(self, chan: BlockingChannel, deliver: pika.spec.Basic.Deliver, props, msg):
-        print(msg)
-        chan.basic_ack(deliver.delivery_tag)
+    def handle_error(self, msg):
+        self._logger.error(msg)
 
 
 def setdefaultmany(obj, keys, func, default = None):
     for k in keys:
         obj[k] = func(obj[k]) if obj.get(k) else default
+
+
+handler = KeywordTrackerHandler
