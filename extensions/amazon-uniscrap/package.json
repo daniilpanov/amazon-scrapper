@@ -1,0 +1,28 @@
+{
+  "name": "extension-template",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build"
+  },
+  "dependencies": {
+    "@stomp/stompjs": "^7.0.0",
+    "axios": "^1.7.9",
+    "sockjs-client": "^1.6.1",
+    "vue": "^3.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/webextension-polyfill": "^0.10.0",
+    "@vitejs/plugin-vue": "^4.5.0",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "typescript": "~5.6.3",
+    "vite": "^5.0.0",
+    "vite-plugin-web-extension": "^4.0.0",
+    "vue-tsc": "^2.2.0",
+    "webextension-polyfill": "^0.10.0"
+  }
+}
