@@ -3,10 +3,12 @@ from logging import StreamHandler
 
 from run_keyword import run_keyword
 from run_spfd import run_spfd
+from run_helium_blackbox import run_helium_blackbox
 
 actions = {
     'KW': run_keyword,
     'SPFD': run_spfd,
+    'H_BBX': run_helium_blackbox
 }
 
 if __name__ == '__main__':
