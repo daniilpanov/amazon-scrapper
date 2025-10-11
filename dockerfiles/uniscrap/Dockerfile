@@ -1,5 +1,7 @@
 FROM node:alpine AS uniscrap-builder
 
+ARG VITE_STOMP_HOST="localhost"
+
 WORKDIR "/app"
 # install
 COPY ./extensions/amazon-uniscrap/package.json .
