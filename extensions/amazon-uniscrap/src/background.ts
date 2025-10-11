@@ -46,6 +46,13 @@ let stompConnection: Stomp | null = null;
 /// FUNCTIONS ///
 function getHandlers() { return queueHandlers; }
 
+function init() {
+    browser.storage.local.set({
+        'stomp': true,
+        'subscriptions': queueHandlers,
+    });
+}
+
 function sendMessage(data: any) {
     if (!stompConnection) return;
     if (!data.queue || typeof data.queue !== 'string') return;
@@ -63,33 +70,14 @@ function fetchTimeout(url: string, timeout: number = 3000, options: any = {}): P
         .finally(() => clearTimeout(id));
 }
 
-async function checkAvailableAddressesSTOMP(addresses: string[]) {
-    for (const address of addresses) {
-        try {
-            const test1 = await fetchTimeout('https://' + address + ':15672');
-            if (test1.ok) return address;
-        } catch (e) {}
-        try {
-            const test2 = await fetchTimeout('http://' + address + ':15672');
-            if (test2.ok) return address;
-        } catch (e) {}
-    }
-    return null;
-}
-
 async function fullConnectSTOMP() {
     if (!(await browser.storage.local.get('stomp')).stomp as boolean) {
         stompConnection = null;
         return null;
     }
 
-    const addresses = [
-        'localhost',
-        'cp.nyle.ai',
-        '195.201.194.213',
-    ];
-
-    const address = await checkAvailableAddressesSTOMP(addresses);
+    const address = import.meta.env.VITE_STOMP_HOST;
+    await fetchTimeout('http://' + address + ':15672');
     stompConnection = new Stomp(`ws://${address}:15674/ws`, 5);
 
     for (const queue in queueHandlers) {
@@ -102,6 +90,10 @@ async function fullConnectSTOMP() {
 }
 
 /// CODE ///
+browser.storage.local.get('stomp').then(({ isStompActive }) => {
+    if (typeof isStompActive !== 'boolean') init();
+}).catch(init);
+
 browser.storage.local.get('subscriptions').then(({ subscriptions }) => {
     for (const queue in subscriptions)
         queueHandlers[queue] = subscriptions[queue];
@@ -110,12 +102,7 @@ browser.storage.local.get('subscriptions').then(({ subscriptions }) => {
 fullConnectSTOMP();
 
 /// LISTENERS ///
-browser.runtime.onInstalled.addListener(() => {
-    browser.storage.local.set({
-        'stomp': true,
-        'subscriptions': queueHandlers,
-    });
-});
+browser.runtime.onInstalled.addListener(init);
 
 browser.storage.local.onChanged.addListener(async (changes: { [key: string]: BrowserStorageCache }) => {
     if (changes.stomp?.newValue === false) {

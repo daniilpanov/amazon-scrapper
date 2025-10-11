@@ -1,3 +1,7 @@
+variable "UNISCRAP_STOMP_HOST" {
+  default = "msgbroker"
+}
+
 variable "TAG" {
   default = "latest"
 }
@@ -35,6 +39,9 @@ target "uniscrap-builder" {
   context = "."
   dockerfile = "./dockerfiles/uniscrap/Dockerfile"
   target = "uniscrap-builder"
+  args = {
+    VITE_STOMP_HOST = "${UNISCRAP_STOMP_HOST}"
+  }
 }
 
 target "chrome-vnc" {
