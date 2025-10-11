@@ -3,7 +3,7 @@ variable "TAG" {
 }
 
 group "default" {
-  targets = ["rabbitmq", "simple_server", "light", "cron", "s3"]
+  targets = ["rabbitmq", "simple_server", "light", "cron", "s3", "chrome-vnc"]
 }
 
 target "rabbitmq" {
@@ -29,4 +29,20 @@ target "cron" {
 target "s3" {
   context = "./dockerfiles/s3"
   tags = ["danielgreen1806/amascrap-s3:${TAG}"]
+}
+
+target "uniscrap-builder" {
+  context = "."
+  dockerfile = "./dockerfiles/uniscrap/Dockerfile"
+  target = "uniscrap-builder"
+}
+
+target "chrome-vnc" {
+  contexts = {
+    uniscrap-builder = "target:uniscrap-builder"
+  }
+  context = "./dockerfiles/uniscrap"
+  target = "chrome-vnc"
+  tags = ["danielgreen1806/amascrap-chrome-vnc:${TAG}"]
+  platforms = ["linux/amd64"]
 }

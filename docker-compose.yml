@@ -14,6 +14,27 @@ services:
         volumes:
             - ./external-data/rabbitmq/mnesia:/var/lib/rabbitmq/mnesia:rw
             - ./logs/rabbitmq:/var/log/rabbitmq:rw
+    ### CHROME VNC SERVICE
+    chrome-vnc:
+        depends_on:
+            - msgbroker
+        image: danielgreen1806/amascrap-chrome-vnc:latest
+        ports:
+            - "5900:5900"  # VNC access
+        networks:
+            - net
+        environment:
+            - VNC_PASSWORD=${VNC_PASSWORD}
+        volumes:
+            - ./logs/uniscrap:/home/chrome/logs:rw
+            - ./external-data/chrome-profile:/home/chrome/profile:rw
+        security_opt:
+            - seccomp=unconfined
+            - apparmor=unconfined
+        cap_add:
+            - SYS_ADMIN
+        shm_size: 2g
+        restart: unless-stopped
     ### WORKERS
     cron:
         depends_on:
