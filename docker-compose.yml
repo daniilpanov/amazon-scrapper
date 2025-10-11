@@ -1,4 +1,41 @@
 services:
+    ### EXTERNAL
+    msgbroker:
+        image: danielgreen1806/amascrap-rabbitmq:latest
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+            - "15692:15692"
+            - "15674:15674"
+            - "61613:61613"
+            - "55670:55670"
+        networks:
+            - net
+        volumes:
+            - ./external-data/rabbitmq/mnesia:/var/lib/rabbitmq/mnesia:rw
+            - ./logs/rabbitmq:/var/log/rabbitmq:rw
+    ### CHROME VNC SERVICE
+    chrome-vnc:
+        depends_on:
+            - msgbroker
+        image: danielgreen1806/amascrap-chrome-vnc:latest
+        ports:
+            - "5900:5900"  # VNC access
+        networks:
+            - net
+        environment:
+            - VNC_PASSWORD=${VNC_PASSWORD}
+        volumes:
+            - ./logs/uniscrap:/home/chrome/logs:rw
+            - ./external-data/chrome-profile:/home/chrome/profile:rw
+        security_opt:
+            - seccomp=unconfined
+            - apparmor=unconfined
+        cap_add:
+            - SYS_ADMIN
+        shm_size: 2g
+        restart: unless-stopped
+    ### WORKERS
     cron:
         depends_on:
              - msgbroker
@@ -8,17 +45,30 @@ services:
             - net
         env_file: .env
         volumes:
-            - ./services/cron_starter_service/app:/src:rw
-            - ./services/cron_starter_service/cron_tasks:/res/crontabs:rw
+            - ./services/cron/app:/src:rw
+            - ./services/cron/cron_tasks:/res/crontabs:rw
             - ./logs/cron:/var/log:rw
         command: ["/src/cron-start.sh"]
-    s3:
-        image: danielgreen1806/amascrap-s3:latest
-        restart: unless-stopped
+    msgbroker_handler:
+        depends_on:
+            msgbroker:
+                condition: service_started
+        image: danielgreen1806/amascrap-light:latest
+        restart: on-failure
         networks:
             - net
         volumes:
-            - ./services/s3_service:/src:rw
+            - ./services/msgbroker_handler/app:/src/app:rw
+            - ./logs/msgbroker_handler:/src/logs:rw
+        env_file: .env
+    ### SERVICE
+    s3:
+        image: danielgreen1806/amascrap-s3:latest
+        restart: on-failure
+        networks:
+            - net
+        volumes:
+            - ./services/s3:/src:rw
             - ./logs/s3:/src/logs:rw
         env_file: .env
         expose:
@@ -33,62 +83,14 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$S3_PORT"
-    google:
-        image: danielgreen1806/amascrap-google:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/google_service:/src:rw
-            - ./logs/google:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$GOOGLE_PORT"
-        ports:
-            - "$GOOGLE_PORT:$GOOGLE_PORT"
-        entrypoint:
-            - "gunicorn"
-            - "app:app"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$GOOGLE_PORT"
-    s3_upload:
-        depends_on:
-            - server
-        image: danielgreen1806/amascrap-s3:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/s3_upload_service:/src:rw
-            - ./logs/s3_upload:/src/logs:rw
-        env_file: .env
-        entrypoint:
-            - "python"
-            - "app/serve.py"
-    google_upload:
-        depends_on:
-            - server
-        image: danielgreen1806/amascrap-google:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/google_upload_service:/src:rw
-            - ./logs/google_upload:/src/logs:rw
-        env_file: .env
-        entrypoint:
-            - "python"
-            - "app/serve.py"
+    ### LEGACY PART
     server:
         image: danielgreen1806/amascrap-simple_server:latest
-        restart: unless-stopped
+        restart: on-failure
         networks:
             - net
         volumes:
-            - ./services/server_service:/src:rw
+            - ./services/server:/src:rw
             - ./logs/server:/src/logs:rw
         env_file: .env
         expose:
@@ -100,16 +102,25 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
-        healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:$SERVER_PORT/ping"]
-            interval: 30s
-            timeout: 10s
-            retries: 3
+    s3_upload:
+        depends_on:
+            - server
+        image: danielgreen1806/amascrap-s3:latest
+        restart: on-failure
+        networks:
+            - net
+        volumes:
+            - ./services/s3_upload:/src:rw
+            - ./logs/s3_upload:/src/logs:rw
+        env_file: .env
+        entrypoint:
+            - "python"
+            - "app/serve.py"
     web:
         depends_on:
             - server
         image: danielgreen1806/amascrap-simple_server:latest
-        restart: unless-stopped
+        restart: on-failure
         networks:
             - net
         volumes:
@@ -125,52 +136,5 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$WEB_PORT"
-        healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:$WEB_PORT"]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-    msgbroker:
-        image: danielgreen1806/amascrap-rabbitmq:latest
-        ports:
-            - "5672:5672"
-            - "15672:15672"
-            - "15692:15692"
-            - "15674:15674"
-            - "61613:61613"
-            - "55670:55670"
-        networks:
-            - net
-        volumes:
-            - ./external-data/rabbitmq/mnesia:/var/lib/rabbitmq/mnesia:rw
-            - ./logs/rabbitmq:/var/log/rabbitmq:rw
-        healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:15672"]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-    msgbroker_startup:
-        depends_on:
-            - msgbroker
-        image: danielgreen1806/amascrap-light:latest
-        restart: on-failure
-        networks:
-            - net
-        env_file: .env
-        volumes:
-            - ./services/msgbroker_startup_service/app:/src/app:rw
-    msgbroker_handler:
-        depends_on:
-            - msgbroker
-            - msgbroker_startup
-        image: danielgreen1806/amascrap-light:latest
-        restart: unless-stopped
-        networks:
-            - net
-        volumes:
-            - ./services/msgbroker_handler_service/app:/src/app:rw
-            - ./logs/msgbroker_handler:/src/logs:rw
-        env_file: .env
 networks:
     net:
-        driver: bridge

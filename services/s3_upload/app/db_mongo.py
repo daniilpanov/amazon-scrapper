@@ -4,16 +4,16 @@ from pymongo.database import Database
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient
 
-from . import settings
+from config import *
 
 client: MongoClient | None = None
 
 config = {
-    'url': settings.MONGO_DB_HOST,
-    'username': settings.MONGO_DB_USER,
-    'password': settings.MONGO_DB_PASS,
-    'proxy': settings.MONGO_DB_PROXY,
-    'url_prefix': settings.MONGO_DB_HOST_SCHEMA,
+    'url': MONGO_DB_HOST,
+    'username': MONGO_DB_USER,
+    'password': MONGO_DB_PASS,
+    'proxy': MONGO_DB_PROXY,
+    'url_prefix': MONGO_DB_HOST_SCHEMA,
 }
 
 

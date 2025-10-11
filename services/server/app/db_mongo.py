@@ -1,7 +1,5 @@
 import certifi
-
 from pymongo.database import Database
-from pymongo.errors import BulkWriteError, DuplicateKeyError
 from pymongo.mongo_client import MongoClient
 
 from . import settings
@@ -58,30 +56,3 @@ def inst() -> MongoClient | bool:
 
 def db(dbname: str) -> Database:
     return inst()[dbname]
-
-
-def write_product_parsed(asin, product_url, canonical_link, title, descr, picture_url, features, top5phr, price):
-    try:
-        return db('amazon_data')['product_card'].replace_one({'asin': asin}, {
-            'asin': asin,
-            'product_url': product_url,
-            'canonical_link': canonical_link,
-            'product_title': title,
-            'product_descr': descr,
-            'picture_url': picture_url,
-            'features': features,
-            'top_5_phrases': top5phr,
-            'product_price': price,
-        }, upsert=True)
-    except (BulkWriteError, DuplicateKeyError):
-        return True
-
-
-def write_aspects(asin, aspects):
-    data = []
-    for aspect in aspects:
-        data.append({'ASIN': asin, 'Aspect': aspect[0], 'positive': aspect[1], 'negative': aspect[2]})
-    try:
-        return db('amazon_data')['amazon_aspects'].insert_many(data, False)
-    except (BulkWriteError, DuplicateKeyError):
-        return True

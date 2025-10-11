@@ -1,0 +1,3 @@
+class BrandData extends DataModel {
+
+}
