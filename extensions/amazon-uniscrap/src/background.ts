@@ -113,7 +113,7 @@ browser.storage.local.onChanged.addListener(async (changes: { [key: string]: Bro
         }
         return;
     } else if (changes.stomp?.newValue === true) {
-        if (!stompConnection) fullConnectSTOMP();
+        if (!stompConnection) await fullConnectSTOMP();
     }
 
     if (changes.subscriptions && stompConnection) {
