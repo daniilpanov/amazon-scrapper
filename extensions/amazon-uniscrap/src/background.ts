@@ -99,7 +99,7 @@ browser.storage.local.get('subscriptions').then(({ subscriptions }) => {
         queueHandlers[queue] = subscriptions[queue];
 });
 
-fullConnectSTOMP();
+fullConnectSTOMP().then(() => console.log('STOMP connected'));
 
 /// LISTENERS ///
 browser.runtime.onInstalled.addListener(init);
