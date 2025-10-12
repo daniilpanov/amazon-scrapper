@@ -46,8 +46,8 @@ let stompConnection: Stomp | null = null;
 /// FUNCTIONS ///
 function getHandlers() { return queueHandlers; }
 
-function init() {
-    browser.storage.local.set({
+async function init() {
+    await browser.storage.local.set({
         'stomp': true,
         'subscriptions': queueHandlers,
     });
@@ -90,8 +90,8 @@ async function fullConnectSTOMP() {
 }
 
 /// CODE ///
-browser.storage.local.get('stomp').then(({ isStompActive }) => {
-    if (typeof isStompActive !== 'boolean') init();
+browser.storage.local.get('stomp').then(async ({ isStompActive }) => {
+    if (typeof isStompActive !== 'boolean') await init();
 }).catch(init);
 
 browser.storage.local.get('subscriptions').then(({ subscriptions }) => {
@@ -99,7 +99,7 @@ browser.storage.local.get('subscriptions').then(({ subscriptions }) => {
         queueHandlers[queue] = subscriptions[queue];
 });
 
-fullConnectSTOMP();
+fullConnectSTOMP().then(() => console.log('STOMP connected'));
 
 /// LISTENERS ///
 browser.runtime.onInstalled.addListener(init);
@@ -113,7 +113,7 @@ browser.storage.local.onChanged.addListener(async (changes: { [key: string]: Bro
         }
         return;
     } else if (changes.stomp?.newValue === true) {
-        if (!stompConnection) fullConnectSTOMP();
+        if (!stompConnection) await fullConnectSTOMP();
     }
 
     if (changes.subscriptions && stompConnection) {
