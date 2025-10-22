@@ -136,5 +136,11 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$WEB_PORT"
+    ### WATCHTOWER
+    watchtower:
+        image: containrrr/watchtower:latest
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        command: --interval 180 --cleanup
 networks:
     net:
