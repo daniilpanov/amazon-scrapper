@@ -24,41 +24,41 @@ class TasksGroup:
         self.tasks = []
 
     def create_group(self, alias = None):
-        res = self.conn['scrap_process']['tasks_headers'].insert_one({
-            'script': self.script,
-            'visible': True,
-            'created_at': self.dt,
-            'started_at': None,
-            'ended_at': None,
-            'alias': alias or f'{self.script}.daily({self.dt.isoformat()})',
+        res = self.conn["scrap_process"]["tasks_headers"].insert_one({
+            "script": self.script,
+            "visible": True,
+            "created_at": self.dt,
+            "started_at": None,
+            "ended_at": None,
+            "alias": alias or f"{self.script}.daily({self.dt.isoformat()})",
         })
         self.group_id = res.inserted_id
         return self.group_id
 
     def add_task(self, **params):
         task = {
-            'script': self.script,
-            'header_id': self.group_id,
-            'data': self.task_data_options | params,
-            'status': 2,
-            'confirmed_status': 2,
-            'stage': self.stage,
-            'errors': [],
-            'created_at': self.dt,
-            'started_at': None,
-            'ended_at': None,
-            'result': {},
+            "script": self.script,
+            "header_id": self.group_id,
+            "data": self.task_data_options | params,
+            "status": 2,
+            "confirmed_status": 2,
+            "stage": self.stage,
+            "errors": [],
+            "created_at": self.dt,
+            "started_at": None,
+            "ended_at": None,
+            "result": {},
         }
         self.tasks.append(task)
 
     def update_tasks_header_id(self):
         tasks = []
         for task in self.tasks:
-            task['header_id'] = self.group_id
+            task["header_id"] = self.group_id
             tasks.append(task)
         self.tasks = tasks
 
     def submit_tasks(self):
         self.update_tasks_header_id()
-        res = self.conn['scrap_process']['tasks_bodies'].insert_many(self.tasks)
+        res = self.conn["scrap_process"]["tasks_bodies"].insert_many(self.tasks)
         return res.inserted_ids
