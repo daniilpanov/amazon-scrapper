@@ -497,7 +497,7 @@ class AsinSightAPI:
             ),
         }
 
-    def _make_request(self, method: str, endpoint: str, data: dict = None) -> dict:
+    def _make_request(self, method: str, endpoint: str, data: dict = None, *, retries_left=10) -> dict:
         url = f"{self.base_url}{endpoint}"
         self.logger.debug(f"Request: {method} {url} with {str(data)}")
         response = None
@@ -515,8 +515,11 @@ class AsinSightAPI:
             return data
         except RequestConnectionError:
             self.logger.exception("Request connection error. Retrying")
+            if retries_left <= 0:
+                raise
+
             time.sleep(1)
-            return self._make_request(method, endpoint, data)
+            return self._make_request(method, endpoint, data, retries_left=retries_left - 1)
         except RequestException as e:
             self.logger.exception(f"Error on request [{method} /{endpoint}]: {e}\nData: {data}")
             if response:
