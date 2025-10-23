@@ -4,11 +4,13 @@ from logging import StreamHandler
 from run_keyword import run_keyword
 from run_spfd import run_spfd
 from run_helium_blackbox import run_helium_blackbox
+from run_asinsight import run_asinsight
 
 actions = {
     "KW": run_keyword,
     "SPFD": run_spfd,
     "H_BBX": run_helium_blackbox,
+    "AS": run_asinsight,
 }
 
 if __name__ == "__main__":
