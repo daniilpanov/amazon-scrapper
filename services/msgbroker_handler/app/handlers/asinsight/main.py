@@ -1,4 +1,5 @@
 import datetime
+import functools
 import json
 import math
 import time
@@ -33,8 +34,8 @@ class AsinSightHandler(AbstractHandler):
             raise InvalidDataException()
 
         with requests.Session() as session:
-            token = self._generate_new_token(session)
-            asinsight_api = AsinSightAPI(session, token, asin, country, self._logger)
+            new_token_callback = functools.partial(self._generate_new_token, session)
+            asinsight_api = AsinSightAPI(session, asin, country, self._logger, new_token_callback)
 
             request_start_time = time.time()
             self._load_asin_info(asinsight_api)

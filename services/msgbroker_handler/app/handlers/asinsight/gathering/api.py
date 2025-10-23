@@ -9,15 +9,12 @@ from requests.exceptions import RequestException, ConnectionError as RequestConn
 class AsinSightAPI:
     base_url = "https://api.asinsight.com/v2/"
 
-    def __init__(self, session: requests.Session, auth_token: str, asin: str, country: str, logger: logging.Logger):
+    def __init__(self, session: requests.Session, asin: str, country: str, logger: logging.Logger, new_token_callback=None):
         self.session = session
-        self.auth_token = auth_token
         self.asin = asin
         self.country = country
         self.logger = logger
-
-        if not session.headers.get("Authorization"):
-            self.session.headers["Authorization"] = auth_token
+        self._new_token_callback = new_token_callback
 
     def asin_variation_id(self) -> str:
         """
@@ -498,6 +495,9 @@ class AsinSightAPI:
         }
 
     def _make_request(self, method: str, endpoint: str, data: dict = None, *, retries_left=10) -> dict:
+        if not self.session.headers.get("Authorization"):
+            self.session.headers["Authorization"] = self._new_token_callback()
+
         url = f"{self.base_url}{endpoint}"
         self.logger.debug(f"Request: {method} {url} with {str(data)}")
         response = None
@@ -508,6 +508,10 @@ class AsinSightAPI:
                 url=url,
                 json=data,
             )
+            if response.status_code == 401 and self._new_token_callback and retries_left > 0:
+                self.session.headers["Authorization"] = self._new_token_callback()
+                return self._make_request(method, endpoint, data, retries_left=retries_left - 1)
+
             response.raise_for_status()
             data = response.json()
             data["ts_created"] = time.time()
