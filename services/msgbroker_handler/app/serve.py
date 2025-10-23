@@ -76,7 +76,7 @@ def start_consumer(handler: type[AbstractHandler]):
 
 
 def get_pika():
-    return pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost')))
+    return pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost'), heartbeat=1800))
 
 
 def get_mongo(url, username, password):
