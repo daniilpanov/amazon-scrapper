@@ -75,7 +75,7 @@ def start_consumer(handler: type[AbstractHandler]):
         chan.basic_qos(prefetch_count=inst.prefetch_count)
         for queue, conf in inst.handlers.items():
             logger.info('MSG Handler module loaded: ' + queue)
-            chan.basic_consume(queue, handler_wrapper(conf['handler']), auto_ack=conf.get('auto_ack'), arguments=conf.get('arguments'))
+            chan.basic_consume(queue, handler_wrapper(conf['handler']), auto_ack=conf.get('auto_ack', False), arguments=conf.get('arguments'))
         chan.start_consuming()
 
 
