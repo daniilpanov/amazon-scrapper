@@ -26,6 +26,7 @@ services:
         environment:
             - VNC_PASSWORD=${VNC_PASSWORD}
         volumes:
+            - ./dockerfiles/uniscrap/start.sh:/home/chrome/start.sh:r
             - ./logs/uniscrap:/home/chrome/logs:rw
             - ./external-data/chrome-profile:/home/chrome/profile:rw
         security_opt:
