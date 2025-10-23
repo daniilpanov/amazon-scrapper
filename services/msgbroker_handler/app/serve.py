@@ -17,11 +17,15 @@ from handlers.abstract_handler import AbstractHandler
 
 from startup import startup
 
-# Create a logger object
-logger = logging.getLogger(__name__)
-# Set the logging level to INFO
-logger.setLevel(logging.DEBUG)
-# Create a handler that logs to the Docker logs
+logger = logging.getLogger("msgbroker_handler")
+
+log_level = os.getenv("MSGBROKER_HANDLER_LOG_LEVEL", "INFO")
+if isinstance(log_level, str):
+    log_level = logging.getLevelName(log_level)
+    if isinstance(log_level, str):
+        log_level = logging.INFO
+
+logger.setLevel(log_level)
 log_handler = logging.StreamHandler()
 log_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(log_handler)
@@ -71,12 +75,12 @@ def start_consumer(handler: type[AbstractHandler]):
         chan.basic_qos(prefetch_count=inst.prefetch_count)
         for queue, conf in inst.handlers.items():
             logger.info('MSG Handler module loaded: ' + queue)
-            chan.basic_consume(queue, handler_wrapper(conf['handler']), auto_ack=conf.get('auto_ack'), arguments=conf.get('arguments'))
+            chan.basic_consume(queue, handler_wrapper(conf['handler']), auto_ack=conf.get('auto_ack', False), arguments=conf.get('arguments'))
         chan.start_consuming()
 
 
 def get_pika():
-    return pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost')))
+    return pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost'), heartbeat=1800))
 
 
 def get_mongo(url, username, password):
