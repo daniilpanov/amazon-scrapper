@@ -17,11 +17,15 @@ from handlers.abstract_handler import AbstractHandler
 
 from startup import startup
 
-# Create a logger object
-logger = logging.getLogger(__name__)
-# Set the logging level to INFO
-logger.setLevel(logging.DEBUG)
-# Create a handler that logs to the Docker logs
+logger = logging.getLogger("msgbroker_handler")
+
+log_level = os.getenv("MSGBROKER_HANDLER_LOG_LEVEL", "INFO")
+if isinstance(log_level, str):
+    log_level = logging.getLevelName(log_level)
+    if isinstance(log_level, str):
+        log_level = logging.INFO
+
+logger.setLevel(log_level)
 log_handler = logging.StreamHandler()
 log_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(log_handler)
