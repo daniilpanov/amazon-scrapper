@@ -94,6 +94,7 @@ def startup(logger):
         declare_tasks_queue('products')
         declare_tasks_queue('bsr')
         declare_tasks_queue('helium_blackbox')
+        declare_tasks_queue('asinsight')
         declare_tasks_queue('kwt', { 'x-max-priority': 20 })
 
         ### RESULTS ###
