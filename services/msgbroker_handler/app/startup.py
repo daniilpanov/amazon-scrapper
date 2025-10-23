@@ -71,6 +71,11 @@ def startup(logger):
                 channel.queue_bind(queue=qname, exchange=exchange, routing_key=qname)
 
         def declare_tasks_queue(name: str, args=None):
+            if not args:
+                args = {"x-expires": 3 * 86400000}
+            elif "x-expires" not in args:
+                args["x-expires"] = 3 * 86400000
+
             return declare_queues([name], 'tasks', args)
 
         def declare_results_queue(name: str, args=None):
