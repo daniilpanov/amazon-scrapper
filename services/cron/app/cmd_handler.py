@@ -25,20 +25,28 @@ if __name__ == "__main__":
             k, v = item.strip().split("=")
             func_args[k] = v
 
-    import logging
+    import importlib.util
+    if importlib.util.find_spec("dotenv"):
+        from dotenv import load_dotenv
+        load_dotenv(".env") or load_dotenv("../.env") or load_dotenv("../../.env") or load_dotenv("../../../.env")
 
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    import logging
+    import os
+
+    logger = logging.getLogger("cron.cmd_handler")
+
+    log_level = os.getenv("CRON_LOG_LEVEL", "INFO")
+    if isinstance(log_level, str):
+        log_level = logging.getLevelName(log_level)
+        if isinstance(log_level, str):
+            log_level = logging.INFO
+
+    logger.setLevel(log_level)
 
     handler = StreamHandler()
     handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler)
     logger.info(args)
-
-    import importlib.util
-    if importlib.util.find_spec("dotenv"):
-        from dotenv import load_dotenv
-        load_dotenv(".env") or load_dotenv("../.env") or load_dotenv("../../.env") or load_dotenv("../../../.env")
     
     from inspect import signature
     from contextlib import ExitStack
