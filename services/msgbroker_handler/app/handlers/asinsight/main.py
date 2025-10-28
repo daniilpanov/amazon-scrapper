@@ -30,6 +30,11 @@ class AsinSightHandler(AbstractHandler):
         data = json.loads(msg.decode())
         asin = data.get("asin")
         country = data.get("country", "US")
+        additional_data = {
+            "user_id": data.get("user_id"),
+            "marketplace_id": data.get("marketplace_id"),
+        }
+
         if not asin:
             raise InvalidDataException()
 
@@ -38,27 +43,27 @@ class AsinSightHandler(AbstractHandler):
             asinsight_api = AsinSightAPI(session, asin, country, self._logger, new_token_callback)
 
             request_start_time = time.time()
-            self._load_asin_info(asinsight_api)
+            self._load_asin_info(asinsight_api, additional_data)
             self._logger.info(f"Request asin_info [{asin} ({country})] time: {time.time() - request_start_time}s")
 
             request_start_time = time.time()
-            variation_id = self._load_variation_id(asinsight_api)
+            variation_id = self._load_variation_id(asinsight_api, additional_data)
             self._logger.info(f"Request variation_id [{asin} ({country})] time: {time.time() - request_start_time}s")
 
             request_start_time = time.time()
-            self._load_variation_status(asinsight_api, variation_id)
+            self._load_variation_status(asinsight_api, variation_id, additional_data)
             self._logger.info(f"Request variation_status [{asin} ({country})] time: {time.time() - request_start_time}s")
 
             request_start_time = time.time()
-            self._load_asin_flow_score(asinsight_api)
+            self._load_asin_flow_score(asinsight_api, additional_data)
             self._logger.info(f"Request asin_flow_score [{asin} ({country})] time: {time.time() - request_start_time}s")
 
             request_start_time = time.time()
-            self._load_flow_score(asinsight_api)
+            self._load_flow_score(asinsight_api, additional_data)
             self._logger.info(f"Request flow_score [{asin} ({country})] time: {time.time() - request_start_time}s")
 
             request_start_time = time.time()
-            pages_scraped = self._research_list(asinsight_api)
+            pages_scraped = self._research_list(asinsight_api, additional_data)
             request_time = time.time() - request_start_time
             if pages_scraped:
                 self._logger.info(f"Request research_list [{asin} ({country})] time: {request_time}s ({request_time / pages_scraped}s per page)")
@@ -93,7 +98,7 @@ class AsinSightHandler(AbstractHandler):
         })
         return account.token
 
-    def _load_asin_info(self, asinsight_api):
+    def _load_asin_info(self, asinsight_api, additional_data):
         country = asinsight_api.country
 
         data = asinsight_api.asin_info()
@@ -109,6 +114,7 @@ class AsinSightHandler(AbstractHandler):
         asin_info["priceDistributionPrime"] = asin_info["priceDistribution"]["prime"]
         asin_info["ts_created"] = data["ts_created"]
         asin_info["date_created"] = data["date_created"]
+        asin_info.update(additional_data)
 
         del asin_info["priceDistribution"]
 
@@ -119,7 +125,7 @@ class AsinSightHandler(AbstractHandler):
         }, asin_info, upsert=True)
         return True
 
-    def _load_variation_id(self, asinsight_api):
+    def _load_variation_id(self, asinsight_api, additional_data):
         asin_variation_id = asinsight_api.asin_variation_id()
         if not asin_variation_id:
             return None
@@ -129,10 +135,10 @@ class AsinSightHandler(AbstractHandler):
         }, {
             "asin": asinsight_api.asin,
             "variation_id": asin_variation_id,
-        }, upsert=True)
+        } | additional_data, upsert=True)
         return asin_variation_id
 
-    def _load_variation_status(self, asinsight_api, variation_id):
+    def _load_variation_status(self, asinsight_api, variation_id, additional_data):
         asin_variation_status = asinsight_api.asin_variation_status(variation_id)
         asin_variation_status["asin"] = asinsight_api.asin
         asin_variation_status["country"] = asinsight_api.country
@@ -140,9 +146,9 @@ class AsinSightHandler(AbstractHandler):
             "asin": asinsight_api.asin,
             "country": asinsight_api.country,
             "date_created": asin_variation_status["date_created"],
-        }, asin_variation_status, upsert=True)
+        }, asin_variation_status | additional_data, upsert=True)
 
-    def _load_asin_flow_score(self, asinsight_api):
+    def _load_asin_flow_score(self, asinsight_api, additional_data):
         asin_variation_flow_score = asinsight_api.asin_variation_flow_score()
         ops = [ReplaceOne(
             {
@@ -153,13 +159,13 @@ class AsinSightHandler(AbstractHandler):
             item | {
                 "date_created": asin_variation_flow_score["date_created"],
                 "ts_created": asin_variation_flow_score["ts_created"],
-            },
+            } | additional_data,
             upsert=True,
         ) for item in asin_variation_flow_score.get("list", [])]
 
         self._db["Asinsight"]["asins_variations_flow_score"].bulk_write(ops, ordered=False)
 
-    def _load_flow_score(self, asinsight_api):
+    def _load_flow_score(self, asinsight_api, additional_data):
         flow_trends = asinsight_api.flow_trends()
         if not flow_trends.get("result") or not flow_trends["result"][0].get("xaxis"):
             return False
@@ -174,7 +180,8 @@ class AsinSightHandler(AbstractHandler):
                 "country": asinsight_api.country,
                 "date_created": dates[i],
                 "ts_created": datetime.datetime.now(),
-            }
+            } | additional_data
+
             for key in flow_trends_data_keys:
                 row[key] = flow_trends["result"][0][key][i]
             flow_trends_parsed.append(row)
@@ -195,7 +202,7 @@ class AsinSightHandler(AbstractHandler):
             self._logger.exception("Failed to load asinsight flow trends")
             return False
 
-    def _research_list(self, asinsight_api):
+    def _research_list(self, asinsight_api, additional_data):
         research_result = asinsight_api.research_asin_list()
         if not research_result or not research_result.get("total"):
             self._logger.warning(f"No research result for asin {asinsight_api.asin} ({asinsight_api.country})")
@@ -216,6 +223,7 @@ class AsinSightHandler(AbstractHandler):
                 item["search_term"] = item["searchTerm"]
                 terms.append(item["searchTerm"])
                 del item["searchTerm"]
+                item.update(additional_data)
                 page_results.append(item)
 
             try:
@@ -223,15 +231,15 @@ class AsinSightHandler(AbstractHandler):
             except (DuplicateKeyError, BulkWriteError):
                 pass
 
-            self._load_search_term_trends(asinsight_api, terms)
-            self._load_search_term_top_asins(asinsight_api, terms)
+            self._load_search_term_trends(asinsight_api, terms, additional_data)
+            self._load_search_term_top_asins(asinsight_api, terms, additional_data)
 
             if page < research_pages_to_parsing:
                 research_result = asinsight_api.research_asin_list(page)
 
         return research_pages_to_parsing
 
-    def _load_search_term_trends(self, asinsight_api, search_terms):
+    def _load_search_term_trends(self, asinsight_api, search_terms, additional_data):
         trends = asinsight_api.search_terms_trends(search_terms)
         if not trends:
             return False
@@ -250,7 +258,7 @@ class AsinSightHandler(AbstractHandler):
                     "search_term": search_term,
                     "report_from": datetime.datetime.fromisoformat(trend["reportFromDate"][i]),
                     "report_to": datetime.datetime.fromisoformat(trend["reportToDate"][i]),
-                }
+                } | additional_data
                 for key in keys:
                     row[key] = trend[key][i]
 
@@ -263,7 +271,7 @@ class AsinSightHandler(AbstractHandler):
 
         return True
 
-    def _load_search_term_top_asins(self, asinsight_api, search_terms):
+    def _load_search_term_top_asins(self, asinsight_api, search_terms, additional_data):
         top_asins = asinsight_api.search_terms_top_asins(search_terms)
         if not top_asins:
             return False
@@ -286,6 +294,7 @@ class AsinSightHandler(AbstractHandler):
                 top_asin["search_term"] = search_term
                 top_asin["report_from"] = report_from
                 top_asin["report_to"] = report_to
+                top_asin.update(additional_data)
                 flat_top_asins.append(top_asin)
 
         try:
