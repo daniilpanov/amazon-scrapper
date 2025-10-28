@@ -38,10 +38,6 @@ RUN mkdir -p /home/chrome && \
     chown -R chrome:chrome /home/chrome
 
 WORKDIR /home/chrome
-# Copy start script
-COPY start.sh .
-RUN chmod 777 ./start.sh && chown chrome ./start.sh
-
 USER chrome
 
 # Copy built extension
