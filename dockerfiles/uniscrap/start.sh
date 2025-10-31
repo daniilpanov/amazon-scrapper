@@ -111,7 +111,7 @@ sleep 2
 
 if [ -f /home/chrome/.vnc/passwd ]; then
     echo "Starting VNC with password..."
-    x11vnc -forever -noxdamage -shared -rfbport 5900 -passwd /home/chrome/.vnc/passwd -display :99 &
+    x11vnc -forever -noxdamage -shared -rfbport 5900 -rfbauth /home/chrome/.vnc/passwd -display :99 &
 else
     echo "Starting VNC without password..."
     x11vnc -forever -noxdamage -shared -rfbport 5900 -display :99 &

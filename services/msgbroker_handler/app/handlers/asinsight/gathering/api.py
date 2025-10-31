@@ -2,12 +2,16 @@ import datetime
 import logging
 import time
 
+import pytz
 import requests
 from requests.exceptions import RequestException, ConnectionError as RequestConnectionError
 
 
 class AsinSightAPI:
+    end_data_date = None
+    dates_offset = None
     base_url = "https://api.asinsight.com/v2/"
+    tz_offset = pytz.FixedOffset(-7*60)
 
     def __init__(self, session: requests.Session, asin: str, country: str, logger: logging.Logger, new_token_callback=None):
         self.session = session
@@ -19,7 +23,6 @@ class AsinSightAPI:
     def asin_variation_id(self) -> str:
         """
         Endpoint: /v2/asins/variations
-        Priority 1
 
         Schema: {
           "variationId": "9966b555-d8bf-47ce-8d35-317e6e5ebd83"
@@ -32,7 +35,6 @@ class AsinSightAPI:
     def asin_variation_flow_score(self) -> dict:
         """
         Endpoint: /v2/asins/variations/flowScore
-        Priority 2
 
         Schema: {
           "list": [
@@ -79,7 +81,6 @@ class AsinSightAPI:
     def asin_variation_status(self, variation_id: str) -> dict:
         """
         Endpoint: /v2/asins/variations/status
-        Priority 2
 
         Schema: {
           "parentAsin": "",
@@ -106,7 +107,6 @@ class AsinSightAPI:
     def asin_info(self) -> dict:
         """
         Endpoint: /v2/asins/info
-        Priority 1
 
         Schema: {
           "asins": [
@@ -139,7 +139,6 @@ class AsinSightAPI:
     def flow_trends(self, start_date: str = "", end_date: str = "") -> dict:
         """
         Endpoint: /v2/asins/flow/trends
-        Priority 1
 
         Schema: {
           "result": [
@@ -219,7 +218,6 @@ class AsinSightAPI:
     def research_asin_list(self, page: int = 1, page_size: int = 50) -> dict:
         """
         Endpoint: /v2/asins/research/list
-        Priority 0
 
         Schema: {
           "list": [
@@ -354,7 +352,6 @@ class AsinSightAPI:
     def search_terms_trends(self, search_terms: list[str], weeks: int = 12):
         """
         Endpoint: /v2/searchTerms/trends
-        Priority 1
 
         Schema: {
           "searchTerms": [
@@ -418,7 +415,6 @@ class AsinSightAPI:
     def search_terms_top_asins(self, search_terms: list[str]) -> dict:
         """
         Endpoint: /v2/searchTerms/topAsins
-        Priority 2
 
         Schema: {
           "searchTerms": [
@@ -458,6 +454,114 @@ class AsinSightAPI:
 
         return self._make_request("POST", "searchTerms/topAsins", data)
 
+    def search_terms_rank_trends_daily(self, search_term: str, period: int = 180) -> dict:
+        """
+        Endpoint: /v2/asinSearchTerms/rank/trends/daily
+
+        Schema: {
+          "entities": [
+            {
+              "country": "US",
+              "asin": "B091D8C7RC",
+              "searchTerm": "instax mini 40",
+              "trends": [
+                {
+                  "localDate": "2025-05-04T00:00:00-07:00",
+                  "displayPositions": {
+                    "na": {
+                      "page": 1,
+                      "pageRank": 3,
+                      "totalRank": 3
+                    }
+                  }
+                },
+                {
+                  "localDate": "2025-05-05T00:00:00-07:00",
+                  "displayPositions": {
+                    "na": {
+                      "page": 1,
+                      "pageRank": 1,
+                      "totalRank": 1
+                    }
+                  }
+                },
+                ...
+              ]
+            }
+          ]
+        }
+
+        :param search_term:
+        :param period:
+        :return:
+        """
+
+        return self._make_request(
+            "POST",
+            "asinSearchTerms/rank/trends/daily",
+            self._generate_payload(as_array=True, array_key="entities", additional_payload={
+                "startDate": self._get_date(period).isoformat(),
+                "endDate": self._get_search_trends_available_date(),
+                "searchTerm": search_term,
+            })
+        )
+
+    def asin_info_trends_daily(self, period: int = 100) -> dict:
+        """
+        Endpoint: /v2/asins/info/trends/daily
+
+        Schema: {
+          "entities": [
+            {
+              "asin": "B091D8C7RC",
+              "country": "US",
+              "trends": [
+                {
+                  "localDate": "2025-05-04T00:00:00-07:00",
+                  "price": 134.4900000532432,
+                  "bestSeller": null,
+                  "currency": "USD",
+                  "priceDistribution": {
+                    "deal": false,
+                    "originPrice": null,
+                    "prime": null
+                  },
+                  "ratings": 2972,
+                  "sales": 100,
+                  "stars": 4.599
+                },
+                ...
+              ]
+            }
+          ]
+        }
+
+        :param period:
+        :return:
+        """
+
+        return self._make_request(
+            "POST",
+            "asins/info/trends/daily",
+            self._generate_payload(as_array=True, array_key="entities", additional_payload={
+                "startDate": self._get_date(period).isoformat(),
+                "endDate": self._get_search_trends_available_date(),
+            }),
+            timestamps=False,
+        )
+
+    def _get_search_trends_available_date(self):
+        if self.end_data_date:
+            return self.end_data_date
+
+        payload = self._generate_payload()
+        del payload["biz"]["asin"]
+        res = self._make_request("POST", "asinSearchTerms/rank/trends/daily/availableDates", payload)
+        self.dates_offset = max(res["daysAvailableChoice"])
+        self.end_data_date = res["datesBetween"]["endDate"]
+        return self.end_data_date
+
+
     def _generate_payload(
         self, *,
         as_array: bool = False,
@@ -494,7 +598,7 @@ class AsinSightAPI:
             ),
         }
 
-    def _make_request(self, method: str, endpoint: str, data: dict = None, *, retries_left=10) -> dict:
+    def _make_request(self, method: str, endpoint: str, data: dict = None, *, retries_left=10, timestamps: bool = True) -> dict:
         if not self.session.headers.get("Authorization"):
             self.session.headers["Authorization"] = self._new_token_callback()
 
@@ -514,8 +618,11 @@ class AsinSightAPI:
 
             response.raise_for_status()
             data = response.json()
-            data["ts_created"] = time.time()
-            data["date_created"] = datetime.datetime.combine(datetime.date.today(), datetime.time())
+
+            if timestamps:
+                data["ts_created"] = time.time()
+                data["date_created"] = datetime.datetime.combine(datetime.date.today(), datetime.time())
+
             return data
         except RequestConnectionError:
             self.logger.exception("Request connection error. Retrying")
@@ -529,3 +636,10 @@ class AsinSightAPI:
             if response:
                 self.logger.debug(f"Request headers: {str(response.request.headers)}")
             raise
+
+    def _get_date(self, offset_days=0):
+        return datetime.datetime.combine(
+            datetime.datetime.now().astimezone(self.tz_offset).date(),
+            datetime.time(),
+            self.tz_offset,
+        ) - datetime.timedelta(days=offset_days)
