@@ -232,7 +232,7 @@ class AsinSightHandler(AbstractHandler):
                 pass
 
             self._load_search_term_trends(asinsight_api, terms, additional_data)
-            self._load_search_term_top_asins(asinsight_api, terms, additional_data)
+            self._load_search_term_top_asins(asinsight_api, terms)
 
             if page < research_pages_to_parsing:
                 research_result = asinsight_api.research_asin_list(page)
@@ -271,7 +271,7 @@ class AsinSightHandler(AbstractHandler):
 
         return True
 
-    def _load_search_term_top_asins(self, asinsight_api, search_terms, additional_data):
+    def _load_search_term_top_asins(self, asinsight_api, search_terms):
         top_asins = asinsight_api.search_terms_top_asins(search_terms)
         if not top_asins:
             return False
@@ -294,7 +294,6 @@ class AsinSightHandler(AbstractHandler):
                 top_asin["search_term"] = search_term
                 top_asin["report_from"] = report_from
                 top_asin["report_to"] = report_to
-                top_asin.update(additional_data)
                 flat_top_asins.append(top_asin)
 
         try:
