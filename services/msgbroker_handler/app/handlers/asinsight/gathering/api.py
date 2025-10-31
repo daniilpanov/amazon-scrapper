@@ -2,6 +2,7 @@ import datetime
 import logging
 import time
 
+import pytz
 import requests
 from requests.exceptions import RequestException, ConnectionError as RequestConnectionError
 
@@ -10,6 +11,7 @@ class AsinSightAPI:
     end_data_date = None
     dates_offset = None
     base_url = "https://api.asinsight.com/v2/"
+    tz_offset = pytz.FixedOffset(-7*60)
 
     def __init__(self, session: requests.Session, asin: str, country: str, logger: logging.Logger, new_token_callback=None):
         self.session = session
@@ -452,6 +454,58 @@ class AsinSightAPI:
 
         return self._make_request("POST", "searchTerms/topAsins", data)
 
+    def search_terms_rank_trends_daily(self, search_term: str, period: int = 180) -> dict:
+        """
+        Endpoint: /v2/asinSearchTerms/rank/trends/daily
+
+        Schema: {
+          "entities": [
+            {
+              "country": "US",
+              "asin": "B091D8C7RC",
+              "searchTerm": "instax mini 40",
+              "trends": [
+                {
+                  "localDate": "2025-05-04T00:00:00-07:00",
+                  "displayPositions": {
+                    "na": {
+                      "page": 1,
+                      "pageRank": 3,
+                      "totalRank": 3
+                    }
+                  }
+                },
+                {
+                  "localDate": "2025-05-05T00:00:00-07:00",
+                  "displayPositions": {
+                    "na": {
+                      "page": 1,
+                      "pageRank": 1,
+                      "totalRank": 1
+                    }
+                  }
+                },
+                ...
+              ]
+            }
+          ]
+        }
+
+        :param search_term:
+        :param period:
+        :return:
+        """
+
+        return self._make_request(
+            "POST",
+            "asinSearchTerms/rank/trends/daily",
+            self._generate_payload(as_array=True, array_key="entities", additional_payload={
+                "startDate": self._get_date(period).isoformat(),
+                "endDate": self._get_search_trends_available_date(),
+                "searchTerm": search_term,
+            })
+        )
+
     def _get_search_trends_available_date(self):
         if self.end_data_date:
             return self.end_data_date
@@ -535,3 +589,10 @@ class AsinSightAPI:
             if response:
                 self.logger.debug(f"Request headers: {str(response.request.headers)}")
             raise
+
+    def _get_date(self, offset_days=0):
+        return datetime.datetime.combine(
+            datetime.datetime.now().astimezone(self.tz_offset).date(),
+            datetime.time(),
+            self.tz_offset,
+        ) - datetime.timedelta(days=offset_days)

@@ -3,6 +3,7 @@ import functools
 import json
 import math
 import time
+from collections import defaultdict
 
 import requests
 from pymongo import ReplaceOne
@@ -212,6 +213,7 @@ class AsinSightHandler(AbstractHandler):
         research_timestamp = research_result["ts_created"]
         research_date = research_result["date_created"]
         research_pages_to_parsing = math.ceil(research_result["total"] / research_result["pageSize"]) + 1
+        top_100_results_pages_count = math.ceil(100 / research_result["pageSize"])
 
         for page in range(2, research_pages_to_parsing + 1):
             page_results = []
@@ -233,6 +235,9 @@ class AsinSightHandler(AbstractHandler):
 
             self._load_search_term_trends(asinsight_api, terms, additional_data)
             self._load_search_term_top_asins(asinsight_api, terms)
+
+            if page <= top_100_results_pages_count:
+                self._load_search_terms_rank_trends_daily(asinsight_api, terms, page)
 
             if page < research_pages_to_parsing:
                 research_result = asinsight_api.research_asin_list(page)
@@ -300,6 +305,38 @@ class AsinSightHandler(AbstractHandler):
             self._db["Asinsight"]["search_terms_top_asins"].insert_many(flat_top_asins, ordered=False)
         except (DuplicateKeyError, BulkWriteError):
             pass
+
+        return True
+
+    def _load_search_terms_rank_trends_daily(self, asinsight_api, search_terms, additional_data):
+        for search_term in search_terms:
+            result = asinsight_api.search_terms_rank_trends_daily(search_term).get("entities")
+            if not result:
+                continue
+
+            data = result[0]
+            if not data or "trends" not in data:
+                continue
+
+            trends = data["trends"]
+            documents = []
+            for item in trends:
+                date = datetime.datetime.fromisoformat(item["localDate"])
+                positions = {}
+                for position_type, position_description in item.get("displayPositions", {}).items():
+                    positions[position_type] = position_description.get("totalRank")
+                documents.append({
+                    "asin": asinsight_api.asin,
+                    "country": asinsight_api.country,
+                    "search_term": search_term,
+                    "date_created": date,
+                    "ts_created": time.time(),
+                } | additional_data | positions)
+
+            try:
+                self._db["Asinsight"]["search_terms_rank_trends_daily"].insert_many(documents, ordered=False)
+            except (DuplicateKeyError, BulkWriteError):
+                pass
 
         return True
 
