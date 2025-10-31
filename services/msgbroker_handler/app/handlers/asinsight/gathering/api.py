@@ -7,6 +7,8 @@ from requests.exceptions import RequestException, ConnectionError as RequestConn
 
 
 class AsinSightAPI:
+    end_data_date = None
+    dates_offset = None
     base_url = "https://api.asinsight.com/v2/"
 
     def __init__(self, session: requests.Session, asin: str, country: str, logger: logging.Logger, new_token_callback=None):
@@ -449,6 +451,18 @@ class AsinSightAPI:
         }
 
         return self._make_request("POST", "searchTerms/topAsins", data)
+
+    def _get_search_trends_available_date(self):
+        if self.end_data_date:
+            return self.end_data_date
+
+        payload = self._generate_payload()
+        del payload["biz"]["asin"]
+        res = self._make_request("POST", "asinSearchTerms/rank/trends/daily/availableDates", payload)
+        self.dates_offset = max(res["daysAvailableChoice"])
+        self.end_data_date = res["datesBetween"]["endDate"]
+        return self.end_data_date
+
 
     def _generate_payload(
         self, *,
