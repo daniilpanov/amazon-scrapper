@@ -506,6 +506,50 @@ class AsinSightAPI:
             })
         )
 
+    def asin_info_trends_daily(self, period: int = 100) -> dict:
+        """
+        Endpoint: /v2/asins/info/trends/daily
+
+        Schema: {
+          "entities": [
+            {
+              "asin": "B091D8C7RC",
+              "country": "US",
+              "trends": [
+                {
+                  "localDate": "2025-05-04T00:00:00-07:00",
+                  "price": 134.4900000532432,
+                  "bestSeller": null,
+                  "currency": "USD",
+                  "priceDistribution": {
+                    "deal": false,
+                    "originPrice": null,
+                    "prime": null
+                  },
+                  "ratings": 2972,
+                  "sales": 100,
+                  "stars": 4.599
+                },
+                ...
+              ]
+            }
+          ]
+        }
+
+        :param period:
+        :return:
+        """
+
+        return self._make_request(
+            "POST",
+            "asins/info/trends/daily",
+            self._generate_payload(as_array=True, array_key="entities", additional_payload={
+                "startDate": self._get_date(period).isoformat(),
+                "endDate": self._get_search_trends_available_date(),
+            }),
+            timestamps=False,
+        )
+
     def _get_search_trends_available_date(self):
         if self.end_data_date:
             return self.end_data_date
@@ -554,7 +598,7 @@ class AsinSightAPI:
             ),
         }
 
-    def _make_request(self, method: str, endpoint: str, data: dict = None, *, retries_left=10) -> dict:
+    def _make_request(self, method: str, endpoint: str, data: dict = None, *, retries_left=10, timestamps: bool = True) -> dict:
         if not self.session.headers.get("Authorization"):
             self.session.headers["Authorization"] = self._new_token_callback()
 
@@ -574,8 +618,11 @@ class AsinSightAPI:
 
             response.raise_for_status()
             data = response.json()
-            data["ts_created"] = time.time()
-            data["date_created"] = datetime.datetime.combine(datetime.date.today(), datetime.time())
+
+            if timestamps:
+                data["ts_created"] = time.time()
+                data["date_created"] = datetime.datetime.combine(datetime.date.today(), datetime.time())
+
             return data
         except RequestConnectionError:
             self.logger.exception("Request connection error. Retrying")
