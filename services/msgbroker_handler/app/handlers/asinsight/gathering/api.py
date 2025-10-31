@@ -19,7 +19,6 @@ class AsinSightAPI:
     def asin_variation_id(self) -> str:
         """
         Endpoint: /v2/asins/variations
-        Priority 1
 
         Schema: {
           "variationId": "9966b555-d8bf-47ce-8d35-317e6e5ebd83"
@@ -32,7 +31,6 @@ class AsinSightAPI:
     def asin_variation_flow_score(self) -> dict:
         """
         Endpoint: /v2/asins/variations/flowScore
-        Priority 2
 
         Schema: {
           "list": [
@@ -79,7 +77,6 @@ class AsinSightAPI:
     def asin_variation_status(self, variation_id: str) -> dict:
         """
         Endpoint: /v2/asins/variations/status
-        Priority 2
 
         Schema: {
           "parentAsin": "",
@@ -106,7 +103,6 @@ class AsinSightAPI:
     def asin_info(self) -> dict:
         """
         Endpoint: /v2/asins/info
-        Priority 1
 
         Schema: {
           "asins": [
@@ -139,7 +135,6 @@ class AsinSightAPI:
     def flow_trends(self, start_date: str = "", end_date: str = "") -> dict:
         """
         Endpoint: /v2/asins/flow/trends
-        Priority 1
 
         Schema: {
           "result": [
@@ -219,7 +214,6 @@ class AsinSightAPI:
     def research_asin_list(self, page: int = 1, page_size: int = 50) -> dict:
         """
         Endpoint: /v2/asins/research/list
-        Priority 0
 
         Schema: {
           "list": [
@@ -354,7 +348,6 @@ class AsinSightAPI:
     def search_terms_trends(self, search_terms: list[str], weeks: int = 12):
         """
         Endpoint: /v2/searchTerms/trends
-        Priority 1
 
         Schema: {
           "searchTerms": [
@@ -418,7 +411,6 @@ class AsinSightAPI:
     def search_terms_top_asins(self, search_terms: list[str]) -> dict:
         """
         Endpoint: /v2/searchTerms/topAsins
-        Priority 2
 
         Schema: {
           "searchTerms": [
