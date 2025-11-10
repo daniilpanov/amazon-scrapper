@@ -62,28 +62,6 @@ services:
             - ./services/msgbroker_handler/app:/src/app:rw
             - ./logs/msgbroker_handler:/src/logs:rw
         env_file: .env
-    ### SERVICE
-    s3:
-        image: danielgreen1806/amascrap-s3:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/s3:/src:rw
-            - ./logs/s3:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$S3_PORT"
-        ports:
-            - "$S3_PORT:$S3_PORT"
-        entrypoint:
-            - "gunicorn"
-            - "app:app"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$S3_PORT"
     ### LEGACY PART
     server:
         image: danielgreen1806/amascrap-simple_server:latest
