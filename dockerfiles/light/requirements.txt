@@ -4,3 +4,7 @@ certifi
 pika
 pandas
 pydantic
+pytz
+ffmpeg-python
+pytube
+boto3

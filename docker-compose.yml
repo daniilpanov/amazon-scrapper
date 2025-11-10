@@ -103,20 +103,6 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
-    s3_upload:
-        depends_on:
-            - server
-        image: danielgreen1806/amascrap-s3:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/s3_upload:/src:rw
-            - ./logs/s3_upload:/src/logs:rw
-        env_file: .env
-        entrypoint:
-            - "python"
-            - "app/serve.py"
     web:
         depends_on:
             - server

@@ -9,7 +9,7 @@ def download_video(url, temp_dir):
         response.raise_for_status()
 
         file_path = os.path.join(temp_dir, os.path.basename(url))
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         return file_path
