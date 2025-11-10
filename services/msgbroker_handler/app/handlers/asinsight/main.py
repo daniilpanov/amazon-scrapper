@@ -1,9 +1,7 @@
 import datetime
 import functools
-import json
 import math
 import time
-from collections import defaultdict
 
 import requests
 from pymongo import ReplaceOne
@@ -21,19 +19,18 @@ def _check_token(session, token):
 
 
 class AsinSightHandler(AbstractHandler):
-    @property
-    def handlers(self):
-        return {"asinsight": {"handler": self.handle_start}}
+    @classmethod
+    def get_handlers(cls):
+        return {"asinsight": {"handler": cls.handle_start}}
 
-    def handle_start(self, msg):
+    def handle_start(self):
         start_time = time.time()
 
-        data = json.loads(msg.decode())
-        asin = data.get("asin")
-        country = data.get("country", "US")
+        asin = self._data.get("asin")
+        country = self._data.get("country", "US")
         additional_data = {
-            "user_id": data.get("user_id"),
-            "marketplace_id": data.get("marketplace_id"),
+            "user_id": self._data.get("user_id"),
+            "marketplace_id": self._data.get("marketplace_id"),
         }
 
         if not asin:

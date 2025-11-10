@@ -7,22 +7,23 @@ from pika.spec import PERSISTENT_DELIVERY_MODE, TRANSIENT_DELIVERY_MODE
 
 
 class AbstractHandler(ABC):
-    def __init__(self, db, channel, logger):
+    def __init__(self, channel, msg: bytes, db, logger):
+        self._data = json.loads(msg.decode())
         self._db = db
         self._channel = channel
         self._logger = logger
         self._post_init()
 
-    @property
-    def prefetch_count(self) -> int:
+    @staticmethod
+    def get_prefetch_count() -> int:
         return 10
 
-    def _post_init(self):
+    @classmethod
+    @abstractmethod
+    def get_handlers(cls) -> dict[str, Callable]:
         pass
 
-    @property
-    @abstractmethod
-    def handlers(self) -> dict[str, Callable]:
+    def _post_init(self):
         pass
 
     def _publish_message(self, exchange, route, message, *, persistent=True):

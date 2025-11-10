@@ -1,25 +1,22 @@
 import datetime
-import json
 
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 from ..abstract_handler import AbstractHandler
 
 
 class KeywordTrackerHandler(AbstractHandler):
-    @property
-    def handlers(self):
+    @classmethod
+    def get_handlers(cls):
         return {
-            'result.success.kwt': {'handler': self.handle_success},
-            'result.error.kwt': {'handler': self.handle_error},
+            'result.success.kwt': {'handler': cls.handle_success},
+            'result.error.kwt': {'handler': cls.handle_error},
         }
 
-    def handle_success(self, msg):
-        data = json.loads(msg.decode())
-
-        sq = data['searchQuery']
-        organic_count = data.get('countOrganic', 0)
-        sponsored_count = data.get('countSponsored', 0)
-        data = data['chunk']
+    def handle_success(self):
+        sq = self._data['searchQuery']
+        organic_count = self._data.get('countOrganic', 0)
+        sponsored_count = self._data.get('countSponsored', 0)
+        data = self._data['chunk']
         new_data = []
 
         for item in data:

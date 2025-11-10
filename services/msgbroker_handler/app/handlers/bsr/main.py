@@ -1,5 +1,4 @@
 import datetime
-import json
 import uuid
 
 import pytz
@@ -15,23 +14,22 @@ class BSRHandler(AbstractHandler):
         self._categories_collection = self._db['amazon_dev']['cat_tmp2']
         self._product_categories_collection = self._db['amazon_dev']['product_categories2']
 
-    @property
-    def handlers(self):
+    @classmethod
+    def get_handlers(cls):
         return {
-            'result.success.bsr': {'handler': self.handle_success, 'arguments': {'prefetch-count': 6}},
-            'result.error.bsr': {'handler': self.handle_error},
+            'result.success.bsr': {'handler': cls.handle_success, 'arguments': {'prefetch-count': 6}},
+            'result.error.bsr': {'handler': cls.handle_error},
         }
 
-    def handle_success(self, msg):
+    def handle_success(self):
         # parent_list, current, neighbours, products_data
-        data = json.loads(msg.decode())
-        tree = data.get('tree', [])
-        current_bsr = data.get('currentBSR', None)
-        start_new_tree_tasks = data.get('startNewTreeTasks', False)
-        start_new_prod_tasks = data.get('startNewProdTasks', False)
-        start_new_prod_tasks_with_reviews = data.get('startNewProdTasksWithReview', False)
-        target_asins = data.get('targetAsins', [])
-        products = data.get('ASINs', [])
+        tree = self._data.get('tree', [])
+        current_bsr = self._data.get('currentBSR', None)
+        start_new_tree_tasks = self._data.get('startNewTreeTasks', False)
+        start_new_prod_tasks = self._data.get('startNewProdTasks', False)
+        start_new_prod_tasks_with_reviews = self._data.get('startNewProdTasksWithReview', False)
+        target_asins = self._data.get('targetAsins', [])
+        products = self._data.get('ASINs', [])
         tree_items_chains = []
         last_level = None
 

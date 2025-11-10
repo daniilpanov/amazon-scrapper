@@ -34,11 +34,12 @@ logger.addHandler(log_handler)
 startup(logger)
 
 
-def handler_wrapper(func):
-    @wraps(func)
+def handler_wrapper(handler_cls, method, *args, **kwargs):
+    @wraps(method)
     def wrapper(chan: BlockingChannel, deliver: pika.spec.Basic.Deliver, _, msg):
         try:
-            res = func(msg)
+            instance = handler_cls(chan, msg, *args, **kwargs)
+            res = method(instance)
             if res is None or res:
                 chan.basic_ack(deliver.delivery_tag)
             else:
@@ -71,11 +72,15 @@ def start_consumer(handler: type[AbstractHandler]):
         get_mongo(**build_mongo_config()) as db,
     ):
         chan = broker.channel()
-        inst = handler(db, chan, logger)
-        chan.basic_qos(prefetch_count=inst.prefetch_count)
-        for queue, conf in inst.handlers.items():
+        chan.basic_qos(prefetch_count=handler.get_prefetch_count())
+        for queue, conf in handler.get_handlers().items():
             logger.info('MSG Handler module loaded: ' + queue)
-            chan.basic_consume(queue, handler_wrapper(conf['handler']), auto_ack=conf.get('auto_ack', False), arguments=conf.get('arguments'))
+            chan.basic_consume(
+                queue,
+                handler_wrapper(handler, conf['handler'], db, logger),
+                auto_ack=conf.get('auto_ack', False),
+                arguments=conf.get('arguments')
+            )
         chan.start_consuming()
 
 

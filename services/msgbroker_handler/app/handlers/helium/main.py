@@ -7,22 +7,17 @@ from ..abstract_handler import AbstractHandler
 
 
 class HeliumHandler(AbstractHandler):
-    @property
-    def handlers(self):
+    @classmethod
+    def get_handlers(cls):
         return {
-            'result.success.helium_blackbox': {'handler': self.handle_success_helium_blackbox},
-            'result.error.helium_blackbox': {'handler': self.handle_error_helium_blackbox},
+            "result.success.helium_blackbox": {"handler": cls.handle_success_helium_blackbox},
+            "result.error.helium_blackbox": {"handler": cls.handle_error_helium_blackbox},
         }
 
     def handle_success_helium_blackbox(self, msg):
-        try:
-            data = json.loads(msg.decode())
-        except json.decoder.JSONDecodeError:
-            raise ValueError('Invalid JSON!')
-
         validated = []
         errors = []
-        for item in data:
+        for item in self._data:
             try:
                 validated.append(BlackboxDocument(**item))
             except ValidationError as e:
