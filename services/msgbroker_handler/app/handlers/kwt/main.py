@@ -2,6 +2,7 @@ import datetime
 
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 from ..abstract_handler import AbstractHandler
+from ..helpers import setdefaultmany
 
 
 class KeywordTrackerHandler(AbstractHandler):
@@ -45,11 +46,6 @@ class KeywordTrackerHandler(AbstractHandler):
 
     def handle_error(self, msg):
         self._logger.error(msg)
-
-
-def setdefaultmany(obj, keys, func, default = None):
-    for k in keys:
-        obj[k] = func(obj[k]) if obj.get(k) else default
 
 
 handler = KeywordTrackerHandler
