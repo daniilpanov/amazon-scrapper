@@ -81,25 +81,5 @@ services:
             - "uvicorn.workers.UvicornWorker"
             - "-b"
             - "0.0.0.0:$SERVER_PORT"
-    web:
-        depends_on:
-            - server
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/web:/src:rw
-            - ./logs/web:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$WEB_PORT"
-        ports:
-            - "$WEB_PORT:$WEB_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$WEB_PORT"
 networks:
     net:
