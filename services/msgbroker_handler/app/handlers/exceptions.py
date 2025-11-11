@@ -4,3 +4,7 @@ class HandlerException(Exception):
 
 class InvalidDataException(HandlerException):
     pass
+
+
+class NotFoundException(HandlerException):
+    pass

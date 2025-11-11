@@ -104,4 +104,6 @@ def startup(logger):
         declare_results_queue('kwt')
         declare_results_queue('bsr')
         declare_results_queue('helium_blackbox')
-        declare_results_queue('products')
+        declare_results_queue('product_card')
+        declare_results_queue('product_reviews')
+        declare_results_queue('product_aspects')

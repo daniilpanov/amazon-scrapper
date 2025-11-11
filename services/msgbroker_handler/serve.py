@@ -12,10 +12,10 @@ from pika.adapters.blocking_connection import BlockingChannel
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
-import handlers
-from handlers.abstract_handler import AbstractHandler
+from app import handlers
+from app.handlers.abstract_handler import AbstractHandler
 
-from startup import startup
+from app.startup import startup
 
 logger = logging.getLogger("msgbroker_handler")
 
@@ -34,12 +34,18 @@ logger.addHandler(log_handler)
 startup(logger)
 
 
-def handler_wrapper(handler_cls, method, *args, **kwargs):
+def handler_wrapper(handler_cls, method, config, *args, **kwargs):
     @wraps(method)
     def wrapper(chan: BlockingChannel, deliver: pika.spec.Basic.Deliver, _, msg):
         try:
+            if 'validator' in config:
+                msg = config['validator'](msg)
+            elif 'array_validator' in config:
+                msg = config['array_validator'](msg)
+
             instance = handler_cls(chan, msg, *args, **kwargs)
             res = method(instance)
+
             if res is None or res:
                 chan.basic_ack(deliver.delivery_tag)
             else:
@@ -77,7 +83,7 @@ def start_consumer(handler: type[AbstractHandler]):
             logger.info('MSG Handler module loaded: ' + queue)
             chan.basic_consume(
                 queue,
-                handler_wrapper(handler, conf['handler'], db, logger),
+                handler_wrapper(handler, conf['handler'], conf, db, logger),
                 auto_ack=conf.get('auto_ack', False),
                 arguments=conf.get('arguments')
             )

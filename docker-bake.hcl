@@ -7,17 +7,12 @@ variable "TAG" {
 }
 
 group "default" {
-  targets = ["rabbitmq", "simple_server", "light", "cron", "chrome-vnc"]
+  targets = ["rabbitmq", "light", "cron", "chrome-vnc"]
 }
 
 target "rabbitmq" {
   context = "./dockerfiles/msgbroker"
   tags = ["danielgreen1806/amascrap-rabbitmq:${TAG}"]
-}
-
-target "simple_server" {
-  context = "./dockerfiles/simple_server"
-  tags = ["danielgreen1806/amascrap-simple_server:${TAG}"]
 }
 
 target "light" {

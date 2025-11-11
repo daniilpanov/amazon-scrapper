@@ -59,27 +59,9 @@ services:
         networks:
             - net
         volumes:
+            - ./services/msgbroker_handler/serve.py:/src/serve.py:rw
             - ./services/msgbroker_handler/app:/src/app:rw
             - ./logs/msgbroker_handler:/src/logs:rw
         env_file: .env
-    ### LEGACY PART
-    server:
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/server:/src:rw
-            - ./logs/server:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$SERVER_PORT"
-        ports:
-            - "$SERVER_PORT:$SERVER_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$SERVER_PORT"
 networks:
     net:
