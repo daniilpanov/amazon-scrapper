@@ -48,7 +48,7 @@ services:
         volumes:
             - ./app_main/serve.py:/src/serve.py:ro
             - ./app_main/app:/src/app:ro
-            - ./logs/app_main:/src/logs:rw
+            - ./app_main/logs:/src/logs:rw
         env_file: .env
         ports:
             - "${APP_PORT:-8080}:8080"
@@ -63,7 +63,7 @@ services:
         volumes:
             - ./cron/cron-start.sh:/src/cron-start.sh:r
             - ./cron/crontab:/res/crontabs/root:ro
-            - ./logs/cron:/var/log:rw
+            - ./cron/logs:/var/log:rw
         command: ["/src/cron-start.sh"]
 networks:
     net:
