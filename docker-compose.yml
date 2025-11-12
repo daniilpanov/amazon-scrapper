@@ -37,19 +37,6 @@ services:
         shm_size: 2g
         restart: unless-stopped
     ### WORKERS
-    cron:
-        depends_on:
-             - msgbroker
-        image: danielgreen1806/amascrap-cron:latest
-        restart: unless-stopped
-        networks:
-            - net
-        env_file: .env
-        volumes:
-            - ./cron/app:/src:rw
-            - ./cron/cron_tasks:/res/crontabs:rw
-            - ./logs/cron:/var/log:rw
-        command: ["/src/cron-start.sh"]
     app_main:
         depends_on:
             msgbroker:
@@ -65,5 +52,18 @@ services:
         env_file: .env
         ports:
             - "${APP_PORT:-8080}:8080"
+    cron:
+        depends_on:
+            - app_main
+        image: danielgreen1806/amascrap-cron:latest
+        restart: unless-stopped
+        networks:
+            - net
+        env_file: .env
+        volumes:
+            - ./cron/cron-start.sh:/src/cron-start.sh:r
+            - ./cron/crontab:/res/crontabs/root:ro
+            - ./logs/cron:/var/log:rw
+        command: ["/src/cron-start.sh"]
 networks:
     net:
