@@ -27,7 +27,7 @@ target "cron" {
 
 target "uniscrap-builder" {
   context = "."
-  dockerfile = "./dockerfiles/uniscrap/Dockerfile"
+  dockerfile = "./uniscrap/Dockerfile"
   target = "uniscrap-builder"
   args = {
     VITE_STOMP_HOST = "${UNISCRAP_STOMP_HOST}"
@@ -38,7 +38,7 @@ target "chrome-vnc" {
   contexts = {
     uniscrap-builder = "target:uniscrap-builder"
   }
-  context = "./dockerfiles/uniscrap"
+  context = "./uniscrap"
   target = "chrome-vnc"
   tags = ["danielgreen1806/amascrap-chrome-vnc:${TAG}"]
   platforms = ["linux/amd64"]
