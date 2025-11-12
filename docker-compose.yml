@@ -63,5 +63,7 @@ services:
             - ./app_main/app:/src/app:ro
             - ./logs/app_main:/src/logs:rw
         env_file: .env
+        ports:
+            - "${APP_PORT:-8080}:8080"
 networks:
     net:

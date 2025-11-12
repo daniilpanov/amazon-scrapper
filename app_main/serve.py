@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import ExitStack
 from functools import wraps
 from os import environ as env
 import importlib
@@ -8,10 +9,14 @@ import pkgutil
 import certifi
 import pika
 from concurrent.futures import ThreadPoolExecutor
+
+import uvicorn
+from fastapi import FastAPI
 from pika.adapters.blocking_connection import BlockingChannel
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
+from app import api
 from app import handlers
 from app.handlers.abstract_handler import AbstractHandler
 
@@ -19,7 +24,7 @@ from app.startup import startup
 
 logger = logging.getLogger("msgbroker_handler")
 
-log_level = os.getenv("MSGBROKER_HANDLER_LOG_LEVEL", "INFO")
+log_level = os.getenv("APP_LOG_LEVEL", "INFO")
 if isinstance(log_level, str):
     log_level = logging.getLevelName(log_level)
     if isinstance(log_level, str):
@@ -69,14 +74,11 @@ def build_mongo_config():
             url += ':' + password
         url += '@'
     url += os.environ.get('MONGO_DB_HOST', 'localhost')
-    return {'url': url, 'username': username, 'password': password}
+    return url, username, password
 
 
 def start_consumer(handler: type[AbstractHandler]):
-    with (
-        get_pika() as broker,
-        get_mongo(**build_mongo_config()) as db,
-    ):
+    with get_pika() as broker, get_mongo() as db:
         chan = broker.channel()
         chan.basic_qos(prefetch_count=handler.get_prefetch_count())
         for queue, conf in handler.get_handlers().items():
@@ -94,32 +96,69 @@ def get_pika():
     return pika.BlockingConnection(pika.ConnectionParameters(env.get('RABBITMQ_HOST', 'localhost'), heartbeat=1800))
 
 
-def get_mongo(url, username, password):
-    return MongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where())
+def get_mongo():
+    url, username, password = build_mongo_config()
+    client = MongoClient(url, server_api=ServerApi('1'), username=username, password=password, tlsCAFile=certifi.where())
+    client.admin.command('ping')
+    return client
+
+
+def load_handlers(executor):
+    futures = []
+
+    for handler in pkgutil.iter_modules(handlers.__path__):
+        module_path = 'app.handlers.' + handler.name + '.main'
+        try:
+            module = importlib.import_module(module_path)
+            if not getattr(module, 'handler', None):
+                continue
+        except ModuleNotFoundError as e:
+            logger.error('Module not found: ' + module_path + ' [error: ' + str(e) + ']')
+            continue
+        except AttributeError as e:
+            logger.error('Module ' + module_path + ' has no attribute: ' + str(e))
+            continue
+
+        logger.info('Handler module loaded: ' + module_path)
+        futures.append(executor.submit(
+            start_consumer,
+            module.handler,
+        ))
+
+    return futures
+
+
+def load_api(db, channel):
+    api_app = FastAPI()
+
+    for api_item in pkgutil.iter_modules(api.__path__):
+        module_path = 'app.api.' + api_item.name
+        try:
+            router_class = getattr(importlib.import_module(module_path), 'router_class')
+            router_instance = router_class(db, channel, logger)
+            api_app.include_router(router_instance.get_router())
+        except ModuleNotFoundError as e:
+            logger.error('Module not found: ' + module_path + ' [error: ' + str(e) + ']')
+            continue
+        except AttributeError as e:
+            logger.error('Module ' + module_path + ' has no attribute "router_class": ' + str(e))
+            continue
+
+        logger.info('API module loaded: ' + module_path)
+
+    return api_app
 
 
 def run():
-    with (ThreadPoolExecutor() as executor):
-        futures = []
+    with ThreadPoolExecutor() as executor:
+        futures = load_handlers(executor)
 
-        for handler in pkgutil.iter_modules(handlers.__path__):
-            module_path = 'app.handlers.' + handler.name + '.main'
-            try:
-                module = importlib.import_module(module_path)
-                if not getattr(module, 'handler', None):
-                    continue
-            except ModuleNotFoundError as e:
-                logger.error('Module not found: ' + module_path + ' [error: ' + str(e) + ']')
-                continue
-            except AttributeError as e:
-                logger.error('Module ' + module_path + ' has no attribute: ' + str(e))
-                continue
+        with ExitStack() as stack:
+            db = stack.enter_context(get_mongo())
+            rabbit = stack.enter_context(get_pika())
+            channel = stack.enter_context(rabbit.channel())
 
-            logger.info('Handler module loaded: ' + module_path)
-            futures.append(executor.submit(
-                start_consumer,
-                module.handler,
-            ))
+            uvicorn.run(load_api(db, channel), host='0.0.0.0', port=os.getenv('API_PORT', 8080))
 
         for future in futures:
             future.result()

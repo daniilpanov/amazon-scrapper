@@ -8,3 +8,11 @@ pytz
 ffmpeg-python
 pytube
 boto3
+cryptography>=42.0.2
+protobuf>=4.25.8
+pycparser==2.19
+six==1.13.0
+anyio==4.3.0
+fastapi>=0.121.2
+uvicorn==0.29.0
+orjson
