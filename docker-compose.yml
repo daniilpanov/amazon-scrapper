@@ -46,8 +46,8 @@ services:
             - net
         env_file: .env
         volumes:
-            - ./services/cron/app:/src:rw
-            - ./services/cron/cron_tasks:/res/crontabs:rw
+            - ./cron/app:/src:rw
+            - ./cron/cron_tasks:/res/crontabs:rw
             - ./logs/cron:/var/log:rw
         command: ["/src/cron-start.sh"]
     app_main:

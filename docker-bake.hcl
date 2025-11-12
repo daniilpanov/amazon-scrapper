@@ -21,7 +21,7 @@ target "app" {
 }
 
 target "cron" {
-  context = "./dockerfiles/cron"
+  context = "./cron"
   tags = ["danielgreen1806/amascrap-cron:${TAG}"]
 }
 
