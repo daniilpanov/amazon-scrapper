@@ -11,7 +11,7 @@ group "default" {
 }
 
 target "rabbitmq" {
-  context = "./dockerfiles/msgbroker"
+  context = "./msgbroker"
   tags = ["danielgreen1806/amascrap-rabbitmq:${TAG}"]
 }
 
