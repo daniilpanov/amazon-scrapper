@@ -12,8 +12,8 @@ services:
         networks:
             - net
         volumes:
-            - ./external-data/rabbitmq/mnesia:/var/lib/rabbitmq/mnesia:rw
-            - ./logs/rabbitmq:/var/log/rabbitmq:rw
+            - ./msgbroker/internal-data/mnesia:/var/lib/rabbitmq/mnesia:rw
+            - ./msgbroker/logs:/var/log/rabbitmq:rw
     ### CHROME VNC SERVICE
     chrome-vnc:
         depends_on:
