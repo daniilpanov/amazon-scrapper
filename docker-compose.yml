@@ -50,18 +50,18 @@ services:
             - ./services/cron/cron_tasks:/res/crontabs:rw
             - ./logs/cron:/var/log:rw
         command: ["/src/cron-start.sh"]
-    msgbroker_handler:
+    app_main:
         depends_on:
             msgbroker:
                 condition: service_started
-        image: danielgreen1806/amascrap-light:latest
+        image: danielgreen1806/amascrap-app:latest
         restart: on-failure
         networks:
             - net
         volumes:
-            - ./services/msgbroker_handler/serve.py:/src/serve.py:rw
-            - ./services/msgbroker_handler/app:/src/app:rw
-            - ./logs/msgbroker_handler:/src/logs:rw
+            - ./app_main/serve.py:/src/serve.py:ro
+            - ./app_main/app:/src/app:ro
+            - ./logs/app_main:/src/logs:rw
         env_file: .env
 networks:
     net:

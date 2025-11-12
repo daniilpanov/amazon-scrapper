@@ -1,5 +1,3 @@
-import json
-
 from pydantic import ValidationError
 from .blackbox import BlackboxHandler
 from .models import BlackboxDocument

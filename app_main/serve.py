@@ -103,7 +103,7 @@ def run():
         futures = []
 
         for handler in pkgutil.iter_modules(handlers.__path__):
-            module_path = 'handlers.' + handler.name + '.main'
+            module_path = 'app.handlers.' + handler.name + '.main'
             try:
                 module = importlib.import_module(module_path)
                 if not getattr(module, 'handler', None):
