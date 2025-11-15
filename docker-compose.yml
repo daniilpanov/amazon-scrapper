@@ -39,8 +39,7 @@ services:
     ### WORKERS
     app_main:
         depends_on:
-            msgbroker:
-                condition: service_started
+            - msgbroker
         image: danielgreen1806/amascrap-app:latest
         restart: on-failure
         networks:
