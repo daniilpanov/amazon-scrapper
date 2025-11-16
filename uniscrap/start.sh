@@ -129,6 +129,6 @@ google-chrome-stable \
     --v=1 \
     --extension-metrics-opt-in=true \
     --enable-extension-activity-logging \
-    --disable-features=ExtensionsManifestV2DeprecationWarning \
     --whitelisted-extension-id=ibffcdnaaoagnnbemdielinlpjalhkhb \
-    --enable-experimental-extension-apis
+    --enable-experimental-extension-apis \
+    --enable-unsafe-swiftshader
