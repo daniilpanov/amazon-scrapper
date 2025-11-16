@@ -1,8 +1,0 @@
-[submodule "ShopifyScraperExtension"]
-	path = extensions/shopify-courses-scrap-extension
-	url = git@github.com:daniilpanov/shopify-courses-scraper.git
-	branch = master
-[submodule "BsrMarketTree"]
-	path = extensions/bsr-market-tree-scrap-extension
-	url = git@github.com:daniilpanov/bsr-market-tree-scrap-extension.git
-	branch = main
