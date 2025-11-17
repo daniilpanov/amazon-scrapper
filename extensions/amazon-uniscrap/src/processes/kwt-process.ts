@@ -38,7 +38,13 @@ export async function KWTProcess(task: TaskConfig): Promise<void> {
     if (!tab?.id)
         throw new Error(`Unable to create a tab: unknown error (${JSON.stringify(task)})`);
 
+    let timeout;
+
     try {
+        // timeLimit + 1000 because the same timeout will be inside a tab
+        if (task.timeLimit)
+            timeout = setTimeout(browser.tabs.remove, task.timeLimit + 1000, tab.id);
+
         const result: Result = await kwtProcess(task, tab);
 
         if (task.destination === 'local') {
@@ -53,6 +59,9 @@ export async function KWTProcess(task: TaskConfig): Promise<void> {
             });
         }
     } finally {
+        if (timeout)
+            clearTimeout(timeout);
+
         await browser.tabs.remove(tab.id);
     }
 }
