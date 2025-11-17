@@ -62,6 +62,7 @@ async function kwtProcess(task: TaskConfig): Promise<Result> {
                 'injections/common/parseCurrency.js',
                 'injections/common/wait.js',
                 'injections/common/pagination.js',
+                'injections/kwt/callbackFactories.js',
                 'injections/kwt/parsePage.js',
             ],
         });
@@ -74,35 +75,13 @@ async function kwtProcess(task: TaskConfig): Promise<Result> {
         result = (await browser.scripting.executeScript({
             target: { tabId: tab.id },
             args: [task.searchQuery || null, task.pagesLimit || null, task.itemsLimit || null, task.timeLimit || null, task.destination === 'local', task.asin || null],
-            func: async (sq, pagesLimit, itemsLimit, timeLimit, saveAll) => {
-                /** @ts-ignore page */
-                function perPageCallback({ countSponsored, countOrganic, res }) {
-                    /** @ts-ignore chrome */
-                    chrome.runtime.sendMessage({
-                        action: 'sendMessage',
-                        data: {
-                            queue: 'result.success.kwt',
-                            msg: { searchQuery: sq, countSponsored, countOrganic, chunk: res },
-                        },
-                    });
-                }
-
-                /** @ts-ignore exception */
-                function onErrorCallback(exception) {
-                    /** @ts-ignore chrome */
-                    chrome.runtime.sendMessage({
-                        action: 'sendMessage',
-                        data: {
-                            queue: 'result.error.kwt',
-                            msg: { searchQuery: sq, error: exception.message },
-                        },
-                    });
-                }
-
+            func: async (sq, pagesLimit, itemsLimit, timeLimit, saveAll, asins) => {
                 /** @ts-ignore */
-                return await parseAll({ pagesLimit, itemsLimit, timeLimit }, {}, saveAll ? {} : {
-                    perPageCallback,
-                    onErrorCallback,
+                return await parseAll({ pagesLimit, itemsLimit, timeLimit, asins }, {}, saveAll ? {} : {
+                    /** @ts-ignore */
+                    perPageCallback: createPerPageCallback(sq),
+                    /** @ts-ignore */
+                    onErrorCallback: createErrorCallback(sq),
                 }, 100, saveAll);
             },
         }))[0]?.result;
