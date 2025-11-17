@@ -1,4 +1,5 @@
-import browser from 'webextension-polyfill';
+import browser, { Tabs } from 'webextension-polyfill';
+import Tab = Tabs.Tab;
 
 type Result = {
     empty: boolean,
@@ -29,26 +30,34 @@ type TaskConfig = {
 };
 
 export async function KWTProcess(task: TaskConfig): Promise<void> {
-    const result: Result = await kwtProcess(task);
-
-    if (task.destination === 'local') {
-        const binString = Array.from(new TextEncoder().encode(JSON.stringify(result.result)), (byte) =>
-            String.fromCodePoint(byte),
-        ).join("");
-
-        await browser.downloads.download({
-            url: 'data:application/json;base64,' + btoa(binString),
-            filename: 'resultKWT.json',
-            saveAs: true,
-        });
-    }
-}
-
-async function kwtProcess(task: TaskConfig): Promise<Result> {
     const tab = await browser.tabs.create({
         url: encodeURI('https://www.amazon.com/s?k=' + task.searchQuery).replaceAll('#', '%23'),
         active: false,
     });
+
+    if (!tab?.id)
+        throw new Error(`Unable to create a tab: unknown error (${JSON.stringify(task)})`);
+
+    try {
+        const result: Result = await kwtProcess(task, tab);
+
+        if (task.destination === 'local') {
+            const binString = Array.from(new TextEncoder().encode(JSON.stringify(result.result)), byte =>
+                String.fromCodePoint(byte),
+            ).join("");
+
+            await browser.downloads.download({
+                url: 'data:application/json;base64,' + btoa(binString),
+                filename: 'resultKWT.json',
+                saveAs: true,
+            });
+        }
+    } finally {
+        await browser.tabs.remove(tab.id);
+    }
+}
+
+async function kwtProcess(task: TaskConfig, tab: Tab): Promise<Result> {
     if (!tab || !tab.id) throw new Error(`Unable to process task: no tab found (${JSON.stringify(task)})`);
     await browser.tabs.update(tab.id, {
         autoDiscardable: false,
@@ -67,7 +76,6 @@ async function kwtProcess(task: TaskConfig): Promise<Result> {
             ],
         });
     } catch (e) {
-        await browser.tabs.remove(tab.id);
         throw new Error(`Unable to process task: can't inject files due to ${e} (${JSON.stringify(task)})`);
     }
     let result;
@@ -86,7 +94,6 @@ async function kwtProcess(task: TaskConfig): Promise<Result> {
             },
         }))[0]?.result;
     }
-    await browser.tabs.remove(tab.id);
     if (!result) throw new Error(`Error while processing task: too many errors (${JSON.stringify(task)})`);
     return result;
 }
