@@ -2,6 +2,7 @@ from fastapi import Response
 from pydantic import BaseModel
 
 from .abstract_api import AbstractAPI
+from ..task_factories.amazon_zip import AmazonZipFactory
 from ..task_factories.asinsight import AsinSightFactory
 from ..task_factories.helium_blackbox import HeliumBlackBoxFactory
 from ..task_factories.keyword_tracker import KeywordTrackerFactory
@@ -28,6 +29,7 @@ class TaskFactoryAdapterAPI(AbstractAPI):
         self._add_task_start_route("/helium-blackbox", self.publish_helium_blackbox)
         self._add_task_start_route("/asinsight", self.publish_asinsight)
         self._add_task_start_route("/keyword-tracker", self.publish_keyword_tracker)
+        self._add_task_start_route("/amazon-zip", self.publish_amazon_zip)
 
     def publish_asinsight(self):
         AsinSightFactory(self._db, self._channel).publish_asinsight_tasks()
@@ -37,6 +39,9 @@ class TaskFactoryAdapterAPI(AbstractAPI):
 
     def publish_keyword_tracker(self):
         KeywordTrackerFactory(self._db, self._channel).publish_keyword_tracker()
+
+    def publish_amazon_zip(self):
+        AmazonZipFactory(self._db, self._channel).publish_amazon_zip_task()
 
 
 router_class = TaskFactoryAdapterAPI
