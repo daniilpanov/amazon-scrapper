@@ -13,6 +13,10 @@ class HeliumBlackBoxTaskInput(BaseModel):
     max_cat_level: int
 
 
+class AmazonZipTaskInput(BaseModel):
+    zip_code: int
+
+
 class TaskFactoryAdapterAPI(AbstractAPI):
     @staticmethod
     def get_prefix() -> str:
@@ -40,8 +44,8 @@ class TaskFactoryAdapterAPI(AbstractAPI):
     def publish_keyword_tracker(self):
         KeywordTrackerFactory(self._db, self._channel).publish_keyword_tracker()
 
-    def publish_amazon_zip(self):
-        AmazonZipFactory(self._db, self._channel).publish_amazon_zip_task()
+    def publish_amazon_zip(self, data_input: AmazonZipTaskInput):
+        AmazonZipFactory(self._db, self._channel).publish_amazon_zip_task(data_input.zip_code)
 
 
 router_class = TaskFactoryAdapterAPI
