@@ -85,6 +85,9 @@ async function kwtProcess(task: TaskConfig, tab: Tab): Promise<Result> {
     if (!tab || !tab.id)
         throw new Error(`Unable to process task: no tab found (${JSON.stringify(task)})`);
 
+    if (!tab.url?.includes('/s?k='))
+        throw new Error(`Unable to process task: redirect occurred to ${tab.url} (${JSON.stringify(task)})`);
+
     const result = (await browser.scripting.executeScript({
         target: { tabId: tab.id },
         args: [
