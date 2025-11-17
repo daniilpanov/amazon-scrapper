@@ -3,6 +3,7 @@ import browser from 'webextension-polyfill';
 import { jungleScoutProcess } from './processes/jungle-scout-process';
 import { KWTProcess } from './processes/kwt-process';
 import { BSRProcess } from './processes/bsr-process';
+import { AmazonZipCodeProcess } from './processes/amazon-zip-code-process';
 
 /// TYPES ///
 type Action = (message: any) => any;
@@ -24,12 +25,14 @@ const actions: ActionMap = {
     jungleScoutProcess,
     KWTProcess,
     BSRProcess,
+    AmazonZipCodeProcess,
 };
 
 const queueHandlers: HandlersMap = {
     'junglescout': { action: 'jungleScoutProcess', state: false },
     'kwt': { action: 'KWTProcess', state: true },
     'bsr': { action: 'BSRProcess', state: true },
+    'amazon-zip': { action: 'AmazonZipCodeProcess', state: true },
 };
 
 let stompConnection: Stomp | null = null;
