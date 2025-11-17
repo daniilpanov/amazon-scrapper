@@ -60,6 +60,7 @@ async function kwtProcess(task: TaskConfig): Promise<Result> {
             files: [
                 'injections/common/parseImageURL.js',
                 'injections/common/parseCurrency.js',
+                'injections/common/wait.js',
                 'injections/common/pagination.js',
                 'injections/kwt/parsePage.js',
             ],

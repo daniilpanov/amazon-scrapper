@@ -128,7 +128,10 @@ async function parseAll({ pagesLimit, itemsLimit, timeLimit } = {}, { itemFilter
             if (saveAll)
                 for (const item of res) result.result.push(item);
 
-            if (!await paginationCheckAndClick(clickDelay)) break;
+            if (!await waitAndClickToNextPage())
+                break;
+
+            await new Promise(resolve => setTimeout(resolve, clickDelay));
         }
     } catch (e) {
         if (onErrorCallback) await onErrorCallback(e);
