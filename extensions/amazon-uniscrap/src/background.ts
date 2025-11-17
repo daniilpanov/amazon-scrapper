@@ -117,7 +117,6 @@ browser.storage.local.onChanged.addListener(async (changes: { [key: string]: Bro
 });
 
 browser.runtime.onMessage.addListener((message: MsgType, sender, sendResponse: (res?: any) => void) => {
-    console.log('Message sent: ' + JSON.stringify(message));
     if (typeof message === 'object') {
         if (message.hasOwnProperty('action') && actions.hasOwnProperty(message.action)) {
             const res = actions[message.action](message.data);
