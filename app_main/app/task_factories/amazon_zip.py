@@ -8,5 +8,5 @@ class AmazonZipTask(BaseModel):
 
 
 class AmazonZipFactory(AbstractFactory):
-    def publish_amazon_zip_task(self):
-        self._basic_publish(exchange="tasks", routing_key="amazon-zip", body=AmazonZipTask(zipCode=90005))
+    def publish_amazon_zip_task(self, zip_code: int):
+        self._basic_publish(exchange="tasks", routing_key="amazon-zip", body=AmazonZipTask(zipCode=zip_code))

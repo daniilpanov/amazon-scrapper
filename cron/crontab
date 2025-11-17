@@ -4,6 +4,7 @@
 0       3       *       *       6       run-parts /etc/periodic/weekly
 0       5       1       *       *       run-parts /etc/periodic/monthly
 
+0  4  * * *   curl -X POST -H "Content-Type: application/json" -d '{"zip_code": 90005}' http://app_main/tasks/amazon-zip >> /var/log/AZ.log 2>&1
 0  5  * * *   curl -X POST http://app_main/tasks/asinsight >> /var/log/AS.log 2>&1
 0  6  * * *   curl -X POST http://app_main/tasks/keyword-tracker >> /var/log/KW.log 2>&1
 0  6  * * *   curl -X POST -H "Content-Type: application/json" -d '{"level": 1, "user_id": 1545531519}' http://app_main/tasks/helium-blackbox >> /var/log/H_BBX.log 2>&1
