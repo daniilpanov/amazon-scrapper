@@ -24,7 +24,7 @@ type TaskConfig = {
     pagesLimit?: number;
     itemsLimit?: number;
     timeLimit?: number;
-    asin?: string[];
+    asins?: string[];
     destination: 'local' | 'remote';
 };
 
@@ -74,7 +74,7 @@ async function kwtProcess(task: TaskConfig): Promise<Result> {
     for (let i = 0; !result && i < 10; ++i) {
         result = (await browser.scripting.executeScript({
             target: { tabId: tab.id },
-            args: [task.searchQuery || null, task.pagesLimit || null, task.itemsLimit || null, task.timeLimit || null, task.destination === 'local', task.asin || null],
+            args: [task.searchQuery || null, task.pagesLimit || null, task.itemsLimit || null, task.timeLimit || null, task.destination === 'local', task.asins || null],
             func: async (sq, pagesLimit, itemsLimit, timeLimit, saveAll, asins) => {
                 /** @ts-ignore */
                 return await parseAll({ pagesLimit, itemsLimit, timeLimit, asins }, {}, saveAll ? {} : {
