@@ -58,7 +58,9 @@ export async function KWTProcess(task: TaskConfig): Promise<void> {
 }
 
 async function kwtProcess(task: TaskConfig, tab: Tab): Promise<Result> {
-    if (!tab || !tab.id) throw new Error(`Unable to process task: no tab found (${JSON.stringify(task)})`);
+    if (!tab.id)
+        throw new Error(`Unable to process task: no tab found (${JSON.stringify(task)})`);
+
     await browser.tabs.update(tab.id, {
         autoDiscardable: false,
     });
@@ -78,22 +80,34 @@ async function kwtProcess(task: TaskConfig, tab: Tab): Promise<Result> {
     } catch (e) {
         throw new Error(`Unable to process task: can't inject files due to ${e} (${JSON.stringify(task)})`);
     }
-    let result;
-    for (let i = 0; !result && i < 10; ++i) {
-        result = (await browser.scripting.executeScript({
-            target: { tabId: tab.id },
-            args: [task.searchQuery || null, task.pagesLimit || null, task.itemsLimit || null, task.timeLimit || null, task.destination === 'local', task.asins || null],
-            func: async (sq, pagesLimit, itemsLimit, timeLimit, saveAll, asins) => {
+
+    tab = await browser.tabs.get(tab.id);
+    if (!tab || !tab.id)
+        throw new Error(`Unable to process task: no tab found (${JSON.stringify(task)})`);
+
+    const result = (await browser.scripting.executeScript({
+        target: { tabId: tab.id },
+        args: [
+            task.searchQuery,
+            task.pagesLimit || null,
+            task.itemsLimit || null,
+            task.timeLimit || null,
+            task.destination === 'local',
+            task.asins || null,
+        ],
+        func: async (sq, pagesLimit, itemsLimit, timeLimit, saveAll, asins) => {
+            /** @ts-ignore */
+            return await parseAll({ pagesLimit, itemsLimit, timeLimit, asins }, {}, saveAll ? {} : {
                 /** @ts-ignore */
-                return await parseAll({ pagesLimit, itemsLimit, timeLimit, asins }, {}, saveAll ? {} : {
-                    /** @ts-ignore */
-                    perPageCallback: createPerPageCallback(sq),
-                    /** @ts-ignore */
-                    onErrorCallback: createErrorCallback(sq),
-                }, 100, saveAll);
-            },
-        }))[0]?.result;
-    }
-    if (!result) throw new Error(`Error while processing task: too many errors (${JSON.stringify(task)})`);
+                perPageCallback: createPerPageCallback(sq),
+                /** @ts-ignore */
+                onErrorCallback: createErrorCallback(sq),
+            }, 100, saveAll);
+        },
+    }))[0]?.result;
+
+    if (!result)
+        throw new Error(`Error while processing task: an unknown error occurred (${JSON.stringify(task)})`);
+
     return result;
 }
