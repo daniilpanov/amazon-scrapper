@@ -12,8 +12,8 @@ services:
         networks:
             - net
         volumes:
-            - ./external-data/rabbitmq/mnesia:/var/lib/rabbitmq/mnesia:rw
-            - ./logs/rabbitmq:/var/log/rabbitmq:rw
+            - ./msgbroker/internal-data/mnesia:/var/lib/rabbitmq/mnesia:rw
+            - ./msgbroker/logs:/var/log/rabbitmq:rw
     ### CHROME VNC SERVICE
     chrome-vnc:
         depends_on:
@@ -26,9 +26,9 @@ services:
         environment:
             - VNC_PASSWORD=${VNC_PASSWORD}
         volumes:
-            - ./dockerfiles/uniscrap/start.sh:/home/chrome/start.sh:r
-            - ./logs/uniscrap:/home/chrome/logs:rw
-            - ./external-data/chrome-profile:/home/chrome/profile:rw
+            - ./uniscrap/start.sh:/home/chrome/start.sh:r
+            - ./uniscrap/logs:/home/chrome/logs:rw
+            - ./uniscrap/chrome-profile:/home/chrome/profile:rw
         security_opt:
             - seccomp=unconfined
             - apparmor=unconfined
@@ -37,105 +37,32 @@ services:
         shm_size: 2g
         restart: unless-stopped
     ### WORKERS
+    app_main:
+        depends_on:
+            - msgbroker
+        image: danielgreen1806/amascrap-app:latest
+        restart: on-failure
+        networks:
+            - net
+        volumes:
+            - ./app_main/serve.py:/src/serve.py:ro
+            - ./app_main/app:/src/app:ro
+            - ./app_main/logs:/src/logs:rw
+        env_file: .env
+        ports:
+            - "${APP_PORT:-8080}:8080"
     cron:
         depends_on:
-             - msgbroker
+            - app_main
         image: danielgreen1806/amascrap-cron:latest
         restart: unless-stopped
         networks:
             - net
         env_file: .env
         volumes:
-            - ./services/cron/app:/src:rw
-            - ./services/cron/cron_tasks:/res/crontabs:rw
-            - ./logs/cron:/var/log:rw
+            - ./cron/cron-start.sh:/src/cron-start.sh:r
+            - ./cron/crontab:/res/crontabs/root:ro
+            - ./cron/logs:/var/log:rw
         command: ["/src/cron-start.sh"]
-    msgbroker_handler:
-        depends_on:
-            msgbroker:
-                condition: service_started
-        image: danielgreen1806/amascrap-light:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/msgbroker_handler/app:/src/app:rw
-            - ./logs/msgbroker_handler:/src/logs:rw
-        env_file: .env
-    ### SERVICE
-    s3:
-        image: danielgreen1806/amascrap-s3:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/s3:/src:rw
-            - ./logs/s3:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$S3_PORT"
-        ports:
-            - "$S3_PORT:$S3_PORT"
-        entrypoint:
-            - "gunicorn"
-            - "app:app"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$S3_PORT"
-    ### LEGACY PART
-    server:
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/server:/src:rw
-            - ./logs/server:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$SERVER_PORT"
-        ports:
-            - "$SERVER_PORT:$SERVER_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$SERVER_PORT"
-    s3_upload:
-        depends_on:
-            - server
-        image: danielgreen1806/amascrap-s3:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/s3_upload:/src:rw
-            - ./logs/s3_upload:/src/logs:rw
-        env_file: .env
-        entrypoint:
-            - "python"
-            - "app/serve.py"
-    web:
-        depends_on:
-            - server
-        image: danielgreen1806/amascrap-simple_server:latest
-        restart: on-failure
-        networks:
-            - net
-        volumes:
-            - ./services/web:/src:rw
-            - ./logs/web:/src/logs:rw
-        env_file: .env
-        expose:
-            - "$WEB_PORT"
-        ports:
-            - "$WEB_PORT:$WEB_PORT"
-        command:
-            - "-k"
-            - "uvicorn.workers.UvicornWorker"
-            - "-b"
-            - "0.0.0.0:$WEB_PORT"
 networks:
     net:

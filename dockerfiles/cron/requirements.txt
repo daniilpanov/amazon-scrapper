@@ -1,6 +1,0 @@
-requests
-pymongo
-pika
-certifi
-argparse
-pytz

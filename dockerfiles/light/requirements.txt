@@ -1,6 +1,0 @@
-requests
-pymongo
-certifi
-pika
-pandas
-pydantic
