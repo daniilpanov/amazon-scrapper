@@ -30,6 +30,9 @@ type TaskConfig = {
 };
 
 export async function KWTProcess(task: TaskConfig): Promise<void> {
+    if (task.asins && !task.asins.length)
+        task.asins = undefined;
+
     const tab = await browser.tabs.create({
         url: encodeURI('https://www.amazon.com/s?k=' + task.searchQuery).replaceAll('#', '%23'),
         active: false,
