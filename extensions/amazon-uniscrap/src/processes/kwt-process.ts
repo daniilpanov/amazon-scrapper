@@ -1,4 +1,5 @@
-import browser from 'webextension-polyfill';
+import browser, { Tabs } from 'webextension-polyfill';
+import Tab = Tabs.Tab;
 
 type Result = {
     empty: boolean,
@@ -24,32 +25,54 @@ type TaskConfig = {
     pagesLimit?: number;
     itemsLimit?: number;
     timeLimit?: number;
-    asin?: string[];
+    asins?: string[];
     destination: 'local' | 'remote';
 };
 
 export async function KWTProcess(task: TaskConfig): Promise<void> {
-    const result: Result = await kwtProcess(task);
+    if (task.asins && !task.asins.length)
+        task.asins = undefined;
 
-    if (task.destination === 'local') {
-        const binString = Array.from(new TextEncoder().encode(JSON.stringify(result.result)), (byte) =>
-            String.fromCodePoint(byte),
-        ).join("");
-
-        await browser.downloads.download({
-            url: 'data:application/json;base64,' + btoa(binString),
-            filename: 'resultKWT.json',
-            saveAs: true,
-        });
-    }
-}
-
-async function kwtProcess(task: TaskConfig): Promise<Result> {
     const tab = await browser.tabs.create({
         url: encodeURI('https://www.amazon.com/s?k=' + task.searchQuery).replaceAll('#', '%23'),
         active: false,
     });
-    if (!tab || !tab.id) throw new Error(`Unable to process task: no tab found (${JSON.stringify(task)})`);
+
+    if (!tab?.id)
+        throw new Error(`Unable to create a tab: unknown error (${JSON.stringify(task)})`);
+
+    let timeout;
+
+    try {
+        // timeLimit + 1000 because the same timeout will be inside a tab
+        if (task.timeLimit)
+            timeout = setTimeout(browser.tabs.remove, task.timeLimit + 1000, tab.id);
+
+        const result: Result = await kwtProcess(task, tab);
+
+        if (task.destination === 'local') {
+            const binString = Array.from(new TextEncoder().encode(JSON.stringify(result.result)), byte =>
+                String.fromCodePoint(byte),
+            ).join("");
+
+            await browser.downloads.download({
+                url: 'data:application/json;base64,' + btoa(binString),
+                filename: 'resultKWT.json',
+                saveAs: true,
+            });
+        }
+    } finally {
+        if (timeout)
+            clearTimeout(timeout);
+
+        await browser.tabs.remove(tab.id);
+    }
+}
+
+async function kwtProcess(task: TaskConfig, tab: Tab): Promise<Result> {
+    if (!tab.id)
+        throw new Error(`Unable to process task: no tab found (${JSON.stringify(task)})`);
+
     await browser.tabs.update(tab.id, {
         autoDiscardable: false,
     });
@@ -60,53 +83,46 @@ async function kwtProcess(task: TaskConfig): Promise<Result> {
             files: [
                 'injections/common/parseImageURL.js',
                 'injections/common/parseCurrency.js',
+                'injections/common/wait.js',
                 'injections/common/pagination.js',
+                'injections/kwt/callbackFactories.js',
                 'injections/kwt/parsePage.js',
             ],
         });
     } catch (e) {
-        await browser.tabs.remove(tab.id);
         throw new Error(`Unable to process task: can't inject files due to ${e} (${JSON.stringify(task)})`);
     }
-    let result;
-    for (let i = 0; !result && i < 10; ++i) {
-        result = (await browser.scripting.executeScript({
-            target: { tabId: tab.id },
-            args: [task.searchQuery || null, task.pagesLimit || null, task.itemsLimit || null, task.timeLimit || null, task.destination === 'local', task.asin || null],
-            func: async (sq, pagesLimit, itemsLimit, timeLimit, saveAll) => {
-                /** @ts-ignore page */
-                function perPageCallback({ countSponsored, countOrganic, res }) {
-                    /** @ts-ignore chrome */
-                    chrome.runtime.sendMessage({
-                        action: 'sendMessage',
-                        data: {
-                            queue: 'result.success.kwt',
-                            msg: { searchQuery: sq, countSponsored, countOrganic, chunk: res },
-                        },
-                    });
-                }
 
-                /** @ts-ignore exception */
-                function onErrorCallback(exception) {
-                    /** @ts-ignore chrome */
-                    chrome.runtime.sendMessage({
-                        action: 'sendMessage',
-                        data: {
-                            queue: 'result.error.kwt',
-                            msg: { searchQuery: sq, error: exception.message },
-                        },
-                    });
-                }
+    tab = await browser.tabs.get(tab.id);
+    if (!tab || !tab.id)
+        throw new Error(`Unable to process task: no tab found (${JSON.stringify(task)})`);
 
+    if (!tab.url?.includes('/s?k='))
+        throw new Error(`Unable to process task: redirect occurred to ${tab.url} (${JSON.stringify(task)})`);
+
+    const result = (await browser.scripting.executeScript({
+        target: { tabId: tab.id },
+        args: [
+            task.searchQuery,
+            task.pagesLimit || null,
+            task.itemsLimit || null,
+            task.timeLimit || null,
+            task.destination === 'local',
+            task.asins || null,
+        ],
+        func: async (sq, pagesLimit, itemsLimit, timeLimit, saveAll, asins) => {
+            /** @ts-ignore */
+            return await parseAll({ pagesLimit, itemsLimit, timeLimit, asins }, {}, saveAll ? {} : {
                 /** @ts-ignore */
-                return await parseAll({ pagesLimit, itemsLimit, timeLimit }, {}, saveAll ? {} : {
-                    perPageCallback,
-                    onErrorCallback,
-                }, 100, saveAll);
-            },
-        }))[0]?.result;
-    }
-    await browser.tabs.remove(tab.id);
-    if (!result) throw new Error(`Error while processing task: too many errors (${JSON.stringify(task)})`);
+                perPageCallback: createPerPageCallback(sq),
+                /** @ts-ignore */
+                onErrorCallback: createErrorCallback(sq),
+            }, 100, saveAll);
+        },
+    }))[0]?.result;
+
+    if (!result)
+        throw new Error(`Error while processing task: an unknown error occurred (${JSON.stringify(task)})`);
+
     return result;
 }

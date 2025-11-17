@@ -68,6 +68,7 @@ async function jungleScoutSingleProcess(task: TaskConfig): Promise<Result> {
         await browser.scripting.executeScript({
             target: { tabId: tab.id },
             files: [
+                'injections/common/wait.js',
                 'injections/common/parseCurrency.js',
                 'injections/common/pagination.js',
                 'injections/junglescout/SearchProcess.js',

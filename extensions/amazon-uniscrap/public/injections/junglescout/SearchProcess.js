@@ -119,6 +119,6 @@ async function getTheDataWithPagination() {
             }, 500);
         });
         data = {...await waitForInjectAndGetTheData(), ...data};
-    } while (Object.keys(data).length < 10000 && await paginationCheckAndClick(1000));
+    } while (Object.keys(data).length < 10000 && await waitAndClickToNextPage(1000));
     return data;
 }

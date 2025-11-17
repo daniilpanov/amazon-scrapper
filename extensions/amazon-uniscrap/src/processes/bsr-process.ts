@@ -112,7 +112,7 @@ export async function BSRProcess(task: TaskConfig): Promise<void> {
                 target: { tabId: tab.id },
                 func: async () => {
                     /** @ts-ignore */
-                    return paginationCheckAndClick();
+                    return waitAndClickToNextPage();
                 },
             }))[0]?.result;
             if (!switchPage) break;

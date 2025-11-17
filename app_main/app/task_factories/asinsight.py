@@ -52,4 +52,4 @@ class AsinSightFactory(AbstractFactory):
                 marketplace_id=message_data[1],
                 country=message_data[2],
                 user_id=message_data[3],
-            ).encode("utf-8"))
+            ))

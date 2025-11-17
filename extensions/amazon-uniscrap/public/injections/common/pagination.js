@@ -1,28 +1,23 @@
-function paginationCheck() {
-    const pagination = document.querySelector('.s-pagination-strip > ul, ul.a-pagination');
-    if (!pagination || !pagination.children.length) {
-        return false;
-    }
+const paginationUlElementQuerySelector = '.s-pagination-strip > ul, ul.a-pagination';
 
-    return pagination.children[pagination.children.length - 1].tagName !== 'SPAN';
+function getLastPaginationLink() {
+    const pagination = document.querySelector(paginationUlElementQuerySelector);
+    if (!pagination || !pagination.children.length)
+        return false;
+
+    return pagination.children[pagination.children.length - 1].querySelector('& > span > a');
 }
 
-function paginationClick() {
-    const pagination = document.querySelector('.s-pagination-strip > ul, ul.a-pagination');
-    pagination.children[pagination.children.length - 1].querySelector('a').click();
+function clickToNextPage() {
+    const lastElement = getLastPaginationLink();
+    if (!lastElement)
+        return false;
+
+    lastElement.click();
+    return true;
 }
 
-function paginationCheckAndClick(withDelay = null) {
-    const pagination = document.querySelector('.s-pagination-strip > ul, ul.a-pagination');
-    if (!pagination || !pagination.children.length) {
-        return false;
-    }
-
-    if (pagination.children[pagination.children.length - 1].tagName === 'SPAN') {
-        return false;
-    }
-    return withDelay ? new Promise((resolve) => {
-        pagination.children[pagination.children.length - 1].querySelector('a').click();
-        setTimeout((r) => { r(true); }, withDelay, resolve);
-    }) : (pagination.children[pagination.children.length - 1].querySelector('a').click() || true);
+async function waitAndClickToNextPage(timeout = 1000) {
+    if (await waitLoading(paginationUlElementQuerySelector, timeout))
+        return clickToNextPage();
 }

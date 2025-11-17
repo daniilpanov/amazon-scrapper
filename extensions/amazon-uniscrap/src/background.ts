@@ -1,11 +1,9 @@
 import Stomp from './stomp';
 import browser from 'webextension-polyfill';
-import { tiktokProcess } from './processes/tiktok-process';
-import { kalodataProcess } from './processes/kalodata-process';
 import { jungleScoutProcess } from './processes/jungle-scout-process';
-import { waitWhileProcess } from './processes/wait-while-process';
 import { KWTProcess } from './processes/kwt-process';
 import { BSRProcess } from './processes/bsr-process';
+import { AmazonZipCodeProcess } from './processes/amazon-zip-code-process';
 
 /// TYPES ///
 type Action = (message: any) => any;
@@ -24,21 +22,17 @@ type BrowserStorageCache = {
 const actions: ActionMap = {
     getHandlers,
     sendMessage,
-    tiktokProcess,
-    kalodataProcess,
     jungleScoutProcess,
-    waitWhileProcess,
     KWTProcess,
     BSRProcess,
+    AmazonZipCodeProcess,
 };
 
 const queueHandlers: HandlersMap = {
-    'tiktok': { action: 'tiktokProcess', state: false },
-    'kalodata': { action: 'kalodataProcess', state: false },
     'junglescout': { action: 'jungleScoutProcess', state: false },
-    'spfd': { action: 'waitWhileProcess', state: false },
     'kwt': { action: 'KWTProcess', state: true },
     'bsr': { action: 'BSRProcess', state: true },
+    'amazon-zip': { action: 'AmazonZipCodeProcess', state: true },
 };
 
 let stompConnection: Stomp | null = null;
@@ -126,7 +120,6 @@ browser.storage.local.onChanged.addListener(async (changes: { [key: string]: Bro
 });
 
 browser.runtime.onMessage.addListener((message: MsgType, sender, sendResponse: (res?: any) => void) => {
-    console.log('Message sent: ' + JSON.stringify(message));
     if (typeof message === 'object') {
         if (message.hasOwnProperty('action') && actions.hasOwnProperty(message.action)) {
             const res = actions[message.action](message.data);
