@@ -1,9 +1,6 @@
 import Stomp from './stomp';
 import browser from 'webextension-polyfill';
-import { tiktokProcess } from './processes/tiktok-process';
-import { kalodataProcess } from './processes/kalodata-process';
 import { jungleScoutProcess } from './processes/jungle-scout-process';
-import { waitWhileProcess } from './processes/wait-while-process';
 import { KWTProcess } from './processes/kwt-process';
 import { BSRProcess } from './processes/bsr-process';
 
@@ -24,19 +21,13 @@ type BrowserStorageCache = {
 const actions: ActionMap = {
     getHandlers,
     sendMessage,
-    tiktokProcess,
-    kalodataProcess,
     jungleScoutProcess,
-    waitWhileProcess,
     KWTProcess,
     BSRProcess,
 };
 
 const queueHandlers: HandlersMap = {
-    'tiktok': { action: 'tiktokProcess', state: false },
-    'kalodata': { action: 'kalodataProcess', state: false },
     'junglescout': { action: 'jungleScoutProcess', state: false },
-    'spfd': { action: 'waitWhileProcess', state: false },
     'kwt': { action: 'KWTProcess', state: true },
     'bsr': { action: 'BSRProcess', state: true },
 };
