@@ -91,6 +91,7 @@ async function parsePage(
     productsPage,
     { perItemCallback, itemFilterCallback } = {},
     { countSponsored, countOrganic } = { countSponsored: 0, countOrganic: 0 },
+    asins = undefined,
 ) {
     const date = new Date();
     const elements = productsPage.querySelectorAll('& > [data-asin]');
@@ -102,6 +103,9 @@ async function parsePage(
         const item = parseItem(element);
         if (!item)
             continue;
+
+        if (asins && asins.has(item.asin))
+            asins.delete(item.asin);
 
         item.date = date.toISOString();
 
@@ -119,11 +123,11 @@ async function parsePage(
         parsedData.push(item);
     }
 
-    return { co: countOrganic, cs: countSponsored, res: parsedData };
+    return { co: countOrganic, cs: countSponsored, res: parsedData, remainingAsins: asins };
 }
 
 async function parseAll(
-    { pagesLimit, itemsLimit, timeLimit } = {},
+    { pagesLimit, itemsLimit, timeLimit, asins } = {},
     { itemFilterCallback } = {},
     { perItemCallback, perPageCallback, onErrorCallback } = {},
     clickDelay = null,
@@ -137,6 +141,8 @@ async function parseAll(
     // for correct chunking
     let countSponsored = 0;
     let countOrganic = 0;
+    if (asins)
+        asins = new Set(asins);
 
     const result = { empty: !saveAll, result: [] };
 
@@ -148,10 +154,11 @@ async function parseAll(
         ) {
             await wait(40, 200, checkIsLoaded(20, 3));
 
-            const { cs, co, res } = await parsePage(
+            const { cs, co, res, remainingAsins } = await parsePage(
                 document.querySelector('.s-main-slot'),
                 { perItemCallback, itemFilterCallback },
                 { countSponsored, countOrganic },
+                asins,
             );
 
             if (perPageCallback)
@@ -165,6 +172,11 @@ async function parseAll(
             if (saveAll)
                 for (const item of res)
                     result.result.push(item);
+
+            if (remainingAsins && !remainingAsins.size)
+                break;
+
+            asins = remainingAsins;
 
             if (!await waitAndClickToNextPage())
                 break;
