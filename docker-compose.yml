@@ -50,7 +50,7 @@ services:
             - ./app_main/logs:/src/logs:rw
         env_file: .env
         ports:
-            - "${APP_PORT:-8080}:8080"
+            - "${APP_PORT:-8080}:80"
     cron:
         depends_on:
             - app_main
